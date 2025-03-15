@@ -19,10 +19,12 @@ export default function HomePage() {
                 进行合规性检查，并提供智能问答功能，大幅提升审计效率。
               </p>
               <div className="mt-8 sm:max-w-lg sm:mx-auto sm:text-center lg:text-left lg:mx-0">
-                <Button className="bg-orange-600 hover:bg-orange-700 text-white rounded-full text-lg px-8 py-4 inline-flex items-center justify-center">
-                  立即体验
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
+                <Link href="/dashboard">
+                  <Button className="bg-orange-600 hover:bg-orange-700 text-white rounded-full text-lg px-8 py-4 inline-flex items-center justify-center">
+                    立即体验
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
               </div>
             </div>
             <div className="mt-12 relative sm:max-w-lg sm:mx-auto lg:mt-0 lg:max-w-none lg:mx-0 lg:col-span-6 lg:flex lg:items-center">
