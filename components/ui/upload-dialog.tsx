@@ -1,14 +1,23 @@
 import { Button } from '@/components/ui/button';
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
+import OSS from 'ali-oss';
 import { File, FileText, Upload, X } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
+
+interface STSToken {
+  AccessKeyId: string;
+  AccessKeySecret: string;
+  SecurityToken: string;
+  Expiration: string;
+}
 
 interface UploadDialogProps {
   isOpen: boolean;
@@ -22,6 +31,53 @@ export function UploadDialog({ isOpen, onClose, onUpload }: UploadDialogProps) {
   const [documentType, setDocumentType] = useState<string>('meeting');
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
+  const [credentials, setCredentials] = useState<STSToken | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // 获取 STS Token
+  const getSTSToken = async () => {
+    try {
+      const response = await fetch('/api/oss/get-sts-token');
+      if (!response.ok) {
+        throw new Error('Failed to get STS token');
+      }
+      const data = await response.json();
+      setCredentials(data);
+      return data;
+    } catch (error) {
+      console.error('获取 STS Token 失败:', error);
+      throw error;
+    }
+  };
+
+  // 检查凭证是否过期
+  const isCredentialsExpired = useCallback((creds: STSToken | null) => {
+    if (!creds) return true;
+    const expireDate = new Date(creds.Expiration);
+    const now = new Date();
+    return expireDate.getTime() - now.getTime() <= 60000; // 如果剩余有效期小于1分钟，则视为过期
+  }, []);
+
+  // 获取 OSS 客户端实例
+  const getOSSClient = async () => {
+    let currentCredentials = credentials;
+    if (isCredentialsExpired(currentCredentials)) {
+      currentCredentials = await getSTSToken();
+    }
+
+    if (!currentCredentials) {
+      throw new Error('Failed to get valid credentials');
+    }
+
+    return new OSS({
+      region: process.env.NEXT_PUBLIC_OSS_REGION,
+      bucket: process.env.NEXT_PUBLIC_OSS_BUCKET,
+      accessKeyId: currentCredentials.AccessKeyId,
+      accessKeySecret: currentCredentials.AccessKeySecret,
+      stsToken: currentCredentials.SecurityToken,
+    });
+  };
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -58,21 +114,76 @@ export function UploadDialog({ isOpen, onClose, onUpload }: UploadDialogProps) {
 
   const removeFile = (index: number) => {
     setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
+    // 清除对应的上传进度
+    setUploadProgress((prev) => {
+      const newProgress = { ...prev };
+      delete newProgress[index];
+      return newProgress;
+    });
+  };
+
+  const uploadToOSS = async (file: File, index: number) => {
+    const client = await getOSSClient();
+    const fileName = `${organizationId}/${documentType}/${Date.now()}-${file.name}`;
+
+    try {
+      await client.multipartUpload(fileName, file, {
+        progress: (p) => {
+          setUploadProgress((prev) => ({
+            ...prev,
+            [index]: Math.floor(p * 100),
+          }));
+        },
+        headers: {
+          // 添加必要的 headers
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, HEAD, OPTIONS',
+        },
+      });
+      return fileName;
+    } catch (error: any) {
+      console.error('文件上传失败:', error);
+      
+      // 处理 CORS 错误
+      if (error.code === 'AccessDenied' || error.message?.includes('CORS')) {
+        throw new Error(`跨域请求被拒绝，请确保已正确配置 OSS 的 CORS 规则。\n具体错误: ${error.message}`);
+      }
+      
+      // 处理其他常见错误
+      if (error.code === 'InvalidAccessKeyId') {
+        throw new Error('AccessKey 无效，请检查配置');
+      }
+      if (error.code === 'SignatureDoesNotMatch') {
+        throw new Error('签名验证失败，请检查 AccessKey Secret');
+      }
+      if (error.code === 'NoSuchBucket') {
+        throw new Error('Bucket 不存在，请检查配置');
+      }
+      
+      throw error;
+    }
   };
 
   const handleSubmit = async () => {
-    if (files.length === 0) return;
+    if (files.length === 0 || !organizationId) return;
     
     setIsUploading(true);
+    setError(null);  // 重置错误状态
+    
     try {
+      const uploadPromises = files.map((file, index) => uploadToOSS(file, index));
+      await Promise.all(uploadPromises);
+      
+      // 调用父组件的 onUpload 回调
       await onUpload(files, organizationId, documentType);
-      // 上传成功后关闭对话框
+      
+      // 重置状态
       onClose();
-      // 清空文件列表
       setFiles([]);
-    } catch (error) {
+      setUploadProgress({});
+    } catch (error: any) {
       console.error('上传失败:', error);
-      // 这里可以添加错误提示
+      setError(error.message || '文件上传失败，请重试');
     } finally {
       setIsUploading(false);
     }
@@ -152,28 +263,42 @@ export function UploadDialog({ isOpen, onClose, onUpload }: UploadDialogProps) {
               <h4 className="text-sm font-medium mb-2">已选择 {files.length} 个文件</h4>
               <ul className="space-y-2 max-h-40 overflow-y-auto">
                 {files.map((file, index) => (
-                  <li key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                    <div className="flex items-center">
-                      {file.type.includes('pdf') ? (
-                        <FileText className="h-4 w-4 text-red-500 mr-2" />
-                      ) : (
-                        <File className="h-4 w-4 text-blue-500 mr-2" />
-                      )}
-                      <span className="text-sm truncate max-w-[200px]">{file.name}</span>
+                  <li key={index} className="space-y-2">
+                    <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                      <div className="flex items-center">
+                        {file.type.includes('pdf') ? (
+                          <FileText className="h-4 w-4 text-red-500 mr-2" />
+                        ) : (
+                          <File className="h-4 w-4 text-blue-500 mr-2" />
+                        )}
+                        <span className="text-sm truncate max-w-[200px]">{file.name}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeFile(index)}
+                        className="text-gray-500 hover:text-gray-700"
+                        disabled={isUploading}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => removeFile(index)}
-                      className="text-gray-500 hover:text-gray-700"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+                    {uploadProgress[index] !== undefined && (
+                      <div className="w-full">
+                        <Progress value={uploadProgress[index]} className="h-1" />
+                        <span className="text-xs text-gray-500">{uploadProgress[index]}%</span>
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
             </div>
           )}
         </div>
+        {error && (
+          <div className="mt-2 p-3 text-sm text-red-500 bg-red-50 rounded-md">
+            {error}
+          </div>
+        )}
         <DialogFooter className="sm:justify-between">
           <Button variant="ghost" onClick={onClose} disabled={isUploading}>
             取消
