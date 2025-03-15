@@ -5,6 +5,9 @@ import {
   text,
   timestamp,
   integer,
+  boolean,
+  json,
+  real,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -140,3 +143,200 @@ export enum ActivityType {
   INVITE_TEAM_MEMBER = 'INVITE_TEAM_MEMBER',
   ACCEPT_INVITATION = 'ACCEPT_INVITATION',
 }
+
+// Audit Organization entities
+export const organizations = pgTable('organizations', {
+  id: serial('id').primaryKey(),
+  code: varchar('code', { length: 100 }).notNull().unique(),
+  name: varchar('name', { length: 255 }).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  teamId: integer('team_id')
+    .notNull()
+    .references(() => teams.id),
+});
+
+export const documentTypes = pgTable('document_types', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 100 }).notNull(),
+  description: text('description'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const documents = pgTable('documents', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  filePath: text('file_path').notNull(),
+  fileType: varchar('file_type', { length: 50 }).notNull(),
+  documentTypeId: integer('document_type_id')
+    .notNull()
+    .references(() => documentTypes.id),
+  organizationId: integer('organization_id')
+    .notNull()
+    .references(() => organizations.id),
+  uploadedBy: integer('uploaded_by')
+    .notNull()
+    .references(() => users.id),
+  uploadedAt: timestamp('uploaded_at').notNull().defaultNow(),
+  extractedInfo: boolean('extracted_info').default(false),
+  teamId: integer('team_id')
+    .notNull()
+    .references(() => teams.id),
+});
+
+export const meetingMinutes = pgTable('meeting_minutes', {
+  id: serial('id').primaryKey(),
+  documentId: integer('document_id')
+    .notNull()
+    .references(() => documents.id),
+  meetingDate: timestamp('meeting_date'),
+  documentNumber: varchar('document_number', { length: 100 }),
+  meetingTopic: text('meeting_topic'),
+  meetingConclusion: text('meeting_conclusion'),
+  contentSummary: text('content_summary'),
+  eventType: varchar('event_type', { length: 50 }),
+  eventDetails: text('event_details'),
+  involvedAmount: real('involved_amount'),
+  relatedDepartments: text('related_departments'),
+  relatedPersonnel: text('related_personnel'),
+  decisionBasis: text('decision_basis'),
+  originalText: text('original_text'),
+  extractedAt: timestamp('extracted_at').notNull().defaultNow(),
+});
+
+export const contracts = pgTable('contracts', {
+  id: serial('id').primaryKey(),
+  documentId: integer('document_id')
+    .notNull()
+    .references(() => documents.id),
+  contractNumber: varchar('contract_number', { length: 100 }),
+  signingDate: timestamp('signing_date'),
+  contractName: varchar('contract_name', { length: 255 }),
+  partyA: varchar('party_a', { length: 255 }),
+  partyB: varchar('party_b', { length: 255 }),
+  amountWithTax: real('amount_with_tax'),
+  amountWithoutTax: real('amount_without_tax'),
+  paymentTerms: text('payment_terms'),
+  performancePeriod: text('performance_period'),
+  obligations: text('obligations'),
+  acceptanceCriteria: text('acceptance_criteria'),
+  liabilityForBreach: text('liability_for_breach'),
+  extractedAt: timestamp('extracted_at').notNull().defaultNow(),
+});
+
+export const complianceRules = pgTable('compliance_rules', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  ruleType: varchar('rule_type', { length: 50 }).notNull(),
+  ruleConfig: json('rule_config').notNull(),
+  createdBy: integer('created_by')
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  teamId: integer('team_id')
+    .notNull()
+    .references(() => teams.id),
+});
+
+export const complianceChecks = pgTable('compliance_checks', {
+  id: serial('id').primaryKey(),
+  documentId: integer('document_id')
+    .notNull()
+    .references(() => documents.id),
+  ruleId: integer('rule_id')
+    .notNull()
+    .references(() => complianceRules.id),
+  passed: boolean('passed'),
+  details: text('details'),
+  checkedAt: timestamp('checked_at').notNull().defaultNow(),
+});
+
+// Relations for new entities
+export const organizationsRelations = relations(organizations, ({ one, many }) => ({
+  team: one(teams, {
+    fields: [organizations.teamId],
+    references: [teams.id],
+  }),
+  documents: many(documents),
+}));
+
+export const documentTypesRelations = relations(documentTypes, ({ many }) => ({
+  documents: many(documents),
+}));
+
+export const documentsRelations = relations(documents, ({ one, many }) => ({
+  documentType: one(documentTypes, {
+    fields: [documents.documentTypeId],
+    references: [documentTypes.id],
+  }),
+  organization: one(organizations, {
+    fields: [documents.organizationId],
+    references: [organizations.id],
+  }),
+  uploader: one(users, {
+    fields: [documents.uploadedBy],
+    references: [users.id],
+  }),
+  team: one(teams, {
+    fields: [documents.teamId],
+    references: [teams.id],
+  }),
+  meetingMinutes: many(meetingMinutes),
+  contracts: many(contracts),
+  complianceChecks: many(complianceChecks),
+}));
+
+export const meetingMinutesRelations = relations(meetingMinutes, ({ one }) => ({
+  document: one(documents, {
+    fields: [meetingMinutes.documentId],
+    references: [documents.id],
+  }),
+}));
+
+export const contractsRelations = relations(contracts, ({ one }) => ({
+  document: one(documents, {
+    fields: [contracts.documentId],
+    references: [documents.id],
+  }),
+}));
+
+export const complianceRulesRelations = relations(complianceRules, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [complianceRules.createdBy],
+    references: [users.id],
+  }),
+  team: one(teams, {
+    fields: [complianceRules.teamId],
+    references: [teams.id],
+  }),
+  complianceChecks: many(complianceChecks),
+}));
+
+export const complianceChecksRelations = relations(complianceChecks, ({ one }) => ({
+  document: one(documents, {
+    fields: [complianceChecks.documentId],
+    references: [documents.id],
+  }),
+  rule: one(complianceRules, {
+    fields: [complianceChecks.ruleId],
+    references: [complianceRules.id],
+  }),
+}));
+
+export type Organization = typeof organizations.$inferSelect;
+export type NewOrganization = typeof organizations.$inferInsert;
+export type DocumentType = typeof documentTypes.$inferSelect;
+export type NewDocumentType = typeof documentTypes.$inferInsert;
+export type Document = typeof documents.$inferSelect;
+export type NewDocument = typeof documents.$inferInsert;
+export type MeetingMinutes = typeof meetingMinutes.$inferSelect;
+export type NewMeetingMinutes = typeof meetingMinutes.$inferInsert;
+export type Contract = typeof contracts.$inferSelect;
+export type NewContract = typeof contracts.$inferInsert;
+export type ComplianceRule = typeof complianceRules.$inferSelect;
+export type NewComplianceRule = typeof complianceRules.$inferInsert;
+export type ComplianceCheck = typeof complianceChecks.$inferSelect;
+export type NewComplianceCheck = typeof complianceChecks.$inferInsert;

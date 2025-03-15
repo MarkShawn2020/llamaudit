@@ -34,6 +34,7 @@
     "jose": "^6.0.8",
     "lucide-react": "^0.479.0",
     "next": "15.2.2-canary.3",
+    "openai": "^4.87.3",
     "postcss": "^8.5.3",
     "postgres": "^3.4.5",
     "react": "19.0.0",
