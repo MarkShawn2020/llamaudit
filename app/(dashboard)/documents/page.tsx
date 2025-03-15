@@ -1,23 +1,66 @@
+'use client';
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus, Upload, FileText, Search, BarChart } from 'lucide-react';
 import Link from 'next/link';
 import { getUser } from '@/lib/db/queries';
 import { redirect } from 'next/navigation';
+import { UploadDialog } from '@/app/components/upload-dialog';
+import { uploadDocuments } from '@/lib/document-service';
+import { useState } from 'react';
 
-export default async function DocumentsPage() {
-  const user = await getUser();
+export default function DocumentsPage() {
+  return (
+    <ClientDocumentsPage />
+  );
+}
 
-  if (!user) {
-    redirect('/sign-in');
-  }
+
+
+function ClientDocumentsPage() {
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+
+  const handleUploadFiles = async (files: File[], organizationId: string, documentType: string) => {
+    setIsUploading(true);
+    setUploadError(null);
+    setUploadSuccess(false);
+    
+    try {
+      const result = await uploadDocuments(files, organizationId, documentType);
+      
+      if (result.success) {
+        setUploadSuccess(true);
+        // 可以在这里添加一些提示或刷新文档列表
+        setTimeout(() => {
+          setUploadSuccess(false);
+        }, 3000);
+      } else {
+        setUploadError(result.message);
+      }
+      
+      return result;
+    } catch (error) {
+      setUploadError('上传过程中发生错误');
+      console.error('上传出错:', error);
+      throw error;
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl font-bold">文档管理</h1>
         <div className="space-x-2">
-          <Button className="bg-orange-600 hover:bg-orange-700">
+          <Button 
+            className="bg-orange-600 hover:bg-orange-700"
+            onClick={() => setUploadDialogOpen(true)}
+          >
             <Upload className="h-4 w-4 mr-2" />
             上传文件
           </Button>
@@ -27,6 +70,18 @@ export default async function DocumentsPage() {
           </Button>
         </div>
       </div>
+
+      {uploadError && (
+        <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded mb-4">
+          <p>上传失败: {uploadError}</p>
+        </div>
+      )}
+      
+      {uploadSuccess && (
+        <div className="bg-green-100 border border-green-300 text-green-700 px-4 py-3 rounded mb-4">
+          <p>文件上传成功!</p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex flex-col">
@@ -105,6 +160,13 @@ export default async function DocumentsPage() {
           暂无活动记录，开始上传文档并提取信息吧！
         </div>
       </div>
+
+      {/* 上传文件对话框 */}
+      <UploadDialog
+        isOpen={uploadDialogOpen}
+        onClose={() => setUploadDialogOpen(false)}
+        onUpload={handleUploadFiles}
+      />
     </div>
   );
 } 
