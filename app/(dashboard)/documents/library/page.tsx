@@ -1,15 +1,20 @@
-
 'use client';
 
-import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Upload, Filter, ChevronLeft } from 'lucide-react';
-import Link from 'next/link';
-import { getUser } from '@/lib/db/queries';
-import { redirect } from 'next/navigation';
 import { UploadDialog } from '@/app/components/upload-dialog';
-import { uploadDocuments } from '@/lib/document-service';
-import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { getDocuments, uploadDocuments } from '@/lib/document-service';
+import { ChevronLeft, File, FileText, Filter, Upload } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+
+interface DocumentItem {
+  id: string;
+  name: string;
+  organizationName: string;
+  documentType: string;
+  uploadedAt: string;
+  extractedInfo: boolean;
+}
 
 export default function DocumentLibraryPage() {
   return (
@@ -17,14 +22,52 @@ export default function DocumentLibraryPage() {
   );
 }
 
-
-
 function ClientDocumentLibraryPage() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  
+  // 文档列表状态
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  
+  // 筛选状态
+  const [selectedOrg, setSelectedOrg] = useState<string>('');
+  const [selectedType, setSelectedType] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
+  // 获取文档列表
+  const fetchDocuments = async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    
+    try {
+      const response = await getDocuments({
+        organizationId: selectedOrg || undefined,
+        documentType: selectedType || undefined,
+      });
+      
+      if (response.success) {
+        setDocuments(response.data || []);
+      } else {
+        setLoadError('获取文档列表失败');
+      }
+    } catch (error) {
+      console.error('获取文档列表错误:', error);
+      setLoadError('获取文档列表时发生错误');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 初始加载和筛选条件变化时获取数据
+  useEffect(() => {
+    fetchDocuments();
+  }, [selectedOrg, selectedType]);
+
+  // 处理文件上传
   const handleUploadFiles = async (files: File[], organizationId: string, documentType: string) => {
     setIsUploading(true);
     setUploadError(null);
@@ -35,23 +78,29 @@ function ClientDocumentLibraryPage() {
       
       if (result.success) {
         setUploadSuccess(true);
-        // 可以在这里添加一些提示或刷新文档列表
+        // 上传成功后刷新文档列表
+        fetchDocuments();
         setTimeout(() => {
           setUploadSuccess(false);
         }, 3000);
       } else {
         setUploadError(result.message);
       }
-      
-      return result;
     } catch (error) {
       setUploadError('上传过程中发生错误');
       console.error('上传出错:', error);
-      throw error;
     } finally {
       setIsUploading(false);
     }
   };
+
+  // 过滤文档列表（本地搜索）
+  const filteredDocuments = searchQuery 
+    ? documents.filter(doc => 
+        doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        doc.organizationName.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : documents;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -89,20 +138,34 @@ function ClientDocumentLibraryPage() {
         </div>
       )}
       
+      {loadError && (
+        <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded mb-4">
+          <p>加载文档失败: {loadError}</p>
+        </div>
+      )}
+      
       <div className="grid grid-cols-1 gap-4 mb-8">
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex justify-between items-center">
             <div>
-              <select className="border rounded px-2 py-1 text-sm mr-2">
-                <option>所有单位</option>
-                <option>XX公司</option>
-                <option>YY事业单位</option>
+              <select 
+                className="border rounded px-2 py-1 text-sm mr-2"
+                value={selectedOrg}
+                onChange={(e) => setSelectedOrg(e.target.value)}
+              >
+                <option value="">所有单位</option>
+                <option value="org1">XX公司</option>
+                <option value="org2">YY事业单位</option>
               </select>
-              <select className="border rounded px-2 py-1 text-sm">
-                <option>所有文档类型</option>
-                <option>会议纪要</option>
-                <option>合同</option>
-                <option>附件</option>
+              <select 
+                className="border rounded px-2 py-1 text-sm"
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+              >
+                <option value="">所有文档类型</option>
+                <option value="meeting">会议纪要</option>
+                <option value="contract">合同</option>
+                <option value="attachment">附件</option>
               </select>
             </div>
             <div className="relative">
@@ -110,6 +173,8 @@ function ClientDocumentLibraryPage() {
                 type="text" 
                 placeholder="搜索文档..." 
                 className="border rounded px-3 py-1 pl-8 text-sm w-64"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
               <div className="absolute left-2 top-1/2 transform -translate-y-1/2">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -147,11 +212,65 @@ function ClientDocumentLibraryPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              <tr className="text-center">
-                <td colSpan={6} className="px-6 py-12 text-gray-500">
-                  暂无文档，请上传文件
-                </td>
-              </tr>
+              {isLoading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center">
+                    <div className="flex justify-center">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div>
+                    </div>
+                    <p className="mt-2 text-sm text-gray-500">加载中...</p>
+                  </td>
+                </tr>
+              ) : filteredDocuments.length === 0 ? (
+                <tr className="text-center">
+                  <td colSpan={6} className="px-6 py-12 text-gray-500">
+                    暂无文档，请上传文件
+                  </td>
+                </tr>
+              ) : (
+                filteredDocuments.map((doc) => (
+                  <tr key={doc.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        {doc.documentType.includes('pdf') ? (
+                          <FileText className="h-4 w-4 text-red-500 mr-2" />
+                        ) : (
+                          <File className="h-4 w-4 text-blue-500 mr-2" />
+                        )}
+                        <span className="text-sm font-medium text-gray-900">
+                          {doc.name}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {doc.organizationName}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {doc.documentType}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(doc.uploadedAt).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        doc.extractedInfo 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {doc.extractedInfo ? '已提取' : '未提取'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button className="text-orange-600 hover:text-orange-900 mr-3">
+                        查看
+                      </button>
+                      <button className="text-blue-600 hover:text-blue-900">
+                        提取
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

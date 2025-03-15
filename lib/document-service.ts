@@ -103,16 +103,27 @@ export async function getDocuments(params: {
             queryParams.append('limit', params.limit.toString());
         }
 
-        // 发送API请求
+        // 使用合适的API端点获取文档列表
         const response = await fetch(`/api/documents?${queryParams.toString()}`);
 
         if (!response.ok) {
             throw new Error(`获取文档列表失败: ${response.statusText}`);
         }
 
-        return await response.json();
+        const result = await response.json();
+        
+        return {
+            success: true,
+            data: result.data || [],
+            totalCount: result.totalCount || 0,
+            page: result.page || 1
+        };
     } catch (error) {
         console.error('获取文档列表错误:', error);
-        throw error;
+        return {
+            success: false,
+            data: [],
+            message: error instanceof Error ? error.message : '获取文档列表时发生未知错误'
+        };
     }
 } 

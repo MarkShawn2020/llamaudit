@@ -1,15 +1,14 @@
-import React from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { X, Upload, FileText, File } from 'lucide-react';
-import { useState } from 'react';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { File, FileText, Upload, X } from 'lucide-react';
+import React, { useState } from 'react';
 
 interface UploadDialogProps {
   isOpen: boolean;
@@ -32,6 +31,12 @@ export function UploadDialog({ isOpen, onClose, onUpload }: UploadDialogProps) {
     } else if (e.type === 'dragleave') {
       setDragActive(false);
     }
+  };
+
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const openFileSelector = () => {
+    fileInputRef.current?.click();
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -91,8 +96,8 @@ export function UploadDialog({ isOpen, onClose, onUpload }: UploadDialogProps) {
               onChange={(e) => setOrganizationId(e.target.value)}
             >
               <option value="">请选择单位</option>
-              <option value="org1">XX公司</option>
-              <option value="org2">YY事业单位</option>
+              <option value="1">XX公司</option>
+              <option value="2">YY事业单位</option>
             </select>
           </div>
           <div className="space-y-2">
@@ -124,18 +129,22 @@ export function UploadDialog({ isOpen, onClose, onUpload }: UploadDialogProps) {
               <p className="text-xs text-gray-400">
                 支持Word和PDF格式文件
               </p>
-              <label className="mt-4">
-                <input
-                  type="file"
-                  className="hidden"
-                  multiple
-                  onChange={handleFileChange}
-                  accept=".docx,.doc,.pdf"
-                />
-                <Button type="button" variant="outline" size="sm">
-                  选择文件
-                </Button>
-              </label>
+              <input
+                type="file"
+                className="hidden"
+                multiple
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".docx,.doc,.pdf"
+              />
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm"
+                onClick={openFileSelector}
+              >
+                选择文件
+              </Button>
             </div>
           </div>
           {files.length > 0 && (

@@ -1,15 +1,17 @@
+import { relations } from 'drizzle-orm';
 import {
+  boolean,
+  integer,
+  json,
   pgTable,
+  real,
   serial,
-  varchar,
   text,
   timestamp,
-  integer,
-  boolean,
-  json,
-  real,
+  uuid,
+  varchar,
 } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { StorageProvider } from '../file-storage';
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -168,7 +170,7 @@ export const documents = pgTable('documents', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
   filePath: text('file_path').notNull(),
-  fileType: varchar('file_type', { length: 50 }).notNull(),
+  fileType: varchar('file_type', { length: 255 }).notNull(),
   documentTypeId: integer('document_type_id')
     .notNull()
     .references(() => documentTypes.id),
@@ -340,3 +342,21 @@ export type ComplianceRule = typeof complianceRules.$inferSelect;
 export type NewComplianceRule = typeof complianceRules.$inferInsert;
 export type ComplianceCheck = typeof complianceChecks.$inferSelect;
 export type NewComplianceCheck = typeof complianceChecks.$inferInsert;
+
+// 文件表
+export const files = pgTable('files', {
+  id: uuid('id').primaryKey().notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  originalName: varchar('original_name', { length: 255 }).notNull(),
+  fileType: varchar('file_type', { length: 255 }).notNull(),
+  size: integer('size').notNull(),
+  url: varchar('url', { length: 500 }).notNull(),
+  storagePath: varchar('storage_path', { length: 500 }).notNull(),
+  storageProvider: varchar('storage_provider', { length: 50 }).notNull().$type<StorageProvider>(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export type File = typeof files.$inferSelect;
+export type InsertFile = typeof files.$inferInsert;
