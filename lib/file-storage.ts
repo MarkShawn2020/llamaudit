@@ -186,6 +186,13 @@ export class AliyunOssStorage implements FileStorage {
    * @returns 文件存储结果
    */
   async uploadFile(file: File, fileId?: string): Promise<FileStorageResult> {
+    console.log('开始上传文件到OSS:', {
+      fileName: file.name,
+      fileType: file.type,
+      fileSize: file.size,
+      fileId,
+    });
+
     // 生成唯一的文件标识符，如果没有提供
     const id = fileId || randomUUID();
     
@@ -194,24 +201,33 @@ export class AliyunOssStorage implements FileStorage {
     
     // 生成OSS对象键（即路径）
     const objectKey = `${this.baseDir}/${id}${fileExtension}`;
+    console.log('OSS对象键:', objectKey);
     
     // 转换File对象为Buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     
-    // 上传到OSS
-    const result = await this.client.put(objectKey, buffer);
-    
-    // 获取文件URL
-    const url = result.url || this.getFileUrl(id, objectKey);
-    
-    return {
-      id,
-      name: file.name,
-      path: objectKey,
-      url,
-      provider: StorageProvider.ALIYUN_OSS,
-    };
+    try {
+      // 上传到OSS
+      console.log('正在上传到OSS...');
+      const result = await this.client.put(objectKey, buffer);
+      console.log('OSS上传成功:', result);
+      
+      // 获取文件URL
+      const url = result.url || this.getFileUrl(id, objectKey);
+      console.log('文件访问URL:', url);
+      
+      return {
+        id,
+        name: file.name,
+        path: objectKey,
+        url,
+        provider: StorageProvider.ALIYUN_OSS,
+      };
+    } catch (error) {
+      console.error('OSS上传失败:', error);
+      throw error;
+    }
   }
 
   /**
@@ -252,16 +268,26 @@ export function createStorage(): FileStorage {
   // 从环境变量获取存储提供商
   const provider = process.env.STORAGE_PROVIDER as StorageProvider || StorageProvider.LOCAL;
   
+  console.log('创建存储提供者:', provider);
+  console.log('OSS配置:', {
+    region: process.env.ALIYUN_OSS_REGION,
+    bucket: process.env.ALIYUN_OSS_BUCKET,
+    endpoint: process.env.ALIYUN_OSS_ENDPOINT,
+  });
+  
   switch (provider) {
     case StorageProvider.ALIYUN_OSS:
       try {
-        return new AliyunOssStorage();
+        const storage = new AliyunOssStorage();
+        console.log('成功创建阿里云OSS存储');
+        return storage;
       } catch (error) {
         console.error('创建阿里云OSS存储失败，将使用本地存储:', error);
         return new LocalFileStorage();
       }
     case StorageProvider.LOCAL:
     default:
+      console.log('使用本地存储');
       return new LocalFileStorage();
   }
 }

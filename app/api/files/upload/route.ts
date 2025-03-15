@@ -6,15 +6,6 @@ import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { NextRequest, NextResponse } from 'next/server';
 
-// 确保上传目录存在
-import fs from 'fs';
-import path from 'path';
-
-const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
-
 // 创建存储提供程序
 const storage = createStorage();
 

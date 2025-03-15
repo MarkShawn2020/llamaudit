@@ -55,6 +55,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@types/ali-oss": "^6.16.11",
     "ts-node": "^10.9.2"
   }
 }
