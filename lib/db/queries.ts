@@ -12,9 +12,10 @@ export async function getUser() {
   }
 
   return withConnection(async (db: DB) => {
-    return db.query.users.findFirst({
+    const user = await db.query.users.findFirst({
       where: eq(users.email, session.user.email),
     });
+    return user ?? null;
   });
 }
 

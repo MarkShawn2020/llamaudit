@@ -1,3 +1,5 @@
+'use client'
+
 import { useCallback, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -54,18 +56,15 @@ export function OssUpload() {
       xhr.send(file)
       await uploadPromise
 
-      toast({
-        title: "上传成功",
+      toast.success("上传成功",{
         description: `文件 ${file.name} 已成功上传`,
       })
 
       return url
     } catch (error) {
       console.error('Upload failed:', error)
-      toast({
-        title: "上传失败",
+      toast.error("上传失败",{
         description: error instanceof Error ? error.message : "未知错误",
-        variant: "destructive",
       })
       throw error
     } finally {

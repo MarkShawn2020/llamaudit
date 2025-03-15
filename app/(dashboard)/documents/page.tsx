@@ -39,7 +39,7 @@ function ClientDocumentsPage() {
         setUploadError(result.message);
       }
       
-      return result;
+      // 不返回 result，因为 onUpload 期望返回 void
     } catch (error) {
       setUploadError('上传过程中发生错误');
       console.error('上传出错:', error);
