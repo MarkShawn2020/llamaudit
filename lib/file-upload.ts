@@ -1,14 +1,15 @@
-import fs from 'fs';
-import path from 'path';
-import { promisify } from 'util';
+import OSS from 'ali-oss';
 import { randomUUID } from 'crypto';
-import { mkdir, writeFile } from 'fs/promises';
 
-const unlinkAsync = promisify(fs.unlink);
+// OSS 客户端配置
+const ossClient = new OSS({
+    region: process.env.OSS_REGION || 'oss-cn-hangzhou',
+    accessKeyId: process.env.OSS_ACCESS_KEY_ID || '',
+    accessKeySecret: process.env.OSS_ACCESS_KEY_SECRET || '',
+    bucket: process.env.OSS_BUCKET || '',
+});
 
-// 基本存储目录配置
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads');
-// 设置支持的文档类型并定义适当的类型
+// 支持的文档类型配置
 const DOC_TYPES: Record<string, string> = {
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
     'application/msword': 'doc',
@@ -16,38 +17,8 @@ const DOC_TYPES: Record<string, string> = {
     'text/plain': 'txt',
 };
 
-// 确保上传目录存在
-export async function ensureUploadDirs() {
-    try {
-        await mkdir(UPLOAD_DIR, { recursive: true });
-        await mkdir(path.join(UPLOAD_DIR, 'organizations'), { recursive: true });
-    } catch (error) {
-        console.error('Error creating upload directories:', error);
-    }
-}
-
-// 根据组织ID创建目录结构
-export async function ensureOrganizationDirs(organizationId: number) {
-    try {
-        const orgDir = path.join(UPLOAD_DIR, 'organizations', organizationId.toString());
-        await mkdir(orgDir, { recursive: true });
-
-        // 创建不同类型的文档目录
-        await mkdir(path.join(orgDir, 'meeting_minutes'), { recursive: true });
-        await mkdir(path.join(orgDir, 'contracts'), { recursive: true });
-        await mkdir(path.join(orgDir, 'attachments'), { recursive: true });
-
-        return true;
-    } catch (error) {
-        console.error(`Error creating directories for organization ${organizationId}:`, error);
-        return false;
-    }
-}
-
-// 根据文档类型获取存储路径
-function getDocumentPath(organizationId: number, documentType: string, fileName: string) {
-    const orgDir = path.join(UPLOAD_DIR, 'organizations', organizationId.toString());
-
+// 获取 OSS 存储路径
+function getOssPath(organizationId: number, documentType: string, fileName: string) {
     let docTypeDir;
     switch (documentType) {
         case 'meeting_minutes':
@@ -60,78 +31,61 @@ function getDocumentPath(organizationId: number, documentType: string, fileName:
             docTypeDir = 'attachments';
     }
 
-    return path.join(orgDir, docTypeDir, fileName);
+    return `organizations/${organizationId}/${docTypeDir}/${fileName}`;
 }
 
-// 保存上传的文件
+// 保存文件到 OSS
 export async function saveUploadedFile(
     file: { name: string; type: string; data: Buffer },
     organizationId: number,
     documentType: string
 ) {
     try {
-        // 确保目录存在
-        await ensureOrganizationDirs(organizationId);
-
-        // 生成唯一文件名，使用类型安全的访问方式
+        // 生成唯一文件名
         const extension = file.type in DOC_TYPES ? DOC_TYPES[file.type] : 'unknown';
         const uniqueFileName = `${randomUUID()}.${extension}`;
 
-        // 获取存储路径
-        const filePath = getDocumentPath(organizationId, documentType, uniqueFileName);
+        // 获取 OSS 存储路径
+        const ossPath = getOssPath(organizationId, documentType, uniqueFileName);
 
-        // 写入文件
-        await writeFile(filePath, file.data);
+        // 上传到 OSS
+        const result = await ossClient.put(ossPath, file.data);
 
         return {
             success: true,
             fileName: uniqueFileName,
             originalName: file.name,
             mimetype: file.type,
-            path: filePath,
-            relativePath: path.relative(process.cwd(), filePath),
+            url: result.url, // OSS 文件访问地址
+            ossPath: ossPath,
         };
     } catch (error) {
-        console.error('Error saving uploaded file:', error);
+        console.error('Error uploading file to OSS:', error);
         return {
             success: false,
-            error: 'Failed to save file',
+            error: 'Failed to upload file to OSS',
         };
     }
 }
 
-// 删除文件
-export async function deleteFile(filePath: string) {
+// 从 OSS 删除文件
+export async function deleteFile(ossPath: string) {
     try {
-        // 检查是否为相对路径，如果是则转换为绝对路径
-        const absolutePath = path.isAbsolute(filePath)
-            ? filePath
-            : path.join(process.cwd(), filePath);
-
-        await unlinkAsync(absolutePath);
+        await ossClient.delete(ossPath);
         return true;
     } catch (error) {
-        console.error('Error deleting file:', error);
+        console.error('Error deleting file from OSS:', error);
         return false;
     }
 }
 
-// 读取文件内容
-export async function readFileContent(filePath: string): Promise<string | null> {
+// 读取 OSS 文件内容
+export async function readFileContent(ossPath: string): Promise<string | null> {
     try {
-        // 检查是否为相对路径，如果是则转换为绝对路径
-        const absolutePath = path.isAbsolute(filePath)
-            ? filePath
-            : path.join(process.cwd(), filePath);
-
-        // 目前只支持文本文件读取，后续可扩展为支持 docx 和 pdf
-        const content = await fs.promises.readFile(absolutePath, 'utf8');
-        return content;
+        const result = await ossClient.get(ossPath);
+        return result.content.toString('utf8');
     } catch (error) {
-        console.error('Error reading file:', error);
+        console.error('Error reading file from OSS:', error);
         return null;
     }
-}
-
-// 初始化上传目录
-ensureUploadDirs().catch(console.error); 
+} 

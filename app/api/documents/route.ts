@@ -161,7 +161,7 @@ export async function POST(
         // 创建文档记录
         const document = await createDocument({
             name: documentName,
-            filePath: saveResult.relativePath!, // todo: oss path
+            filePath: saveResult.ossPath!,
             fileType: file.type,
             documentTypeId,
             organizationId,
