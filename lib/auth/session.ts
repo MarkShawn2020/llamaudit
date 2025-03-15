@@ -1,9 +1,17 @@
+import { NewUser } from '@/lib/db/schema';
 import { compare, hash } from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
-import { NewUser } from '@/lib/db/schema';
 
-const key = new TextEncoder().encode(process.env.AUTH_SECRET);
+// Ensure the AUTH_SECRET is properly defined
+const AUTH_SECRET = process.env.AUTH_SECRET;
+if (!AUTH_SECRET) {
+  console.error('AUTH_SECRET is not defined in environment variables');
+  // In production, you might want to throw an error here
+}
+
+// Use the AUTH_SECRET only if it's available
+const key = AUTH_SECRET ? new TextEncoder().encode(AUTH_SECRET) : new Uint8Array();
 const SALT_ROUNDS = 10;
 
 export async function hashPassword(password: string) {
@@ -31,10 +39,19 @@ export async function signToken(payload: SessionData) {
 }
 
 export async function verifyToken(input: string) {
-  const { payload } = await jwtVerify(input, key, {
-    algorithms: ['HS256'],
-  });
-  return payload as SessionData;
+  try {
+    if (!AUTH_SECRET) {
+      throw new Error('AUTH_SECRET is not defined');
+    }
+    
+    const { payload } = await jwtVerify(input, key, {
+      algorithms: ['HS256'],
+    });
+    return payload as SessionData;
+  } catch (error) {
+    console.error('Token verification failed:', error);
+    throw error;
+  }
 }
 
 export async function getSession() {
