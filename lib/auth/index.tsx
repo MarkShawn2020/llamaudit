@@ -1,10 +1,10 @@
 'use client';
 
-import { createContext, useContext, ReactNode } from 'react';
 import { User } from '@/lib/db/schema';
+import { createContext, ReactNode, Suspense, useContext } from 'react';
 
 type UserContextType = {
-  userPromise: Promise<User | null>;
+  user: User | null;
 };
 
 const UserContext = createContext<UserContextType | null>(null);
@@ -17,6 +17,20 @@ export function useUser(): UserContextType {
   return context;
 }
 
+function UserProviderInner({
+  user,
+  children
+}: {
+  user: User | null;
+  children: ReactNode;
+}) {
+  return (
+    <UserContext.Provider value={{ user }}>
+      {children}
+    </UserContext.Provider>
+  );
+}
+
 export function UserProvider({
   children,
   userPromise
@@ -25,8 +39,26 @@ export function UserProvider({
   userPromise: Promise<User | null>;
 }) {
   return (
-    <UserContext.Provider value={{ userPromise }}>
+    <Suspense>
+      <AsyncUserProvider userPromise={userPromise}>
+        {children}
+      </AsyncUserProvider>
+    </Suspense>
+  );
+}
+
+async function AsyncUserProvider({
+  children,
+  userPromise
+}: {
+  children: ReactNode;
+  userPromise: Promise<User | null>;
+}) {
+  const user = await userPromise;
+  
+  return (
+    <UserProviderInner user={user}>
       {children}
-    </UserContext.Provider>
+    </UserProviderInner>
   );
 }

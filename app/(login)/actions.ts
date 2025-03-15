@@ -1,30 +1,31 @@
 'use server';
 
-import { z } from 'zod';
-import { and, eq, sql } from 'drizzle-orm';
-import { db } from '@/lib/db/drizzle';
-import {
-  User,
-  users,
-  teams,
-  teamMembers,
-  activityLogs,
-  type NewUser,
-  type NewTeam,
-  type NewTeamMember,
-  type NewActivityLog,
-  ActivityType,
-  invitations,
-} from '@/lib/db/schema';
-import { comparePasswords, hashPassword, setSession } from '@/lib/auth/session';
-import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
-import { createCheckoutSession } from '@/lib/payments/stripe';
-import { getUser, getUserWithTeam } from '@/lib/db/queries';
 import {
   validatedAction,
   validatedActionWithUser,
 } from '@/lib/auth/middleware';
+import { comparePasswords, hashPassword, setSession } from '@/lib/auth/session';
+import { db } from '@/lib/db';
+import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import {
+  activityLogs,
+  ActivityType,
+  invitations,
+  teamMembers,
+  teams,
+  User,
+  users,
+  type NewActivityLog,
+  type NewTeam,
+  type NewTeamMember,
+  type NewUser,
+} from '@/lib/db/schema';
+import { createCheckoutSession } from '@/lib/payments/stripe';
+import { ActionState } from '@/lib/types';
+import { and, eq, sql } from 'drizzle-orm';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { z } from 'zod';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -326,20 +327,26 @@ const updateAccountSchema = z.object({
   email: z.string().email('Invalid email address'),
 });
 
-export const updateAccount = validatedActionWithUser(
-  updateAccountSchema,
-  async (data, _, user) => {
-    const { name, email } = data;
-    const userWithTeam = await getUserWithTeam(user.id);
+export const updateAccount = async (formData: FormData): Promise<ActionState> => {
+  const user = await getUser();
+  if (!user) {
+    return { error: '用户未登录' };
+  }
 
-    await Promise.all([
-      db.update(users).set({ name, email }).where(eq(users.id, user.id)),
-      logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT),
-    ]);
+  const name = formData.get('name') as string;
+  
+  try {
+    await db
+      .update(users)
+      .set({ name })
+      .where(eq(users.id, user.id));
 
-    return { success: 'Account updated successfully.' };
-  },
-);
+    return { success: '更新成功' };
+  } catch (error) {
+    console.error('Failed to update account:', error);
+    return { error: '更新失败' };
+  }
+};
 
 const removeTeamMemberSchema = z.object({
   memberId: z.number(),

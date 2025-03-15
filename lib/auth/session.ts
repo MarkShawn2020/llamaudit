@@ -1,3 +1,5 @@
+'use server';
+
 import { NewUser } from '@/lib/db/schema';
 import { compare, hash } from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';

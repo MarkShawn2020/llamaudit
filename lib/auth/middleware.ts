@@ -1,7 +1,7 @@
-import { z } from 'zod';
-import { TeamDataWithMembers, User } from '@/lib/db/schema';
 import { getTeamForUser, getUser } from '@/lib/db/queries';
+import { TeamDataWithMembers, User } from '@/lib/db/schema';
 import { redirect } from 'next/navigation';
+import { z } from 'zod';
 
 export type ActionState = {
   error?: string;

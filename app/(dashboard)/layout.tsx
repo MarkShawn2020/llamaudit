@@ -1,24 +1,23 @@
 'use client';
 
-import Link from 'next/link';
-import { use, useState, Suspense } from 'react';
+import { signOut } from '@/app/(login)/actions';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { CircleIcon, Home, LogOut } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useUser } from '@/lib/auth';
-import { signOut } from '@/app/(login)/actions';
+import { CircleIcon, Home, LogOut } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
 
 function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { userPromise } = useUser();
-  const user = use(userPromise);
+  const { user } = useUser();
   const router = useRouter();
 
   async function handleSignOut() {
