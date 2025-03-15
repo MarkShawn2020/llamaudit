@@ -1,5 +1,5 @@
-import { toast } from '@/components/ui/use-toast'
 import { useCallback, useState } from 'react'
+import { toast } from 'sonner'
 
 export function OssUpload() {
   const [uploading, setUploading] = useState(false)

@@ -2,6 +2,7 @@ import { UserProvider } from '@/lib/auth';
 import { getUser } from '@/lib/db/queries';
 import type { Metadata, Viewport } from 'next';
 import { Manrope } from 'next/font/google';
+import { Toaster } from 'sonner';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -28,7 +29,9 @@ export default function RootLayout({
       className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}
     >
       <body className="min-h-[100dvh] bg-gray-50" suppressHydrationWarning>
-        <UserProvider userPromise={userPromise}>{children}</UserProvider>
+        <UserProvider userPromise={userPromise}>{children}</UserProvider> 
+
+        <Toaster />
       </body>
     </html>
   );

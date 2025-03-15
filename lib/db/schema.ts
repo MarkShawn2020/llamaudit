@@ -1,15 +1,15 @@
 import { relations } from 'drizzle-orm';
 import {
-    boolean,
-    integer,
-    json,
-    pgTable,
-    real,
-    serial,
-    text,
-    timestamp,
-    uuid,
-    varchar,
+  boolean,
+  integer,
+  json,
+  pgTable,
+  real,
+  serial,
+  text,
+  timestamp,
+  uuid,
+  varchar,
 } from 'drizzle-orm/pg-core';
 import { StorageProvider } from '../file-storage';
 

@@ -6,7 +6,7 @@
  * 上传文档文件
  * @param files 文件数组
  * @param organizationId 组织ID
- * @param documentType 文档类型
+ * @param documentType 文档类型ID
  * @returns 上传结果
  */
 export async function uploadDocuments(
@@ -20,15 +20,26 @@ export async function uploadDocuments(
 
         // 添加文件到FormData
         files.forEach((file) => {
-            formData.append('files', file);
+            formData.append('file', file);
         });
 
-        // 添加其他参数
-        formData.append('organizationId', organizationId);
-        formData.append('documentType', documentType);
+        // 验证参数
+        const orgId = Number(organizationId);
+        if (isNaN(orgId)) {
+            throw new Error('无效的组织ID');
+        }
 
+        const docTypeId = Number(documentType);
+        if (isNaN(docTypeId)) {
+            throw new Error('无效的文档类型ID');
+        }
+
+        // 添加其他参数
+        formData.append('documentTypeId', docTypeId.toString());
+        formData.append('organizationId', orgId.toString());
+        
         // 发送API请求
-        const response = await fetch('/api/documents/upload', {
+        const response = await fetch(`/api/documents`, {
             method: 'POST',
             body: formData,
         });
@@ -41,7 +52,7 @@ export async function uploadDocuments(
         return {
             success: true,
             message: '上传成功',
-            documentIds: result.documentIds,
+            documentIds: [result.data.document.id],
         };
     } catch (error) {
         console.error('文档上传错误:', error);

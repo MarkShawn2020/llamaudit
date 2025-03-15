@@ -7,10 +7,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Progress } from '@/components/ui/progress';
 import OSS from 'ali-oss';
-import { File, FileText, Upload, X } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import React, { useCallback, useState } from 'react';
+import { useDropzone } from 'react-dropzone';
 
 interface STSToken {
   AccessKeyId: string;
@@ -27,13 +27,26 @@ interface UploadDialogProps {
 
 export function UploadDialog({ isOpen, onClose, onUpload }: UploadDialogProps) {
   const [files, setFiles] = useState<File[]>([]);
-  const [organizationId, setOrganizationId] = useState<string>('');
-  const [documentType, setDocumentType] = useState<string>('meeting');
+  const [organizationId, setOrganizationId] = useState('');
+  const [documentType, setDocumentType] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
+  const [uploadProgress, setUploadProgress] = useState<Record<number, number>>({});
   const [credentials, setCredentials] = useState<STSToken | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const handleDrop = useCallback((acceptedFiles: File[]) => {
+    setFiles(acceptedFiles);
+  }, []);
+
+  const { getRootProps, getInputProps } = useDropzone({
+    onDrop: handleDrop,
+    accept: {
+      'application/pdf': ['.pdf'],
+      'application/msword': ['.doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+    },
+  });
 
   // 获取 STS Token
   const getSTSToken = async () => {
@@ -95,89 +108,17 @@ export function UploadDialog({ isOpen, onClose, onUpload }: UploadDialogProps) {
     fileInputRef.current?.click();
   };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const newFiles = Array.from(e.dataTransfer.files);
-      setFiles((prevFiles) => [...prevFiles, ...newFiles]);
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const newFiles = Array.from(e.target.files);
-      setFiles((prevFiles) => [...prevFiles, ...newFiles]);
-    }
-  };
-
-  const removeFile = (index: number) => {
-    setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
-    // 清除对应的上传进度
-    setUploadProgress((prev) => {
-      const newProgress = { ...prev };
-      delete newProgress[index];
-      return newProgress;
-    });
-  };
-
-  const uploadToOSS = async (file: File, index: number) => {
-    const client = await getOSSClient();
-    const fileName = `${organizationId}/${documentType}/${Date.now()}-${file.name}`;
-
-    try {
-      await client.multipartUpload(fileName, file, {
-        progress: (p) => {
-          setUploadProgress((prev) => ({
-            ...prev,
-            [index]: Math.floor(p * 100),
-          }));
-        },
-        headers: {
-          // 添加必要的 headers
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, HEAD, OPTIONS',
-        },
-      });
-      return fileName;
-    } catch (error: any) {
-      console.error('文件上传失败:', error);
-      
-      // 处理 CORS 错误
-      if (error.code === 'AccessDenied' || error.message?.includes('CORS')) {
-        throw new Error(`跨域请求被拒绝，请确保已正确配置 OSS 的 CORS 规则。\n具体错误: ${error.message}`);
-      }
-      
-      // 处理其他常见错误
-      if (error.code === 'InvalidAccessKeyId') {
-        throw new Error('AccessKey 无效，请检查配置');
-      }
-      if (error.code === 'SignatureDoesNotMatch') {
-        throw new Error('签名验证失败，请检查 AccessKey Secret');
-      }
-      if (error.code === 'NoSuchBucket') {
-        throw new Error('Bucket 不存在，请检查配置');
-      }
-      
-      throw error;
-    }
-  };
-
   const handleSubmit = async () => {
-    if (files.length === 0 || !organizationId) return;
-    
+    if (files.length === 0 || !organizationId || !documentType) {
+      setError('请选择文件、审计单位和文档类型');
+      return;
+    }
+
     setIsUploading(true);
-    setError(null);  // 重置错误状态
-    
+    setError(null);
+
     try {
-      const uploadPromises = files.map((file, index) => uploadToOSS(file, index));
-      await Promise.all(uploadPromises);
-      
-      // 调用父组件的 onUpload 回调
       await onUpload(files, organizationId, documentType);
-      
-      // 重置状态
       onClose();
       setFiles([]);
       setUploadProgress({});
@@ -218,97 +159,57 @@ export function UploadDialog({ isOpen, onClose, onUpload }: UploadDialogProps) {
               value={documentType}
               onChange={(e) => setDocumentType(e.target.value)}
             >
-              <option value="meeting">会议纪要</option>
-              <option value="contract">合同</option>
-              <option value="attachment">附件</option>
+              <option value="">请选择类型</option>
+              <option value="1">会议纪要</option>
+              <option value="2">合同</option>
+              <option value="3">附件</option>
             </select>
           </div>
           <div
-            className={`border-2 border-dashed rounded-lg p-6 text-center ${
-              dragActive ? 'border-orange-500 bg-orange-50' : 'border-gray-300'
-            }`}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
+            {...getRootProps()}
+            className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-gray-400 transition-colors"
           >
-            <div className="flex flex-col items-center justify-center">
-              <Upload className="h-10 w-10 text-gray-400 mb-2" />
-              <p className="text-sm text-gray-500 mb-1">
-                拖放文件到此处，或点击选择文件
-              </p>
-              <p className="text-xs text-gray-400">
-                支持Word和PDF格式文件
-              </p>
-              <input
-                type="file"
-                className="hidden"
-                multiple
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept=".docx,.doc,.pdf"
-              />
-              <Button 
-                type="button" 
-                variant="outline" 
-                size="sm"
-                onClick={openFileSelector}
-              >
-                选择文件
-              </Button>
-            </div>
-          </div>
-          {files.length > 0 && (
-            <div className="mt-4">
-              <h4 className="text-sm font-medium mb-2">已选择 {files.length} 个文件</h4>
-              <ul className="space-y-2 max-h-40 overflow-y-auto">
+            <input {...getInputProps()} />
+            {files.length > 0 ? (
+              <div className="space-y-2">
                 {files.map((file, index) => (
-                  <li key={index} className="space-y-2">
-                    <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                      <div className="flex items-center">
-                        {file.type.includes('pdf') ? (
-                          <FileText className="h-4 w-4 text-red-500 mr-2" />
-                        ) : (
-                          <File className="h-4 w-4 text-blue-500 mr-2" />
-                        )}
-                        <span className="text-sm truncate max-w-[200px]">{file.name}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeFile(index)}
-                        className="text-gray-500 hover:text-gray-700"
-                        disabled={isUploading}
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
+                  <div key={index} className="flex items-center space-x-2">
+                    <FileText className="h-5 w-5 text-gray-500" />
+                    <span>{file.name}</span>
                     {uploadProgress[index] !== undefined && (
-                      <div className="w-full">
-                        <Progress value={uploadProgress[index]} className="h-1" />
-                        <span className="text-xs text-gray-500">{uploadProgress[index]}%</span>
-                      </div>
+                      <span className="text-sm text-gray-500">
+                        ({uploadProgress[index]}%)
+                      </span>
                     )}
-                  </li>
+                  </div>
                 ))}
-              </ul>
-            </div>
+              </div>
+            ) : (
+              <div className="text-gray-500">
+                <p>拖放文件到此处，或点击选择文件</p>
+                <p className="text-sm">支持 PDF、DOC、DOCX 格式</p>
+              </div>
+            )}
+          </div>
+          {error && (
+            <div className="text-red-500 text-sm">{error}</div>
           )}
         </div>
-        {error && (
-          <div className="mt-2 p-3 text-sm text-red-500 bg-red-50 rounded-md">
-            {error}
-          </div>
-        )}
-        <DialogFooter className="sm:justify-between">
-          <Button variant="ghost" onClick={onClose} disabled={isUploading}>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={isUploading}
+          >
             取消
           </Button>
           <Button
+            type="button"
             onClick={handleSubmit}
-            disabled={files.length === 0 || !organizationId || isUploading}
-            className="bg-orange-600 hover:bg-orange-700"
+            disabled={files.length === 0 || isUploading}
           >
-            {isUploading ? '上传中...' : '上传文件'}
+            {isUploading ? '上传中...' : '上传'}
           </Button>
         </DialogFooter>
       </DialogContent>
