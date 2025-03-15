@@ -1,10 +1,10 @@
-import { db } from '@/lib/db';
-import { getUser } from '@/lib/db/queries';
-import { files } from '@/lib/db/schema';
-import { createStorage } from '@/lib/file-storage';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { NextRequest, NextResponse } from 'next/server';
+import { withConnection, type DB } from '../../../lib/db';
+import { getUser } from '../../../lib/db/queries';
+import { files } from '../../../lib/db/schema';
+import { createStorage } from '../../../lib/file-storage';
 
 // 创建存储提供程序
 const storage = createStorage();
@@ -59,21 +59,24 @@ export async function POST(request: NextRequest) {
     // 上传文件到存储
     const uploadResult = await storage.uploadFile(file, fileId);
 
-    // 保存文件元数据到数据库
-    const [fileMetadata] = await db
-      .insert(files)
-      .values({
-        id: fileId,
-        name: file.name,
-        originalName: file.name,
-        size: file.size,
-        fileType: file.type,
-        url: uploadResult.url,
-        storagePath: uploadResult.path,
-        storageProvider: uploadResult.provider,
-        userId: user.id,
-      })
-      .returning();
+    // 使用 withConnection 包装数据库操作
+    const fileMetadata = await withConnection(async (db: DB) => {
+      const [result] = await db
+        .insert(files)
+        .values({
+          id: fileId,
+          name: file.name,
+          originalName: file.name,
+          size: file.size,
+          fileType: file.type,
+          url: uploadResult.url,
+          storagePath: uploadResult.path,
+          storageProvider: uploadResult.provider,
+          userId: user.id,
+        })
+        .returning();
+      return result;
+    });
 
     // 重新验证文件路径
     revalidatePath('/files');
