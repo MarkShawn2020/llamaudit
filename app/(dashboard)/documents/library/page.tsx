@@ -1,7 +1,7 @@
 'use client';
 
-import { UploadDialog } from '@/app/components/upload-dialog';
 import { Button } from '@/components/ui/button';
+import { UploadDialog } from '@/components/ui/upload-dialog';
 import { getDocuments, uploadDocuments } from '@/lib/document-service';
 import { ChevronLeft, File, FileText, Filter, Upload } from 'lucide-react';
 import Link from 'next/link';

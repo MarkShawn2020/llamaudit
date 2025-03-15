@@ -1,13 +1,10 @@
 'use client';
 
-import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, Upload, FileText, Search, BarChart } from 'lucide-react';
-import Link from 'next/link';
-import { getUser } from '@/lib/db/queries';
-import { redirect } from 'next/navigation';
-import { UploadDialog } from '@/app/components/upload-dialog';
+import { UploadDialog } from '@/components/ui/upload-dialog';
 import { uploadDocuments } from '@/lib/document-service';
+import { BarChart, FileText, Plus, Search, Upload } from 'lucide-react';
+import Link from 'next/link';
 import { useState } from 'react';
 
 export default function DocumentsPage() {
