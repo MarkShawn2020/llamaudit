@@ -28,20 +28,12 @@ function UserMenu() {
 
   if (!user) {
     return (
-      <>
-        <Link
-          href="/pricing"
-          className="text-sm font-medium text-gray-700 hover:text-gray-900"
-        >
-          Pricing
-        </Link>
-        <Button
-          asChild
-          className="bg-black hover:bg-gray-800 text-white text-sm px-4 py-2 rounded-full"
-        >
-          <Link href="/sign-up">Sign Up</Link>
-        </Button>
-      </>
+      <Button
+        asChild
+        className="bg-black hover:bg-gray-800 text-white text-sm px-4 py-2 rounded-full"
+      >
+        <Link href="/sign-in">登录</Link>
+      </Button>
     );
   }
 
@@ -62,14 +54,14 @@ function UserMenu() {
         <DropdownMenuItem className="cursor-pointer">
           <Link href="/dashboard" className="flex w-full items-center">
             <Home className="mr-2 h-4 w-4" />
-            <span>Dashboard</span>
+            <span>工作台</span>
           </Link>
         </DropdownMenuItem>
         <form action={handleSignOut} className="w-full">
           <button type="submit" className="flex w-full">
             <DropdownMenuItem className="w-full flex-1 cursor-pointer">
               <LogOut className="mr-2 h-4 w-4" />
-              <span>Sign out</span>
+              <span>退出登录</span>
             </DropdownMenuItem>
           </button>
         </form>

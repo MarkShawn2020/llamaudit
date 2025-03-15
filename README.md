@@ -1,72 +1,61 @@
-# Next.js SaaS Starter
+# LlamaAudit - AI 驱动的审计辅助系统
 
-This is a starter template for building a SaaS application using **Next.js** with support for authentication, Stripe integration for payments, and a dashboard for logged-in users.
+基于 AI 的智能审计辅助系统，支持文件管理、信息抽取、合规性检查等功能。
 
-**Demo: [https://next-saas-start.vercel.app/](https://next-saas-start.vercel.app/)**
+## 核心功能
 
-## Features
+- 被审计单位信息维护
+- 文件导入与管理（会议纪要、合同、附件等）
+- AI 驱动的关键信息抽取
+  - 三重一大会议纪要信息提取
+  - 合同关键信息提取
+- 智能问答系统
+- 合规性规则配置与检查
+- 审计底稿导出
 
-- Marketing landing page (`/`) with animated Terminal element
-- Pricing page (`/pricing`) which connects to Stripe Checkout
-- Dashboard pages with CRUD operations on users/teams
-- Basic RBAC with Owner and Member roles
-- Subscription management with Stripe Customer Portal
-- Email/password authentication with JWTs stored to cookies
-- Global middleware to protect logged-in routes
-- Local middleware to protect Server Actions or validate Zod schemas
-- Activity logging system for any user events
+## 技术栈
 
-## Tech Stack
-
-- **Framework**: [Next.js](https://nextjs.org/)
-- **Database**: [Postgres](https://www.postgresql.org/)
+- **框架**: [Next.js](https://nextjs.org/)
+- **数据库**: [Postgres](https://www.postgresql.org/)
 - **ORM**: [Drizzle](https://orm.drizzle.team/)
-- **Payments**: [Stripe](https://stripe.com/)
-- **UI Library**: [shadcn/ui](https://ui.shadcn.com/)
+- **UI 组件**: [shadcn/ui](https://ui.shadcn.com/)
+- **AI 模型**: [LLaMA](https://ai.meta.com/llama/)
 
-## Getting Started
+## 本地开发
 
 ```bash
-git clone https://github.com/nextjs/saas-starter
-cd saas-starter
+git clone https://github.com/your-org/llamaudit
+cd llamaudit
 pnpm install
 ```
 
-## Running Locally
+### 环境配置
 
-Use the included setup script to create your `.env` file:
+使用提供的脚本创建 `.env` 文件：
 
 ```bash
 pnpm db:setup
 ```
 
-Then, run the database migrations and seed the database with a default user and team:
+运行数据库迁移并初始化种子数据：
 
 ```bash
 pnpm db:migrate
 pnpm db:seed
 ```
 
-This will create the following user and team:
+这将创建以下默认用户：
 
-- User: `test@test.com`
-- Password: `admin123`
+- 用户名: `admin@llamaudit.com`
+- 密码: `admin123`
 
-You can, of course, create new users as well through `/sign-up`.
-
-Finally, run the Next.js development server:
+启动开发服务器：
 
 ```bash
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser to see the app in action.
-
-Optionally, you can listen for Stripe webhooks locally through their CLI to handle subscription change events:
-
-```bash
-stripe listen --forward-to localhost:3000/api/stripe/webhook
-```
+访问 [http://localhost:3000](http://localhost:3000) 查看应用。
 
 ## Testing Payments
 

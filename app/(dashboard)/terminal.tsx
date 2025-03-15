@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Copy, Check } from 'lucide-react';
+import { Check, Copy } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 export function Terminal() {
   const [terminalStep, setTerminalStep] = useState(0);
   const [copied, setCopied] = useState(false);
   const terminalSteps = [
-    'git clone https://github.com/nextjs/saas-starter',
+    'git clone git@github.com:MarkShawn2020/2025-03-15_llamaudit.git',
     'pnpm install',
     'pnpm db:setup',
     'pnpm db:migrate',
