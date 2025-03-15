@@ -19,7 +19,7 @@ export default function HomePage() {
                 进行合规性检查，并提供智能问答功能，大幅提升审计效率。
               </p>
               <div className="mt-8 sm:max-w-lg sm:mx-auto sm:text-center lg:text-left lg:mx-0">
-                <Link href="/dashboard">
+                <Link href="/documents">
                   <Button className="bg-orange-600 hover:bg-orange-700 text-white rounded-full text-lg px-8 py-4 inline-flex items-center justify-center">
                     立即体验
                     <ArrowRight className="ml-2 h-5 w-5" />
