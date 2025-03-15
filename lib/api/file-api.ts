@@ -18,36 +18,62 @@ export interface FileMetadata {
   updatedAt: string;
 }
 
-/**
- * 上传文件到服务器
- * @param file 要上传的文件
- * @param onProgress 进度回调函数
- * @returns 上传的文件信息
- */
-export async function uploadFile(
-  file: File,
-  onProgress?: (progress: number) => void
-): Promise<FileUploadResponse> {
-  const formData = new FormData();
-  formData.append('file', file);
+export interface UploadResult {
+  id: string;
+  url: string;
+}
 
+/**
+ * 上传文件到阿里云 OSS
+ * @param file 要上传的文件
+ * @param onProgress 上传进度回调
+ * @returns 上传结果，包含文件 ID 和访问 URL
+ */
+export async function uploadFile(file: File, onProgress?: (progress: number) => void): Promise<UploadResult> {
   try {
-    const response = await axios.post<FileUploadResponse>('/api/files/upload', formData, {
+    // 1. 从服务器获取上传签名URL
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+
+    const { data } = await axios.post('/api/documents/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+    });
+
+    if (!data.success) {
+      throw new Error(data.error || '获取上传URL失败');
+    }
+
+    const { uploadUrl, accessUrl, objectName } = data.data;
+
+    // 2. 使用签名URL上传文件
+    await axios.put(uploadUrl, file, {
+      headers: {
+        'Content-Type': file.type || 'application/octet-stream',
+      },
       onUploadProgress: (progressEvent) => {
         if (onProgress && progressEvent.total) {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          onProgress(percentCompleted);
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress(percent);
         }
       },
     });
 
-    return response.data;
+    // 3. 返回文件信息
+    return {
+      id: objectName,
+      url: accessUrl,
+    };
   } catch (error) {
-    console.error('文件上传错误:', error);
-    throw new Error('文件上传失败');
+    console.error('File upload error:', error);
+    if (axios.isAxiosError(error) && error.response?.data?.error) {
+      throw new Error(
+        error.response.data.error + 
+        (error.response.data.details ? `: ${JSON.stringify(error.response.data.details)}` : '')
+      );
+    }
+    throw new Error('文件上传失败，请重试');
   }
 }
 

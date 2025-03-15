@@ -2,6 +2,8 @@ import { FileUpload } from '@/components/FileUpload';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from '@/components/ui/use-toast';
+import { uploadToOSS } from '@/lib/oss-service';
 import { FileText, Upload } from 'lucide-react';
 
 export default function FilesPage() {
@@ -33,13 +35,30 @@ export default function FilesPage() {
             </CardHeader>
             <CardContent>
               <FileUpload 
-                onUploadComplete={(file) => {
-                  console.log('文件上传成功:', file);
-                  // 可以在这里添加上传成功后的处理逻辑
+                onUploadComplete={async (file) => {
+                  try {
+                    const url = await uploadToOSS(file);
+                    toast({
+                      title: "上传成功",
+                      description: `文件 ${file.name} 已成功上传到 OSS`,
+                    });
+                    console.log('文件上传成功:', url);
+                  } catch (error) {
+                    toast({
+                      title: "上传失败",
+                      description: error instanceof Error ? error.message : "未知错误",
+                      variant: "destructive",
+                    });
+                    console.error('文件上传失败:', error);
+                  }
                 }}
                 onUploadError={(error) => {
+                  toast({
+                    title: "上传失败",
+                    description: error instanceof Error ? error.message : "未知错误",
+                    variant: "destructive",
+                  });
                   console.error('文件上传失败:', error);
-                  // 可以在这里添加上传失败后的处理逻辑
                 }}
               />
             </CardContent>
