@@ -111,12 +111,12 @@ export async function POST(
         const documentTypeIdRaw = formData.get('documentTypeId');
         const documentNameRaw = formData.get('name');
         const documentName = documentNameRaw ? String(documentNameRaw) : file.name;
-
-        const organizationId = formData.get('organizationId');
+        
+        const organizationId = safeParseInt(formData.get('organizationId') as string);
         if(!organizationId) {
             return NextResponse.json({ error: 'No organization ID provided' }, { status: 400 });
         }
-        
+
 
         // 验证并转换 documentTypeId
         const documentTypeId = Number(documentTypeIdRaw);
