@@ -9,8 +9,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, CheckCircle, AlertCircle, FileText } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, FileText, Link } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface FileAnalysisTableProps {
   results: MeetingAnalysisResult[];
@@ -28,18 +29,18 @@ export default function FileAnalysisTable({ results }: FileAnalysisTableProps) {
   }
 
   return (
-    <div className="rounded-md border">
+    <div className="overflow-x-auto w-full">
       <Table>
-        <TableCaption>会议纪要文件解析结果</TableCaption>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[180px]">文件名</TableHead>
-            <TableHead>会议时间</TableHead>
-            <TableHead>文号</TableHead>
-            <TableHead>会议议题</TableHead>
-            <TableHead>事项类别</TableHead>
-            <TableHead>涉及金额</TableHead>
-            <TableHead>状态</TableHead>
+            <TableHead className="w-[200px]">文件名</TableHead>
+            <TableHead className="w-[120px]">会议时间</TableHead>
+            <TableHead className="w-[100px]">文号</TableHead>
+            <TableHead className="w-[200px]">会议议题</TableHead>
+            <TableHead className="w-[100px]">事项类别</TableHead>
+            <TableHead className="w-[100px]">涉及金额</TableHead>
+            <TableHead className="w-[100px]">状态</TableHead>
+            <TableHead className="w-[100px]">操作</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -47,8 +48,8 @@ export default function FileAnalysisTable({ results }: FileAnalysisTableProps) {
             <TableRow key={result.id}>
               <TableCell className="font-medium">
                 <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-gray-400" />
-                  <span className="truncate max-w-[120px]" title={result.fileName}>
+                  <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                  <span className="truncate max-w-[160px]" title={result.fileName}>
                     {result.fileName}
                   </span>
                 </div>
@@ -56,13 +57,15 @@ export default function FileAnalysisTable({ results }: FileAnalysisTableProps) {
               <TableCell>{result.meetingTime || '-'}</TableCell>
               <TableCell>{result.meetingNumber || '-'}</TableCell>
               <TableCell>
-                <span className="truncate max-w-[200px] block" title={result.meetingTopic}>
+                <span className="truncate max-w-[160px] block" title={result.meetingTopic}>
                   {result.meetingTopic || '-'}
                 </span>
               </TableCell>
               <TableCell>
                 {result.eventCategory ? (
-                  <Badge variant="outline">{result.eventCategory}</Badge>
+                  <Badge variant="outline" className="whitespace-nowrap">
+                    {result.eventCategory}
+                  </Badge>
                 ) : (
                   '-'
                 )}
@@ -71,9 +74,18 @@ export default function FileAnalysisTable({ results }: FileAnalysisTableProps) {
               <TableCell>
                 {renderStatus(result.status, result.error)}
               </TableCell>
+              <TableCell>
+                {result.status === 'completed' && (
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <Link className="h-4 w-4" />
+                    <span className="sr-only">查看详情</span>
+                  </Button>
+                )}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
+        <TableCaption>共 {results.length} 个文件分析结果</TableCaption>
       </Table>
     </div>
   );
@@ -83,27 +95,27 @@ function renderStatus(status: MeetingAnalysisResult['status'], error?: string) {
   switch (status) {
     case 'pending':
       return (
-        <Badge variant="outline" className="text-yellow-600 bg-yellow-50">
+        <Badge variant="outline" className="text-yellow-600 bg-yellow-50 whitespace-nowrap">
           等待处理
         </Badge>
       );
     case 'processing':
       return (
-        <div className="flex items-center gap-1 text-blue-600">
+        <div className="flex items-center gap-1 text-blue-600 whitespace-nowrap">
           <Loader2 className="h-3 w-3 animate-spin" />
           <span className="text-xs">解析中...</span>
         </div>
       );
     case 'completed':
       return (
-        <div className="flex items-center gap-1 text-green-600">
+        <div className="flex items-center gap-1 text-green-600 whitespace-nowrap">
           <CheckCircle className="h-3 w-3" />
           <span className="text-xs">已完成</span>
         </div>
       );
     case 'error':
       return (
-        <div className="flex items-center gap-1 text-red-600" title={error}>
+        <div className="flex items-center gap-1 text-red-600 whitespace-nowrap" title={error}>
           <AlertCircle className="h-3 w-3" />
           <span className="text-xs">解析失败</span>
         </div>

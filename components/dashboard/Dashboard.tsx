@@ -107,74 +107,65 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="container mx-auto py-6">
-
+    <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold mb-6">会议纪要解析</h1>
-
-      <Button
-      variant='default'
-                  onClick={handleAnalyzeAll}
-                  disabled={isAnalyzing || analysisResults.filter(r => r.status === 'pending').length === 0}
-                  className="gap-2"
-                >
-                  {isAnalyzing ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      处理中...
-                    </>
-                  ) : (
-                    <>
-                      <PlayIcon className="h-4 w-4" />
-                      一键解析
-                    </>
-                  )}
-                </Button>
+        <h1 className="text-2xl font-bold">会议纪要解析</h1>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        {/* 左侧上传区域 */}
-        <div className="md:col-span-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>文件上传</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <FileUpload
-                onUploadComplete={handleUploadComplete}
-                onUploadError={handleUploadError}
-                accept={{
-                  'application/pdf': ['.pdf'],
-                  'application/msword': ['.doc'],
-                  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-                }}
-                maxSize={20 * 1024 * 1024} // 20MB
-                maxFiles={10}
-                className="mb-4"
-              />
-              
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-muted-foreground">
-                  已上传 {uploadedFiles.length} 个文件
-                </p>
-
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        
-        {/* 右侧解析结果区域 */}
-        <div className="md:col-span-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>解析结果</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <FileAnalysisTable results={analysisResults} />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      
+      {/* 上传区域 */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+          <CardTitle>文件上传</CardTitle>
+          <Button
+            variant="default"
+            onClick={handleAnalyzeAll}
+            disabled={isAnalyzing || analysisResults.filter(r => r.status === 'pending').length === 0}
+            className="gap-2"
+          >
+            {isAnalyzing ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                处理中...
+              </>
+            ) : (
+              <>
+                <PlayIcon className="h-4 w-4" />
+                一键解析
+              </>
+            )}
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <FileUpload
+            onUploadComplete={handleUploadComplete}
+            onUploadError={handleUploadError}
+            accept={{
+              'application/pdf': ['.pdf'],
+              'application/msword': ['.doc'],
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+            }}
+            maxSize={20 * 1024 * 1024} // 20MB
+            maxFiles={10}
+            className="mb-4"
+          />
+          
+          <p className="text-sm text-muted-foreground">
+            已上传 {uploadedFiles.length} 个文件，其中 {analysisResults.filter(r => r.status === 'pending').length} 个待解析
+          </p>
+        </CardContent>
+      </Card>
+      
+      {/* 解析结果区域 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>解析结果</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0 sm:p-6">
+          <div className="overflow-x-auto">
+            <FileAnalysisTable results={analysisResults} />
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 } 
