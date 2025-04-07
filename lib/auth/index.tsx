@@ -1,64 +1,35 @@
 'use client';
 
 import { User } from '@/lib/db/schema';
-import { createContext, ReactNode, Suspense, useContext } from 'react';
+import { createContext, ReactNode, useContext, useState } from 'react';
 
 type UserContextType = {
   user: User | null;
+  setUser: (user: User | null) => void;
 };
 
-const UserContext = createContext<UserContextType | null>(null);
+// 创建一个带有默认值的Context
+const UserContext = createContext<UserContextType>({
+  user: null,
+  setUser: () => {},
+});
 
 export function useUser(): UserContextType {
-  let context = useContext(UserContext);
-  if (context === null) {
-    throw new Error('useUser must be used within a UserProvider');
-  }
-  return context;
-}
-
-function UserProviderInner({
-  user,
-  children
-}: {
-  user: User | null;
-  children: ReactNode;
-}) {
-  return (
-    <UserContext.Provider value={{ user }}>
-      {children}
-    </UserContext.Provider>
-  );
+  return useContext(UserContext);
 }
 
 export function UserProvider({
   children,
-  userPromise
+  initialUser = null,
 }: {
   children: ReactNode;
-  userPromise: Promise<User | null>;
+  initialUser?: User | null;
 }) {
-  return (
-    <Suspense>
-      <AsyncUserProvider userPromise={userPromise}>
-        {children}
-      </AsyncUserProvider>
-    </Suspense>
-  );
-}
+  const [user, setUser] = useState<User | null>(initialUser);
 
-async function AsyncUserProvider({
-  children,
-  userPromise
-}: {
-  children: ReactNode;
-  userPromise: Promise<User | null>;
-}) {
-  const user = await userPromise;
-  
   return (
-    <UserProviderInner user={user}>
+    <UserContext.Provider value={{ user, setUser }}>
       {children}
-    </UserProviderInner>
+    </UserContext.Provider>
   );
 }

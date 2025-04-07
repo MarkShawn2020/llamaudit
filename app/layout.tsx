@@ -16,21 +16,27 @@ export const viewport: Viewport = {
 
 const manrope = Manrope({ subsets: ['latin'] });
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const userPromise = getUser() ?? Promise.resolve(null);
+  // 尝试获取用户，但不在客户端处理Promise
+  let initialUser = null;
+  try {
+    initialUser = await getUser();
+  } catch (error) {
+    console.error("Error getting user:", error);
+  }
 
   return (
     <html
-      lang="en"
+      lang="zh-CN"
       suppressHydrationWarning
       className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}
     >
       <body className="min-h-[100dvh] bg-gray-50" suppressHydrationWarning>
-        <UserProvider userPromise={userPromise}>{children}</UserProvider>
+        <UserProvider initialUser={initialUser}>{children}</UserProvider>
         <Toaster />
       </body>
     </html>

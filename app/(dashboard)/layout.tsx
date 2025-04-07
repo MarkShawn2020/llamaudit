@@ -17,11 +17,12 @@ import { Suspense, useState } from 'react';
 
 function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user } = useUser();
+  const { user, setUser } = useUser();
   const router = useRouter();
 
   async function handleSignOut() {
     await signOut();
+    setUser(null);
     router.refresh();
     router.push('/');
   }
@@ -43,10 +44,12 @@ function UserMenu() {
         <Avatar className="cursor-pointer size-9">
           <AvatarImage alt={user.name || ''} />
           <AvatarFallback>
-            {user.email
-              .split(' ')
-              .map((n) => n[0])
-              .join('')}
+            {user.email ? 
+              user.email
+                .split('@')[0]
+                .charAt(0)
+                .toUpperCase()
+              : '?'}
           </AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
