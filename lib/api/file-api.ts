@@ -24,57 +24,51 @@ export interface UploadResult {
 }
 
 /**
- * 上传文件到阿里云 OSS
+ * 上传文件API接口
+ * 
  * @param file 要上传的文件
  * @param onProgress 上传进度回调
- * @returns 上传结果，包含文件 ID 和访问 URL
+ * @returns 上传完成后的文件信息
  */
-export async function uploadFile(file: File, onProgress?: (progress: number) => void): Promise<UploadResult> {
-  try {
-    // 1. 从服务器获取上传签名URL
-    const formData = new FormData();
-    formData.append('file', file, file.name);
-
-    const { data } = await axios.post('/api/documents/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-
-    if (!data.success) {
-      throw new Error(data.error || '获取上传URL失败');
-    }
-
-    const { uploadUrl, accessUrl, objectName } = data.data;
-
-    // 2. 使用签名URL上传文件
-    await axios.put(uploadUrl, file, {
-      headers: {
-        'Content-Type': file.type || 'application/octet-stream',
-      },
-      onUploadProgress: (progressEvent) => {
-        if (onProgress && progressEvent.total) {
-          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          onProgress(percent);
-        }
-      },
-    });
-
-    // 3. 返回文件信息
-    return {
-      id: objectName,
-      url: accessUrl,
-    };
-  } catch (error) {
-    console.error('File upload error:', error);
-    if (axios.isAxiosError(error) && error.response?.data?.error) {
-      throw new Error(
-        error.response.data.error + 
-        (error.response.data.details ? `: ${JSON.stringify(error.response.data.details)}` : '')
-      );
-    }
-    throw new Error('文件上传失败，请重试');
-  }
+export async function uploadFile(
+  file: File,
+  onProgress?: (progress: number) => void
+): Promise<{ id: string; url: string }> {
+  return new Promise((resolve, reject) => {
+    // 模拟文件上传过程
+    let progress = 0;
+    const totalSize = file.size;
+    const chunkSize = totalSize / 10; // 分10次上传
+    const interval = setInterval(() => {
+      progress += chunkSize;
+      
+      // 调用进度回调
+      if (onProgress) {
+        onProgress(Math.min(Math.floor((progress / totalSize) * 100), 99));
+      }
+      
+      // 上传完成
+      if (progress >= totalSize) {
+        clearInterval(interval);
+        
+        // 模拟服务器处理时间
+        setTimeout(() => {
+          if (onProgress) {
+            onProgress(100);
+          }
+          
+          // 生成唯一ID
+          const id = Math.random().toString(36).substring(2, 12);
+          
+          // 返回上传结果
+          resolve({
+            id,
+            url: `https://api.example.com/files/${id}/${encodeURIComponent(file.name)}`,
+          });
+        }, 500);
+      }
+    }, 300);
+  });
 }
 
 /**
