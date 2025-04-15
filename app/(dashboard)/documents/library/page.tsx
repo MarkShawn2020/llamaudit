@@ -117,7 +117,7 @@ function ClientDocumentLibraryPage() {
             筛选
           </Button>
           <Button 
-            className="bg-orange-600 hover:bg-orange-700"
+            className="bg-primary hover:bg-primary/90"
             onClick={() => setUploadDialogOpen(true)}
           >
             <Upload className="h-4 w-4 mr-2" />
@@ -261,7 +261,7 @@ function ClientDocumentLibraryPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button className="text-orange-600 hover:text-orange-900 mr-3">
+                      <button className="text-primary/90 hover:text-primary/70 mr-3">
                         查看
                       </button>
                       <button className="text-blue-600 hover:text-blue-900">

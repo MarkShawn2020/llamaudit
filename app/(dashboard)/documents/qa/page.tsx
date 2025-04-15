@@ -86,8 +86,8 @@ export default async function QAPage() {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col h-[600px]">
             <div className="p-4 border-b">
               <div className="flex items-center">
-                <div className="bg-orange-50 p-2 rounded-full mr-2">
-                  <Brain className="h-5 w-5 text-orange-600" />
+                <div className="bg-primary/10 p-2 rounded-full mr-2">
+                  <Brain className="h-5 w-5 text-primary/90" />
                 </div>
                 <h2 className="font-semibold">DeepSeek-R1 智能问答</h2>
               </div>
@@ -108,7 +108,7 @@ export default async function QAPage() {
                   placeholder="输入您的问题..." 
                   className="flex-grow border rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
-                <Button className="rounded-l-none rounded-r-lg bg-orange-600 hover:bg-orange-700">
+                <Button className="rounded-l-none rounded-r-lg bg-primary hover:bg-primary/90">
                   <Send className="h-4 w-4" />
                 </Button>
               </div>

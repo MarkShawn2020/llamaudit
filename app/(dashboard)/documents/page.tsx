@@ -55,7 +55,7 @@ function ClientDocumentsPage() {
         <h1 className="text-2xl font-bold">文档管理</h1>
         <div className="space-x-2">
           <Button 
-            className="bg-orange-600 hover:bg-orange-700"
+            className="bg-primary hover:bg-primary/90"
             onClick={() => setUploadDialogOpen(true)}
           >
             <Upload className="h-4 w-4 mr-2" />
@@ -97,8 +97,8 @@ function ClientDocumentsPage() {
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex flex-col">
-          <div className="bg-orange-50 p-4 rounded-full w-12 h-12 flex items-center justify-center mb-4">
-            <BarChart className="h-6 w-6 text-orange-600" />
+          <div className="bg-primary/10 p-4 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+            <BarChart className="h-6 w-6 text-primary/90" />
           </div>
           <h3 className="text-lg font-semibold mb-2">信息提取</h3>
           <p className="text-gray-600 mb-6 flex-grow">

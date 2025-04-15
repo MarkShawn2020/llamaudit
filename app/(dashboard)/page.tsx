@@ -12,7 +12,7 @@ export default function HomePage() {
             <div className="sm:text-center md:max-w-2xl md:mx-auto lg:col-span-6 lg:text-left">
               <h1 className="text-4xl font-bold text-gray-900 tracking-tight sm:text-5xl md:text-6xl">
                 智能审计平台
-                <span className="block text-orange-500">基于 DeepSeek 大模型</span>
+                <span className="block text-primary">基于 DeepSeek 大模型</span>
               </h1>
               <p className="mt-3 text-base text-gray-500 sm:mt-5 sm:text-xl lg:text-lg xl:text-xl">
                 利用DeepSeek-V3和DeepSeek-R1等先进大语言模型，自动提取会议纪要和合同关键信息，
@@ -20,7 +20,7 @@ export default function HomePage() {
               </p>
               <div className="mt-8 sm:max-w-lg sm:mx-auto sm:text-center lg:text-left lg:mx-0">
                 <Link href="/documents">
-                  <Button className="bg-orange-600 hover:bg-orange-700 text-white rounded-full text-lg px-8 py-4 inline-flex items-center justify-center">
+                  <Button className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full text-lg px-8 py-4 inline-flex items-center justify-center">
                     立即体验
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
@@ -38,7 +38,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="lg:grid lg:grid-cols-3 lg:gap-8">
             <div>
-              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-500 text-white">
+              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-primary text-primary-foreground">
                 <FileText className="h-6 w-6" />
               </div>
               <div className="mt-5">
@@ -53,7 +53,7 @@ export default function HomePage() {
             </div>
 
             <div className="mt-10 lg:mt-0">
-              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-500 text-white">
+              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-primary text-primary-foreground">
                 <ShieldCheck className="h-6 w-6" />
               </div>
               <div className="mt-5">
@@ -68,7 +68,7 @@ export default function HomePage() {
             </div>
 
             <div className="mt-10 lg:mt-0">
-              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-500 text-white">
+              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-primary text-primary-foreground">
                 <Search className="h-6 w-6" />
               </div>
               <div className="mt-5">
@@ -131,7 +131,7 @@ export default function HomePage() {
             </div>
             <div className="mt-8 lg:mt-0 flex justify-center lg:justify-end">
               <Link href="/product">
-                <Button className="bg-white hover:bg-gray-100 text-black border border-gray-200 rounded-full text-xl px-12 py-6 inline-flex items-center justify-center">
+                <Button className="bg-white hover:bg-gray-100 text-primary border border-gray-200 rounded-full text-xl px-12 py-6 inline-flex items-center justify-center">
                   了解技术细节
                   <ArrowRight className="ml-3 h-6 w-6" />
                 </Button>

@@ -21,7 +21,7 @@ export default async function ExtractInfoPage() {
       
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl font-bold">信息提取</h1>
-        <Button className="bg-orange-600 hover:bg-orange-700">
+        <Button className="bg-primary hover:bg-primary/90">
           开始批量提取
         </Button>
       </div>
@@ -43,7 +43,7 @@ export default async function ExtractInfoPage() {
               <span>已提取: 0</span>
             </div>
             <div className="flex items-center">
-              <Clock className="h-4 w-4 text-orange-500 mr-1" />
+              <Clock className="h-4 w-4 text-primary mr-1" />
               <span>待提取: 0</span>
             </div>
           </div>
@@ -54,8 +54,8 @@ export default async function ExtractInfoPage() {
         
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <h2 className="text-lg font-semibold mb-4 flex items-center">
-            <div className="bg-orange-50 p-2 rounded-full mr-2">
-              <FileText className="h-5 w-5 text-orange-600" />
+            <div className="bg-primary/10 p-2 rounded-full mr-2">
+              <FileText className="h-5 w-5 text-primary/90" />
             </div>
             合同信息提取
           </h2>
@@ -68,7 +68,7 @@ export default async function ExtractInfoPage() {
               <span>已提取: 0</span>
             </div>
             <div className="flex items-center">
-              <Clock className="h-4 w-4 text-orange-500 mr-1" />
+              <Clock className="h-4 w-4 text-primary mr-1" />
               <span>待提取: 0</span>
             </div>
           </div>

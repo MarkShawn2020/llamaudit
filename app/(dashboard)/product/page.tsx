@@ -6,7 +6,7 @@ import { ArrowLeft, Brain, ChevronRight, Code, FileText } from 'lucide-react';
 export default function ProductPage() {
   return (
     <div className="container max-w-6xl mx-auto px-4 py-12">
-      <Link href="/" className="inline-flex items-center text-orange-600 hover:text-orange-800 mb-8">
+      <Link href="/" className="inline-flex items-center text-primary/90 hover:text-primary/80 mb-8">
         <ArrowLeft className="mr-2 h-4 w-4" />
         返回首页
       </Link>
@@ -22,9 +22,9 @@ export default function ProductPage() {
         <h2 className="text-2xl font-bold mt-12 mb-6">技术亮点</h2>
         
         <div className="grid md:grid-cols-2 gap-8 mb-12">
-          <div className="bg-orange-50 p-6 rounded-lg border border-orange-100">
+          <div className="bg-primary/10 p-6 rounded-lg border border-orange-100">
             <div className="flex items-center mb-4">
-              <Brain className="h-8 w-8 text-orange-600 mr-3" />
+              <Brain className="h-8 w-8 text-primary/90 mr-3" />
               <h3 className="text-xl font-semibold">DeepSeek-R1 推理能力</h3>
             </div>
             <p>
@@ -149,7 +149,7 @@ XX公司2023年第三季度经营决策会议纪要
         
         <div className="flex justify-center mt-16">
           <Link href="/dashboard">
-            <Button className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-3 rounded-full text-lg flex items-center">
+            <Button className="bg-primary hover:bg-primary/90 text-white px-8 py-3 rounded-full text-lg flex items-center">
               进入系统体验
               <ChevronRight className="ml-2 h-5 w-5" />
             </Button>
