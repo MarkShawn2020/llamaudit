@@ -4,9 +4,10 @@ import type { Metadata, Viewport } from 'next';
 import { Manrope } from 'next/font/google';
 import { Toaster } from 'sonner';
 import './globals.css';
+import { GlobalNavbar } from '@/components/GlobalNavbar';
 
 export const metadata: Metadata = {
-  title: '智审 - AI 驱动的审计辅助系统',
+  title: 'Llamaudit - AI 驱动的审计辅助系统',
   description: '基于 AI 的智能审计辅助系统，支持文件管理、信息抽取、合规性检查等功能。',
 };
 
@@ -36,7 +37,12 @@ export default async function RootLayout({
       className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}
     >
       <body className="min-h-[100dvh] bg-gray-50" suppressHydrationWarning>
-        <UserProvider initialUser={initialUser}>{children}</UserProvider>
+        <UserProvider initialUser={initialUser}>
+          <GlobalNavbar />
+          <main className="min-h-[calc(100vh-4rem)]">
+            {children}
+          </main>
+        </UserProvider>
         <Toaster />
       </body>
     </html>
