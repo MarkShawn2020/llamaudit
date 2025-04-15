@@ -32,7 +32,7 @@ function UserMenu() {
     return (
       <Button
         asChild
-        className="bg-black hover:bg-gray-800 text-white text-sm px-4 py-2 rounded-full"
+        className="bg-white text-primary hover:bg-gray-100 text-sm px-4 py-2 rounded-full"
       >
         <Link href="/sign-in">登录</Link>
       </Button>
@@ -42,9 +42,9 @@ function UserMenu() {
   return (
     <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
       <DropdownMenuTrigger>
-        <Avatar className="cursor-pointer size-9">
+        <Avatar className="cursor-pointer size-9 ring-2 ring-white">
           <AvatarImage alt={user.name || ''} />
-          <AvatarFallback>
+          <AvatarFallback className="bg-white text-primary">
             {user.email ? 
               user.email
                 .split('@')[0]
@@ -76,11 +76,11 @@ function UserMenu() {
 
 function Header() {
   return (
-    <header className="border-b border-gray-200">
+    <header className="border-b border-gray-200 bg-primary text-primary-foreground">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
         <Link href="/" className="flex items-center">
-          <Image src="/logo.svg" alt="智审 Logo" width={36} height={36} />
-          <span className="ml-2 text-xl font-semibold text-gray-900">智审</span>
+          <Image src="/nau-colors-logo.svg" alt="智审 Logo" width={36} height={36} />
+          <span className="ml-2 text-xl font-semibold">智审</span>
         </Link>
         <div className="flex items-center space-x-4">
           <Suspense fallback={<div className="h-9" />}>
