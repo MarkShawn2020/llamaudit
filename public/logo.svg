@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+  <!-- 渐变定义 -->
+  <defs>
+    <linearGradient id="blueGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#1e40af" />
+    </linearGradient>
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+  </defs>
+
+  <!-- 圆形背景 -->
+  <circle cx="150" cy="150" r="130" fill="#f8fafc" />
+  
+  <!-- 椭圆元素 - 主体 -->
+  <ellipse cx="150" cy="150" rx="90" ry="45" 
+           fill="none" 
+           stroke="url(#blueGradient)" 
+           stroke-width="10" />
+  
+  <!-- 第二个椭圆 - 交叉效果 -->
+  <ellipse cx="150" cy="150" rx="45" ry="90" 
+           fill="none" 
+           stroke="url(#blueGradient)" 
+           stroke-width="10" />
+  
+  <!-- 中心圆形 - 连接点 -->
+  <circle cx="150" cy="150" r="15" fill="url(#accentGradient)" />
+  
+  <!-- 四个点 - 代表数据节点和审计精准性 -->
+  <circle cx="150" cy="60" r="8" fill="url(#accentGradient)" />
+  <circle cx="150" cy="240" r="8" fill="url(#accentGradient)" />
+  <circle cx="60" cy="150" r="8" fill="url(#accentGradient)" />
+  <circle cx="240" cy="150" r="8" fill="url(#accentGradient)" />
+  
+  <!-- 抽象中文"智"的笔画元素 - 更加简化但可识别 -->
+  <path d="M125,120 L175,120 M150,105 L150,195" 
+        stroke="url(#blueGradient)" 
+        stroke-width="8" 
+        stroke-linecap="round" />
+</svg>

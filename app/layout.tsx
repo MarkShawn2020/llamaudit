@@ -6,7 +6,7 @@ import { Toaster } from 'sonner';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Llamaudit - AI 驱动的审计辅助系统',
+  title: '智审 - AI 驱动的审计辅助系统',
   description: '基于 AI 的智能审计辅助系统，支持文件管理、信息抽取、合规性检查等功能。',
 };
 
