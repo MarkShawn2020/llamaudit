@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { ArrowRight, FileText, Search, ShieldCheck, Database } from 'lucide-react';
-import { Terminal } from './terminal';
+import Image from 'next/image';
 import Link from 'next/link';
 
 export default function HomePage() {
@@ -28,7 +28,14 @@ export default function HomePage() {
               </div>
             </div>
             <div className="mt-12 relative sm:max-w-lg sm:mx-auto lg:mt-0 lg:max-w-none lg:mx-0 lg:col-span-6 lg:flex lg:items-center">
-              <Terminal />
+              <Image 
+                src="/hero.png" 
+                alt="智审 - AI驱动的审计辅助系统" 
+                width={600} 
+                height={400}
+                className="rounded-lg shadow-lg"
+                priority
+              />
             </div>
           </div>
         </div>
