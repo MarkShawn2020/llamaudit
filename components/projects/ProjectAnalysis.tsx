@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +41,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { saveDocumentAnalysisResults } from '@/lib/api/analysis-api';
+import { getProjectAnalysisResults } from '@/lib/api/analysis-api';
 import { 
   DropdownMenu,
   DropdownMenuTrigger,
@@ -48,6 +49,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { exportAnalysisResults, ExportFormat } from "@/lib/export-utils";
+import React from 'react';
 
 interface FileAnalysisGroup {
   fileId: string;
@@ -61,6 +63,69 @@ interface FileAnalysisGroup {
   results: MeetingAnalysisResult[];
 }
 
+// 优化全选复选框组件
+const SelectAllCheckbox = React.memo(({ 
+  checked, 
+  onChange, 
+  disabled 
+}: { 
+  checked: boolean, 
+  onChange: () => void, 
+  disabled?: boolean 
+}) => {
+  // 使用useCallback防止每次渲染创建新函数
+  const handleChange = React.useCallback(() => {
+    onChange();
+  }, [onChange]);
+
+  return (
+    <Checkbox 
+      checked={checked}
+      onCheckedChange={handleChange}
+      disabled={disabled}
+    >
+      <CheckboxIndicator />
+    </Checkbox>
+  );
+}, (prevProps, nextProps) => {
+  // 自定义比较函数，避免不必要的重渲染
+  return prevProps.checked === nextProps.checked && 
+         prevProps.disabled === nextProps.disabled;
+});
+
+// 优化文件选择复选框组件
+const ItemCheckbox = React.memo(({ 
+  fileId, 
+  checked, 
+  onChange, 
+  disabled 
+}: { 
+  fileId: string, 
+  checked: boolean, 
+  onChange: (fileId: string, checked: boolean) => void, 
+  disabled?: boolean 
+}) => {
+  // 使用useCallback防止每次渲染创建新函数
+  const handleChange = React.useCallback((value: boolean | "indeterminate") => {
+    onChange(fileId, value === true);
+  }, [onChange, fileId]);
+
+  return (
+    <Checkbox 
+      checked={checked}
+      onCheckedChange={handleChange}
+      disabled={disabled}
+    >
+      <CheckboxIndicator />
+    </Checkbox>
+  );
+}, (prevProps, nextProps) => {
+  // 自定义比较函数，避免不必要的重渲染
+  return prevProps.checked === nextProps.checked && 
+         prevProps.disabled === nextProps.disabled && 
+         prevProps.fileId === nextProps.fileId;
+});
+
 export default function ProjectAnalysis({ projectId }: { projectId: string }) {
   const [files, setFiles] = useState<ProjectFile[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
@@ -68,6 +133,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
   const [groupedResults, setGroupedResults] = useState<FileAnalysisGroup[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingResults, setLoadingResults] = useState(true);
   
   // 文件上传相关状态
   const [uploading, setUploading] = useState(false);
@@ -76,21 +142,53 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('files');
 
+  // 维护一个已处理文件ID的集合，避免重复处理
+  const processedFileIdsRef = useRef<Set<string>>(new Set());
+  
+  // 添加引用来跟踪前一次的结果和文件状态，避免不必要的重新计算
+  const prevResultsRef = useRef<MeetingAnalysisResult[]>([]);
+  const prevFilesRef = useRef<ProjectFile[]>([]);
+
   useEffect(() => {
     // 从API获取文件列表
     fetchFiles();
+    // 获取已保存的分析结果
+    fetchAnalysisResults();
   }, [projectId]);
 
-  // 处理分析结果分组
+  // 修改useEffect，避免在依赖项改变时重新执行
   useEffect(() => {
+    console.log(`处理分析结果: ${rawAnalysisResults.length}个结果`);
+    
+    // 如果结果为空，直接返回
+    if (rawAnalysisResults.length === 0) {
+      return;
+    }
+    
+    // 检查是否需要重新处理结果 - 使用JSON.stringify比较对象内容而不是引用
+    const currentResultsJson = JSON.stringify(rawAnalysisResults);
+    const prevResultsJson = JSON.stringify(prevResultsRef.current);
+    
+    // 如果结果没有变化，则不处理
+    if (currentResultsJson === prevResultsJson) {
+      console.log('分析结果未变化，跳过处理');
+      return;
+    }
+    
+    // 更新结果引用
+    prevResultsRef.current = JSON.parse(currentResultsJson);
+    
+    console.log('开始处理分析结果...');
+    
     // 按文件ID分组结果
     const groupMap = new Map<string, FileAnalysisGroup>();
     
+    // 处理每个分析结果
     rawAnalysisResults.forEach(result => {
       const fileId = result.id;
       
       if (!groupMap.has(fileId)) {
-        // 创建新的文件分组
+        // 查找文件信息
         const fileInfo = files.find(f => f.id === fileId);
         groupMap.set(fileId, {
           fileId,
@@ -105,6 +203,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
         });
       }
       
+      // 获取当前组
       const group = groupMap.get(fileId)!;
       
       // 更新组的状态
@@ -113,14 +212,15 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
         group.error = result.error;
       }
 
-      // 如果是已完成状态，添加结果
+      // 处理完成状态的结果
       if (result.status === 'completed') {
-        // 处理新格式（带items数组）
         if (result.items && result.items.length > 0) {
-          // 将每个item转换为MeetingAnalysisResult格式并添加到结果数组
+          // 处理多项分析结果
           result.items.forEach(item => {
+            if (!item.meetingTopic && !item.eventCategory) return;
+            
             group.results.push({
-              id: `${fileId}-${item.itemId}`,
+              id: `${fileId}-${item.itemId || Math.random().toString(36).substring(2, 9)}`,
               fileName: result.fileName,
               status: 'completed',
               meetingTime: item.meetingTime,
@@ -137,20 +237,145 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
               originalText: item.originalText
             });
           });
-        } 
-        // 处理旧格式（单个事项）
-        else if (result.meetingTopic || result.eventCategory) {
+        } else if (result.meetingTopic || result.eventCategory) {
+          // 处理单项分析结果
           group.results.push({
             ...result,
-            // 确保每个结果有唯一ID
             id: `${fileId}-legacy`
           });
         }
       }
     });
     
-    setGroupedResults(Array.from(groupMap.values()));
-  }, [rawAnalysisResults, files]);
+    // 更新分组结果状态
+    const groupedResultsData = Array.from(groupMap.values());
+    console.log(`生成了${groupedResultsData.length}个文件分析组`);
+    setGroupedResults(groupedResultsData);
+    
+    // 收集需要更新isAnalyzed状态的文件
+    const analyzedFileIds = Array.from(groupMap.keys());
+    const filesToUpdate = files.filter(
+      file => analyzedFileIds.includes(file.id) && !file.isAnalyzed
+    );
+    
+    // 只有在有文件需要更新状态时才更新files状态
+    if (filesToUpdate.length > 0) {
+      console.log(`更新${filesToUpdate.length}个文件的分析状态`);
+      
+      // 将更新文件和状态更新的逻辑移到这个函数外执行，打破依赖循环
+      requestAnimationFrame(() => {
+        // 防止循环更新：创建新的files数组而不是直接修改
+        const updatedFiles = files.map(file => 
+          analyzedFileIds.includes(file.id) && !file.isAnalyzed
+            ? { ...file, isAnalyzed: true }
+            : file
+        );
+        
+        // 更新files状态，但用一个单独的setFiles调用来批量更新
+        setFiles(updatedFiles);
+        
+        // 更新文件分析状态到数据库
+        filesToUpdate.forEach(file => {
+          updateFileAnalysisStatus(projectId, file.id, true).catch(err => 
+            console.error(`更新文件状态失败: ${file.id}`, err)
+          );
+        });
+      });
+    }
+    
+  }, [rawAnalysisResults, projectId]); // 去掉files依赖，只依赖于rawAnalysisResults和projectId
+
+  // 获取已保存的分析结果
+  const fetchAnalysisResults = async () => {
+    try {
+      setLoadingResults(true);
+      console.log('正在获取项目分析结果:', projectId);
+      
+      const results = await getProjectAnalysisResults(projectId);
+      console.log('获取到分析结果:', results);
+      
+      if (!results || results.length === 0) {
+        console.log('没有找到已保存的分析结果');
+        setLoadingResults(false);
+        return;
+      }
+      
+      // 处理结果，将数据库中的结果转换为MeetingAnalysisResult格式
+      const processedResults: MeetingAnalysisResult[] = [];
+      
+      // 遍历每个文件
+      results.forEach(file => {
+        if (!file || !file.analysisResults || file.analysisResults.length === 0) {
+          return;
+        }
+        
+        console.log(`处理文件 ${file.id}: ${file.originalName}, 分析结果数量: ${file.analysisResults.length}`);
+        
+        // 将文件的所有分析结果按itemIndex分组
+        const itemGroups = new Map<number, any[]>();
+        
+        file.analysisResults.forEach(result => {
+          const index = result.itemIndex || 0;
+          if (!itemGroups.has(index)) {
+            itemGroups.set(index, []);
+          }
+          itemGroups.get(index)!.push(result);
+        });
+        
+        console.log(`文件 ${file.id} 分析事项组数: ${itemGroups.size}`);
+        
+        // 为每个文件创建一个分析结果对象
+        const fileResult: MeetingAnalysisResult = {
+          id: file.id || `file-${Date.now()}`,
+          fileName: file.originalName || '未命名文件',
+          status: 'completed',
+          fileUrl: file.filePath,
+          fileSize: Number(file.fileSize),
+          fileType: file.fileType,
+          items: []
+        };
+        
+        // 将每组分析结果添加到items中
+        itemGroups.forEach((items, index) => {
+          // 使用每组的第一条记录作为代表
+          const representative = items[0];
+          
+          fileResult.items?.push({
+            itemId: String(index),
+            meetingTime: representative.meetingTime ? new Date(representative.meetingTime).toISOString() : undefined,
+            meetingNumber: representative.meetingNumber || undefined,
+            meetingTopic: representative.meetingTopic || undefined,
+            meetingConclusion: representative.meetingConclusion || undefined,
+            contentSummary: representative.contentSummary || undefined,
+            eventCategory: representative.eventCategory || undefined,
+            eventDetails: representative.eventDetails || undefined,
+            amountInvolved: representative.amountInvolved ? String(representative.amountInvolved) : undefined,
+            relatedDepartments: representative.relatedDepartments || undefined,
+            relatedPersonnel: representative.relatedPersonnel || undefined,
+            decisionBasis: representative.decisionBasis || undefined,
+            originalText: representative.originalText || undefined
+          });
+        });
+        
+        console.log(`文件 ${file.id} 处理后的结果项数量: ${fileResult.items?.length || 0}`);
+        
+        // 把整个文件的分析结果添加到结果数组
+        processedResults.push(fileResult);
+      });
+      
+      console.log('所有文件处理后的分析结果数量:', processedResults.length);
+      
+      // 更新状态
+      if (processedResults.length > 0) {
+        setRawAnalysisResults(processedResults);
+        console.log('已更新分析结果状态');
+      }
+    } catch (error) {
+      console.error('获取分析结果失败:', error);
+    } finally {
+      setLoadingResults(false);
+    }
+  };
 
   // 获取项目文件列表
   const fetchFiles = async () => {
@@ -166,23 +391,30 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
     }
   };
 
-  const handleSelectFile = (fileId: string) => {
+  // 选择所有文件
+  const handleSelectAll = useCallback(() => {
     setSelectedFiles(prev => {
-      if (prev.includes(fileId)) {
-        return prev.filter(id => id !== fileId);
-      } else {
+      const allIds = files.map(file => file.id);
+      // 如果当前所有文件都已选中，则清空所选；否则选择所有文件
+      return prev.length === allIds.length ? [] : allIds;
+    });
+  }, [files]);
+
+  // 判断是否所有文件都已被选中
+  const allFilesSelected = useMemo(() => {
+    return files.length > 0 && selectedFiles.length === files.length;
+  }, [files, selectedFiles]);
+
+  // 选择单个文件
+  const handleSelectFile = useCallback((fileId: string, checked: boolean) => {
+    setSelectedFiles(prev => {
+      if (checked) {
         return [...prev, fileId];
+      } else {
+        return prev.filter(id => id !== fileId);
       }
     });
-  };
-
-  const handleSelectAll = () => {
-    if (selectedFiles.length === files.length) {
-      setSelectedFiles([]);
-    } else {
-      setSelectedFiles(files.filter(file => !file.isAnalyzed).map(file => file.id));
-    }
-  };
+  }, []);
 
   const handleAnalyze = async () => {
     if (selectedFiles.length === 0) {
@@ -509,13 +741,11 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[50px]">
-                        <Checkbox 
-                          checked={files.length > 0 && selectedFiles.length === files.filter(f => !f.isAnalyzed).length}
-                          onCheckedChange={handleSelectAll}
+                        <SelectAllCheckbox 
+                          checked={allFilesSelected}
+                          onChange={handleSelectAll}
                           disabled={loading || isAnalyzing}
-                        >
-                          <CheckboxIndicator />
-                        </Checkbox>
+                        />
                       </TableHead>
                       <TableHead>文件名</TableHead>
                       <TableHead>类型</TableHead>
@@ -546,13 +776,12 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
                       files.map((file) => (
                         <TableRow key={file.id}>
                           <TableCell>
-                            <Checkbox 
+                            <ItemCheckbox
+                              fileId={file.id}
                               checked={selectedFiles.includes(file.id)}
-                              onCheckedChange={() => handleSelectFile(file.id)}
-                              disabled={isAnalyzing || file.isAnalyzed}
-                            >
-                              <CheckboxIndicator />
-                            </Checkbox>
+                              onChange={handleSelectFile}
+                              disabled={isAnalyzing}
+                            />
                           </TableCell>
                           <TableCell className="font-medium flex items-center gap-2">
                             <FileText className="h-4 w-4 text-blue-500" />
@@ -641,7 +870,12 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              {groupedResults.length > 0 ? (
+              {loadingResults ? (
+                <div className="p-6 text-center flex flex-col items-center">
+                  <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
+                  <p>加载分析结果中...</p>
+                </div>
+              ) : groupedResults.length > 0 ? (
                 <Tabs defaultValue="card" className="w-full px-6">
                   <div className="flex justify-between items-center border-b pb-4">
                     <TabsList>

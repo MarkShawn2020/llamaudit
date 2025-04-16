@@ -2,8 +2,8 @@
 
 import { getUser } from '@/lib/db/queries';
 import { db } from '@/lib/db/drizzle';
-import { analysisResults, analysisTasks, files } from '@/lib/db/schema';
-import { and, eq } from 'drizzle-orm';
+import { analysisResults, analysisTasks, files, auditUnits } from '@/lib/db/schema';
+import { and, eq, desc, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 
 export interface AnalysisResultInput {
@@ -26,6 +26,66 @@ export interface AnalysisResponse {
   success: boolean;
   message?: string;
   result?: any;
+}
+
+/**
+ * 获取项目的所有分析结果
+ */
+export async function getProjectAnalysisResults(auditUnitId: string) {
+  try {
+    const user = await getUser();
+    if (!user) {
+      throw new Error('未授权访问');
+    }
+
+    // 检查被审计单位是否存在
+    const auditUnit = await db.query.auditUnits.findFirst({
+      where: eq(auditUnits.id, auditUnitId),
+    });
+
+    if (!auditUnit) {
+      throw new Error('被审计单位不存在');
+    }
+
+    // 获取已分析过的文件
+    const analyzedFiles = await db.query.files.findMany({
+      where: and(
+        eq(files.auditUnitId, auditUnitId),
+        eq(files.isAnalyzed, true)
+      ),
+      orderBy: (files, { desc }) => [desc(files.uploadDate)]
+    });
+
+    const fileIds = analyzedFiles.map(file => file.id);
+    
+    if (fileIds.length === 0) {
+      return [];
+    }
+
+    // 获取分析结果
+    const results = await db.query.analysisResults.findMany({
+      where: inArray(analysisResults.fileId, fileIds),
+      orderBy: [
+        desc(analysisResults.createdAt)
+      ]
+    });
+
+    // 按文件分组结果
+    const resultsByFile = fileIds.map(fileId => {
+      const file = analyzedFiles.find(f => f.id === fileId);
+      const fileResults = results.filter(r => r.fileId === fileId);
+      
+      return {
+        ...file,
+        analysisResults: fileResults
+      };
+    }).filter(f => f.analysisResults.length > 0);
+
+    return resultsByFile;
+  } catch (error) {
+    console.error('获取项目分析结果失败:', error);
+    throw error;
+  }
 }
 
 /**

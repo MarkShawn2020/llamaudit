@@ -2,6 +2,7 @@ import { toast } from "sonner";
 import { 
   createAnalysisTask, 
   saveAnalysisResults, 
+  getProjectAnalysisResults as getProjectAnalysisResultsAction,
   type AnalysisResultInput,
   type AnalysisResponse
 } from "@/lib/actions/analysis-actions";
@@ -22,6 +23,20 @@ export async function createAnalysisTaskForProject(
   } catch (error) {
     console.error('创建分析任务失败:', error);
     toast.error('创建分析任务失败');
+    throw error;
+  }
+}
+
+/**
+ * 获取项目的所有分析结果
+ * @param projectId 项目ID
+ */
+export async function getProjectAnalysisResults(projectId: string) {
+  try {
+    return await getProjectAnalysisResultsAction(projectId);
+  } catch (error) {
+    console.error('获取项目分析结果失败:', error);
+    toast.error('获取项目分析结果失败');
     throw error;
   }
 }
