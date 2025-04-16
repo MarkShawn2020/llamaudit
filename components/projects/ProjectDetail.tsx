@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Building, FileText, BarChart3, TrashIcon } from 'lucide-react';
 import Link from 'next/link';
 import ProjectInfo from './ProjectInfo';
-import ProjectFiles from './ProjectFiles';
 import ProjectAnalysis from './ProjectAnalysis';
 import { Project, getProject, deleteProject } from '@/lib/api/project-api';
 import { toast } from 'sonner';
@@ -155,15 +154,12 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
       </Card>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 max-w-md">
+        <TabsList className="grid w-full grid-cols-2 max-w-md">
           <TabsTrigger value="info" className="flex items-center gap-1.5">
             <Building className="h-4 w-4" />
             <span>基本信息</span>
           </TabsTrigger>
-          <TabsTrigger value="files" className="flex items-center gap-1.5">
-            <FileText className="h-4 w-4" />
-            <span>文件列表</span>
-          </TabsTrigger>
+
           <TabsTrigger value="analysis" className="flex items-center gap-1.5">
             <BarChart3 className="h-4 w-4" />
             <span>分析任务</span>
@@ -174,9 +170,6 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
           <ProjectInfo project={project} onUpdate={handleProjectUpdate} />
         </TabsContent>
         
-        <TabsContent value="files" className="space-y-4">
-          <ProjectFiles project={project} onUpdate={loadProject} />
-        </TabsContent>
         
         <TabsContent value="analysis" className="space-y-4">
           <ProjectAnalysis projectId={projectId} />
