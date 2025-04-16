@@ -3,259 +3,217 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileUpload, UploadedFile } from '@/components/FileUpload';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
+import { Project } from '@/lib/api/project-api';
+import { getProjectFiles, uploadProjectFile, deleteProjectFile, ProjectFile } from '@/lib/api/project-file-api';
 import { toast } from 'sonner';
-import { FileIcon, FileText, File, Trash2, Eye } from 'lucide-react';
+import { formatFileSize, formatDate } from '@/lib/utils';
+import { Loader2, Trash, FileUp, Eye, Download } from 'lucide-react';
 
-interface ProjectFile {
-  id: string;
-  name: string;
-  type: string;
-  size: number;
-  url: string;
-  uploadDate: string;
-  category: 'meeting' | 'contract' | 'attachment';
-  isAnalyzed: boolean;
+interface ProjectFilesProps {
+  project: Project;
+  onUpdate: () => void;
 }
 
-// 模拟文件数据
-const MOCK_FILES = {
-  '1': [
-    {
-      id: 'file1',
-      name: '第三季度经营分析会议纪要.docx',
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      size: 521000,
-      url: 'https://example.com/files/file1.docx',
-      uploadDate: '2023-10-20',
-      category: 'meeting',
-      isAnalyzed: true
-    },
-    {
-      id: 'file2',
-      name: '年度工作总结会议.docx',
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      size: 382000,
-      url: 'https://example.com/files/file2.docx',
-      uploadDate: '2023-11-05',
-      category: 'meeting',
-      isAnalyzed: true
-    },
-    {
-      id: 'file3',
-      name: '设备采购合同.pdf',
-      type: 'application/pdf',
-      size: 1240000,
-      url: 'https://example.com/files/file3.pdf',
-      uploadDate: '2023-11-20',
-      category: 'contract',
-      isAnalyzed: false
-    }
-  ],
-  '2': [
-    {
-      id: 'file4',
-      name: '工厂扩建项目会议纪要.docx',
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      size: 450000,
-      url: 'https://example.com/files/file4.docx',
-      uploadDate: '2023-09-15',
-      category: 'meeting',
-      isAnalyzed: true
-    }
-  ],
-  '3': [
-    {
-      id: 'file5',
-      name: '环保设备升级会议纪要.docx',
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      size: 380000,
-      url: 'https://example.com/files/file5.docx',
-      uploadDate: '2023-08-10',
-      category: 'meeting',
-      isAnalyzed: false
-    },
-    {
-      id: 'file6',
-      name: '技术合作协议.pdf',
-      type: 'application/pdf',
-      size: 950000,
-      url: 'https://example.com/files/file6.pdf',
-      uploadDate: '2023-09-05',
-      category: 'contract',
-      isAnalyzed: false
-    }
-  ]
-} as Record<string, ProjectFile[]>;
-
-export default function ProjectFiles({ projectId }: { projectId: string }) {
+export default function ProjectFiles({ project, onUpdate }: ProjectFilesProps) {
+  const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [files, setFiles] = useState<ProjectFile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
-    // 模拟从API获取文件列表
-    setTimeout(() => {
-      setFiles(MOCK_FILES[projectId] || []);
+    fetchFiles();
+  }, [project.id]);
+
+  // 获取项目文件列表
+  const fetchFiles = async () => {
+    try {
+      setLoading(true);
+      const filesList = await getProjectFiles(project.id);
+      setFiles(filesList);
+    } catch (error) {
+      console.error('获取文件列表失败:', error);
+      toast.error('获取文件列表失败');
+    } finally {
       setLoading(false);
-    }, 300);
-  }, [projectId]);
-
-  const handleUploadComplete = (file: UploadedFile) => {
-    // 添加新上传的文件到列表
-    const newFile: ProjectFile = {
-      id: file.id,
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      url: file.url,
-      uploadDate: new Date().toISOString().split('T')[0],
-      category: determineCategory(file.name),
-      isAnalyzed: false
-    };
-    
-    setFiles(prev => [...prev, newFile]);
-    toast.success(`文件 ${file.name} 上传成功`);
-  };
-
-  const determineCategory = (fileName: string): 'meeting' | 'contract' | 'attachment' => {
-    const lowerName = fileName.toLowerCase();
-    if (lowerName.includes('会议') || lowerName.includes('纪要')) {
-      return 'meeting';
-    } else if (lowerName.includes('合同') || lowerName.includes('协议')) {
-      return 'contract';
     }
-    return 'attachment';
   };
 
-  const handleDelete = (fileId: string) => {
-    // 这里应该是实际的API调用
-    setTimeout(() => {
-      setFiles(prev => prev.filter(file => file.id !== fileId));
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = e.target.files;
+    if (!selectedFiles || selectedFiles.length === 0) return;
+
+    try {
+      setUploading(true);
+      setUploadProgress(0);
+      
+      // 转换FileList为数组
+      const filesArray = Array.from(selectedFiles);
+      
+      // 使用新API上传文件
+      const result = await uploadProjectFile(
+        project.id, 
+        filesArray,
+        (progress) => setUploadProgress(progress)
+      );
+      
+      // 更新本地文件状态
+      setFiles([...files, ...result.files]);
+      
+      // 通知父组件
+      onUpdate();
+      
+      toast.success(`成功上传 ${filesArray.length} 个文件`);
+    } catch (error) {
+      console.error('文件上传失败:', error);
+      toast.error('文件上传失败');
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+      // 重置文件输入
+      e.target.value = '';
+    }
+  };
+
+  const handleDeleteFile = async (fileId: string) => {
+    try {
+      setDeleting(fileId);
+      await deleteProjectFile(project.id, fileId);
+      
+      // 更新本地状态 - 移除已删除文件
+      setFiles(files.filter(file => file.id !== fileId));
+      
+      // 通知父组件
+      onUpdate();
+      
       toast.success('文件已删除');
-    }, 300);
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-  };
-
-  const renderFileIcon = (fileType: string) => {
-    if (fileType.includes('pdf')) {
-      return <FileIcon className="h-5 w-5 text-red-500" />;
-    } else if (fileType.includes('document')) {
-      return <FileText className="h-5 w-5 text-blue-500" />;
+    } catch (error) {
+      console.error('删除文件失败:', error);
+      toast.error('删除文件失败');
+    } finally {
+      setDeleting(null);
     }
-    return <FileIcon className="h-5 w-5 text-gray-500" />;
+  };
+
+  const downloadFile = (file: ProjectFile) => {
+    if (file.url) {
+      window.open(file.url, '_blank');
+    }
+  };
+
+  const viewFile = (file: ProjectFile) => {
+    if (file.url) {
+      window.open(file.url, '_blank');
+    }
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>文件上传</CardTitle>
-          <CardDescription>
-            上传会议纪要、合同等文件，支持 Word 和 PDF 格式
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <FileUpload
-            onUploadComplete={handleUploadComplete}
-            onUploadError={(error) => toast.error(`上传失败: ${error.message}`)}
-            accept={{
-              'application/pdf': ['.pdf'],
-              'application/msword': ['.doc'],
-              'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-            }}
-            maxSize={20 * 1024 * 1024} // 20MB
-            maxFiles={10}
+    <Card>
+      <CardHeader>
+        <CardTitle>项目文件</CardTitle>
+        <CardDescription>管理项目相关的所有文件</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="mb-6 flex items-center gap-2">
+          <Input
+            type="file"
+            id="fileUpload"
+            multiple
+            className="hidden"
+            onChange={handleFileChange}
+            disabled={uploading}
           />
-        </CardContent>
-      </Card>
+          <label htmlFor="fileUpload">
+            <Button 
+              variant="outline" 
+              disabled={uploading} 
+              className="cursor-pointer" 
+              asChild
+            >
+              <span>
+                {uploading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    上传中... {uploadProgress}%
+                  </>
+                ) : (
+                  <>
+                    <FileUp className="mr-2 h-4 w-4" />
+                    选择文件
+                  </>
+                )}
+              </span>
+            </Button>
+          </label>
+          <span className="text-sm text-muted-foreground">
+            上传项目相关的文档和资料
+          </span>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>文件列表</CardTitle>
-          <CardDescription>
-            已上传的文件列表，可查看和管理
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-pulse">加载文件列表...</div>
-            </div>
-          ) : files.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>暂无上传的文件</p>
-              <p className="text-sm mt-1">请上传会议纪要、合同等文件</p>
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[300px]">文件名</TableHead>
-                    <TableHead>类别</TableHead>
-                    <TableHead>大小</TableHead>
-                    <TableHead>上传日期</TableHead>
-                    <TableHead>分析状态</TableHead>
-                    <TableHead className="text-right">操作</TableHead>
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>文件名</TableHead>
+                <TableHead>大小</TableHead>
+                <TableHead>上传时间</TableHead>
+                <TableHead className="text-right">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-6">
+                    <div className="flex justify-center items-center">
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      <span>加载文件列表...</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : files.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
+                    暂无文件，点击"选择文件"上传
+                  </TableCell>
+                </TableRow>
+              ) : (
+                files.map((file) => (
+                  <TableRow key={file.id}>
+                    <TableCell className="font-medium">{file.filename}</TableCell>
+                    <TableCell>{formatFileSize(file.size)}</TableCell>
+                    <TableCell>{formatDate(file.createdAt)}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="ghost" onClick={() => viewFile(file)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => downloadFile(file)}>
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="text-red-500 hover:text-red-700"
+                          onClick={() => handleDeleteFile(file.id)}
+                          disabled={deleting === file.id}
+                        >
+                          {deleting === file.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {files.map((file) => (
-                    <TableRow key={file.id}>
-                      <TableCell className="font-medium flex items-center gap-2">
-                        {renderFileIcon(file.type)}
-                        <span className="truncate max-w-[200px]" title={file.name}>
-                          {file.name}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {file.category === 'meeting' && '会议纪要'}
-                        {file.category === 'contract' && '合同文件'}
-                        {file.category === 'attachment' && '附件'}
-                      </TableCell>
-                      <TableCell>{formatFileSize(file.size)}</TableCell>
-                      <TableCell>{file.uploadDate}</TableCell>
-                      <TableCell>
-                        {file.isAnalyzed ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            已分析
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                            未分析
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" title="查看文件">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            title="删除文件" 
-                            onClick={() => handleDelete(file.id)}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
   );
 } 

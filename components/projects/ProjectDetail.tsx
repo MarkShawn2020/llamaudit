@@ -9,84 +9,66 @@ import Link from 'next/link';
 import ProjectInfo from './ProjectInfo';
 import ProjectFiles from './ProjectFiles';
 import ProjectAnalysis from './ProjectAnalysis';
-
-// 模拟项目数据
-const MOCK_PROJECTS = {
-  '1': {
-    id: '1',
-    name: '新能源科技有限公司',
-    code: 'NE001',
-    type: '国有企业',
-    address: '北京市海淀区中关村大街1号',
-    contact: '张三',
-    phone: '010-12345678',
-    email: 'contact@newenergy.com',
-    description: '主要从事新能源技术研发和应用',
-    createdAt: '2023-01-15',
-    documentCount: 12,
-    taskCount: 3
-  },
-  '2': {
-    id: '2',
-    name: '红星机械制造公司',
-    code: 'RM002',
-    type: '国有企业',
-    address: '上海市浦东新区张江高科技园区',
-    contact: '李四',
-    phone: '021-87654321',
-    email: 'contact@redstar.com',
-    description: '专业从事机械设备制造和销售',
-    createdAt: '2023-03-22',
-    documentCount: 8,
-    taskCount: 2
-  },
-  '3': {
-    id: '3',
-    name: '蓝天环保设备有限公司',
-    code: 'BT003',
-    type: '民营企业',
-    address: '广州市天河区科技园',
-    contact: '王五',
-    phone: '020-55555555',
-    email: 'contact@bluetech.com',
-    description: '致力于环保设备的研发和生产',
-    createdAt: '2023-05-10',
-    documentCount: 15,
-    taskCount: 4
-  }
-};
+import { Project, getProject } from '@/lib/api/project-api';
+import { toast } from 'sonner';
 
 export default function ProjectDetail({ projectId }: { projectId: string }) {
-  const [project, setProject] = useState<any>(null);
+  const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('info');
 
   useEffect(() => {
-    // 模拟从API获取项目数据
-    setTimeout(() => {
-      setProject(MOCK_PROJECTS[projectId as keyof typeof MOCK_PROJECTS] || {
-        id: projectId,
-        name: '未知项目',
-        code: 'UNKNOWN',
-        type: '未分类',
-        address: '',
-        contact: '',
-        phone: '',
-        email: '',
-        description: '',
-        createdAt: new Date().toISOString().split('T')[0],
-        documentCount: 0,
-        taskCount: 0
-      });
-      setLoading(false);
-    }, 300);
+    // 加载项目详情
+    loadProject();
   }, [projectId]);
+
+  const loadProject = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getProject(projectId);
+      
+      if (!data) {
+        setError('项目不存在');
+        toast.error('无法找到该项目');
+        return;
+      }
+      
+      setProject(data);
+    } catch (error) {
+      console.error('加载项目详情失败:', error);
+      setError('加载项目详情失败');
+      toast.error('加载项目详情失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProjectUpdate = (updated: Partial<Project>) => {
+    if (!project) return;
+    setProject({ ...project, ...updated });
+  };
 
   if (loading) {
     return (
       <div className="container mx-auto py-6">
         <div className="flex justify-center items-center h-64">
           <div className="animate-pulse text-lg">加载项目信息...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !project) {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="text-center py-12 border rounded-lg bg-gray-50">
+          <h3 className="text-lg font-medium text-red-600">{error || '项目不存在'}</h3>
+          <p className="text-sm text-gray-500 mt-1">请返回项目列表查看其他项目</p>
+          <Button asChild variant="outline" className="mt-4">
+            <Link href="/projects">返回项目列表</Link>
+          </Button>
         </div>
       </div>
     );
@@ -142,11 +124,11 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
         </TabsList>
         
         <TabsContent value="info" className="space-y-4">
-          <ProjectInfo project={project} onUpdate={(updated) => setProject({...project, ...updated})} />
+          <ProjectInfo project={project} onUpdate={handleProjectUpdate} />
         </TabsContent>
         
         <TabsContent value="files" className="space-y-4">
-          <ProjectFiles projectId={projectId} />
+          <ProjectFiles project={project} onUpdate={loadProject} />
         </TabsContent>
         
         <TabsContent value="analysis" className="space-y-4">
