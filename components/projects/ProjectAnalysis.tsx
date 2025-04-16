@@ -449,8 +449,8 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
         )
       );
 
-      // 调用API批量解析文件
-      const analysisPromises = analyzeMeetingDocuments(selectedFiles);
+      // 调用API批量解析文件，传入projectId以便直接保存到数据库
+      const analysisPromises = analyzeMeetingDocuments(selectedFiles, projectId);
       
       // 使用Promise.allSettled处理所有解析请求
       const results = await Promise.allSettled(analysisPromises);
@@ -501,16 +501,6 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
                 : item
             )
           );
-        }
-      }
-
-      // 保存成功的分析结果到数据库
-      if (successfulResults.length > 0) {
-        try {
-          await saveDocumentAnalysisResults(projectId, successfulResults);
-        } catch (error) {
-          console.error('保存分析结果到数据库失败:', error);
-          toast.error('分析结果已生成，但保存到数据库失败');
         }
       }
 
