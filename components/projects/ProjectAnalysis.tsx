@@ -27,7 +27,9 @@ import {
   CreditCard,
   Users,
   Building,
-  BarChart3
+  BarChart3,
+  ChevronDown,
+  Download
 } from 'lucide-react';
 import { MeetingAnalysisResult, analyzeMeetingDocuments } from '@/lib/api/document-api';
 import { getProjectFiles, updateFileAnalysisStatus, ProjectFile } from '@/lib/api/project-file-api';
@@ -36,6 +38,13 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { saveDocumentAnalysisResults } from '@/lib/api/analysis-api';
+import { 
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { exportAnalysisResults, ExportFormat } from "@/lib/export-utils";
 
 interface FileAnalysisGroup {
   fileId: string;
@@ -274,6 +283,21 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
     }
   };
 
+  const handleExport = (format: ExportFormat) => {
+    if (groupedResults.length === 0) {
+      toast.warning('没有可导出的数据');
+      return;
+    }
+    
+    try {
+      exportAnalysisResults(groupedResults, format);
+      toast.success(`已成功导出${format.toUpperCase()}格式文件`);
+    } catch (error) {
+      console.error('导出失败:', error);
+      toast.error('导出失败，请重试');
+    }
+  };
+
   const renderStatus = (status: MeetingAnalysisResult['status'], error?: string) => {
     switch (status) {
       case 'pending':
@@ -431,7 +455,23 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
                   <TabsTrigger value="card">卡片视图</TabsTrigger>
                   <TabsTrigger value="table">表格视图</TabsTrigger>
                 </TabsList>
-                <Button variant="outline">导出结果</Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="gap-2">
+                      <Download className="h-4 w-4" />
+                      导出结果
+                      <ChevronDown className="h-4 w-4 ml-1" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleExport('csv')}>
+                      导出为CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExport('xlsx')}>
+                      导出为Excel (XLSX)
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               
               <TabsContent value="card" className="mt-4 pb-4">
