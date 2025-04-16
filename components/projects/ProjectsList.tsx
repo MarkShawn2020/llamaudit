@@ -123,7 +123,7 @@ export default function ProjectsList() {
               <Button variant="outline" onClick={() => setOpen(false)}>取消</Button>
               <Button 
                 onClick={handleAddProject} 
-                disabled={!newProject.name || !newProject.code || loading}
+                disabled={!newProject.name || !newProject.code || !newProject.type || loading}
               >
                 确认添加
               </Button>

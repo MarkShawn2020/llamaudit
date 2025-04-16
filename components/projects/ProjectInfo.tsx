@@ -98,6 +98,7 @@ export default function ProjectInfo({ project, onUpdate }: ProjectInfoProps) {
                   name="address" 
                   value={formData.address} 
                   onChange={handleInputChange} 
+                
                 />
               </div>
               <div className="space-y-2">
