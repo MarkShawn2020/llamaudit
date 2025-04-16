@@ -18,87 +18,8 @@ import {
 import { toast } from 'sonner';
 import { PlayIcon, CheckCircle, XCircle, Loader2, FileText } from 'lucide-react';
 import { MeetingAnalysisResult, analyzeMeetingDocuments } from '@/lib/api/document-api';
-
-interface ProjectFile {
-  id: string;
-  name: string;
-  type: string;
-  size: number;
-  url: string;
-  uploadDate: string;
-  category: 'meeting' | 'contract' | 'attachment';
-  isAnalyzed: boolean;
-}
-
-// 模拟项目文件数据
-const MOCK_PROJECT_FILES = {
-  '1': [
-    {
-      id: 'file1',
-      name: '第三季度经营分析会议纪要.docx',
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      size: 521000,
-      url: 'https://example.com/files/file1.docx',
-      uploadDate: '2023-10-20',
-      category: 'meeting',
-      isAnalyzed: false
-    },
-    {
-      id: 'file2',
-      name: '年度工作总结会议.docx',
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      size: 382000,
-      url: 'https://example.com/files/file2.docx',
-      uploadDate: '2023-11-05',
-      category: 'meeting',
-      isAnalyzed: false
-    },
-    {
-      id: 'file3',
-      name: '设备采购合同.pdf',
-      type: 'application/pdf',
-      size: 1240000,
-      url: 'https://example.com/files/file3.pdf',
-      uploadDate: '2023-11-20',
-      category: 'contract',
-      isAnalyzed: false
-    }
-  ],
-  '2': [
-    {
-      id: 'file4',
-      name: '工厂扩建项目会议纪要.docx',
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      size: 450000,
-      url: 'https://example.com/files/file4.docx',
-      uploadDate: '2023-09-15',
-      category: 'meeting',
-      isAnalyzed: false
-    }
-  ],
-  '3': [
-    {
-      id: 'file5',
-      name: '环保设备升级会议纪要.docx',
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      size: 380000,
-      url: 'https://example.com/files/file5.docx',
-      uploadDate: '2023-08-10',
-      category: 'meeting',
-      isAnalyzed: false
-    },
-    {
-      id: 'file6',
-      name: '技术合作协议.pdf',
-      type: 'application/pdf',
-      size: 950000,
-      url: 'https://example.com/files/file6.pdf',
-      uploadDate: '2023-09-05',
-      category: 'contract',
-      isAnalyzed: false
-    }
-  ]
-} as Record<string, ProjectFile[]>;
+import { getProjectFiles, updateFileAnalysisStatus, ProjectFile } from '@/lib/api/project-file-api';
+import { formatDate } from '@/lib/utils';
 
 export default function ProjectAnalysis({ projectId }: { projectId: string }) {
   const [files, setFiles] = useState<ProjectFile[]>([]);
@@ -108,12 +29,21 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 模拟从API获取文件列表
-    setTimeout(() => {
-      const projectFiles = MOCK_PROJECT_FILES[projectId] || [];
-      setFiles(projectFiles);
-      setLoading(false);
-    }, 300);
+    // 从API获取文件列表
+    const fetchFiles = async () => {
+      try {
+        setLoading(true);
+        const projectFiles = await getProjectFiles(projectId);
+        setFiles(projectFiles);
+      } catch (error) {
+        console.error('获取文件列表失败:', error);
+        toast.error('获取文件列表失败');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFiles();
   }, [projectId]);
 
   const handleSelectFile = (fileId: string) => {
@@ -130,7 +60,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
     if (selectedFiles.length === files.length) {
       setSelectedFiles([]);
     } else {
-      setSelectedFiles(files.map(file => file.id));
+      setSelectedFiles(files.filter(file => !file.isAnalyzed).map(file => file.id));
     }
   };
 
@@ -148,7 +78,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
         const file = files.find(f => f.id === fileId);
         return {
           id: fileId,
-          fileName: file?.name || '',
+          fileName: file?.filename || '',
           status: 'pending' as const,
           fileUrl: file?.url,
           fileSize: file?.size,
@@ -174,8 +104,9 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
       const results = await Promise.allSettled(analysisPromises);
       
       // 更新解析结果
-      results.forEach((result, index) => {
-        const fileId = selectedFiles[index];
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i];
+        const fileId = selectedFiles[i];
         
         if (result.status === 'fulfilled') {
           // 成功解析
@@ -185,12 +116,19 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
             )
           );
           
-          // 更新文件的isAnalyzed状态
-          setFiles(prev => 
-            prev.map(file => 
-              file.id === fileId ? { ...file, isAnalyzed: true } : file
-            )
-          );
+          try {
+            // 调用API更新文件的分析状态
+            await updateFileAnalysisStatus(projectId, fileId, true);
+            
+            // 更新本地文件状态
+            setFiles(prev => 
+              prev.map(file => 
+                file.id === fileId ? { ...file, isAnalyzed: true } : file
+              )
+            );
+          } catch (error) {
+            console.error(`更新文件[${fileId}]分析状态失败:`, error);
+          }
         } else {
           // 解析失败
           setAnalysisResults(prev => 
@@ -207,7 +145,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
             )
           );
         }
-      });
+      }
 
       toast.success(`已完成${results.length}个文件的解析`);
       
@@ -272,7 +210,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
                 <TableRow>
                   <TableHead className="w-[50px]">
                     <Checkbox 
-                      checked={files.length > 0 && selectedFiles.length === files.length}
+                      checked={files.length > 0 && selectedFiles.length === files.filter(f => !f.isAnalyzed).length}
                       onCheckedChange={handleSelectAll}
                       disabled={loading || isAnalyzing}
                     >
@@ -313,8 +251,8 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
                       </TableCell>
                       <TableCell className="font-medium flex items-center gap-2">
                         <FileText className="h-4 w-4 text-blue-500" />
-                        <span className="truncate max-w-[200px]" title={file.name}>
-                          {file.name}
+                        <span className="truncate max-w-[200px]" title={file.filename}>
+                          {file.filename}
                         </span>
                       </TableCell>
                       <TableCell>
@@ -322,7 +260,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
                         {file.category === 'contract' && '合同文件'}
                         {file.category === 'attachment' && '附件'}
                       </TableCell>
-                      <TableCell>{file.uploadDate}</TableCell>
+                      <TableCell>{formatDate(file.createdAt)}</TableCell>
                       <TableCell>
                         {file.isAnalyzed ? (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
