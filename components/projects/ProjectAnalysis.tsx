@@ -478,11 +478,11 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
             await updateFileAnalysisStatus(projectId, fileId, true);
             
             // 更新本地文件状态
-            setFiles(prev => 
-              prev.map(file => 
-                file.id === fileId ? { ...file, isAnalyzed: true } : file
-              )
-            );
+          setFiles(prev => 
+            prev.map(file => 
+              file.id === fileId ? { ...file, isAnalyzed: true } : file
+            )
+          );
           } catch (error) {
             console.error(`更新文件[${fileId}]分析状态失败:`, error);
           }
@@ -647,17 +647,17 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
     <div className="space-y-6">
       <div className="grid md:grid-cols-1 gap-6">
         {/* 文件管理卡片 */}
-        <Card>
+      <Card>
 
           <div className='flex gap-3 justify-between items-center px-4'>
 
-          <CardHeader>
+        <CardHeader>
             <CardTitle>项目文件管理</CardTitle>
-            <CardDescription>
+          <CardDescription>
               上传、管理和准备分析的文件
-            </CardDescription>
+          </CardDescription>
 
-          </CardHeader>
+        </CardHeader>
 
           <div className='flex gap-3 justify-between items-center px-4'>
 
@@ -745,80 +745,80 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
           </div>
 
 
-          <CardContent>
+        <CardContent>
 
 
             <div className="rounded-md border overflow-auto max-h-[400px]">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px]">
                       <SelectAllCheckbox 
                         checked={allFilesSelected}
                         onChange={handleSelectAll}
-                        disabled={loading || isAnalyzing}
+                      disabled={loading || isAnalyzing}
                       />
-                    </TableHead>
-                    <TableHead>文件名</TableHead>
-                    <TableHead>类型</TableHead>
+                  </TableHead>
+                  <TableHead>文件名</TableHead>
+                  <TableHead>类型</TableHead>
                     <TableHead>大小</TableHead>
-                    <TableHead>上传日期</TableHead>
-                    <TableHead>状态</TableHead>
+                  <TableHead>上传日期</TableHead>
+                  <TableHead>状态</TableHead>
                     <TableHead className="text-right">操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
                       <TableCell colSpan={7} className="text-center py-8">
                         <div className="flex justify-center items-center">
                           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                           <span>加载文件列表...</span>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : files.length === 0 ? (
-                    <TableRow>
+                    </TableCell>
+                  </TableRow>
+                ) : files.length === 0 ? (
+                  <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        <p>暂无可分析的文件</p>
-                        <p className="text-sm mt-1">请先上传会议纪要、合同等文件</p>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    files.map((file) => (
-                      <TableRow key={file.id}>
-                        <TableCell>
+                      <p>暂无可分析的文件</p>
+                      <p className="text-sm mt-1">请先上传会议纪要、合同等文件</p>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  files.map((file) => (
+                    <TableRow key={file.id}>
+                      <TableCell>
                           <ItemCheckbox
                             fileId={file.id}
-                            checked={selectedFiles.includes(file.id)}
+                          checked={selectedFiles.includes(file.id)}
                             onChange={handleSelectFile}
                             disabled={isAnalyzing}
                           />
-                        </TableCell>
-                        <TableCell className="font-medium flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-blue-500" />
+                      </TableCell>
+                      <TableCell className="font-medium flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-blue-500" />
                           <span className="truncate max-w-[200px]" title={file.filename}>
                             {file.filename}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {file.category === 'meeting' && '会议纪要'}
-                          {file.category === 'contract' && '合同文件'}
-                          {file.category === 'attachment' && '附件'}
-                        </TableCell>
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {file.category === 'meeting' && '会议纪要'}
+                        {file.category === 'contract' && '合同文件'}
+                        {file.category === 'attachment' && '附件'}
+                      </TableCell>
                         <TableCell>{formatFileSize(file.size)}</TableCell>
                         <TableCell>{formatDate(file.createdAt)}</TableCell>
-                        <TableCell>
-                          {file.isAnalyzed ? (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              已分析
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                              未分析
-                            </span>
-                          )}
-                        </TableCell>
+                      <TableCell>
+                        {file.isAnalyzed ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            已分析
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            未分析
+                          </span>
+                        )}
+                      </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
                             <Button size="sm" variant="ghost" onClick={() => viewFile(file)}>
@@ -842,16 +842,16 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
                             </Button>
                           </div>
                         </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-            
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          
 
-          </CardContent>
-        </Card>
+        </CardContent>
+      </Card>
 
         {/* 分析结果卡片 */}
         <Card>
@@ -859,9 +859,9 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
             <div className="flex justify-between items-center">
               <div>
                 <CardTitle>三重一大分析结果</CardTitle>
-                <CardDescription>
-                  提取的三重一大信息
-                </CardDescription>
+            <CardDescription>
+              提取的三重一大信息
+            </CardDescription>
               </div>
               {groupedResults.length > 0 && (
                 <DropdownMenu>
@@ -1010,43 +1010,43 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
                 
                 <TabsContent value="table" className="mt-4">
                   <div className="rounded-md border overflow-x-auto max-h-[500px]">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
+              <Table>
+                <TableHeader>
+                  <TableRow>
                           <TableHead className="w-[200px]">文件名</TableHead>
-                          <TableHead>会议时间</TableHead>
-                          <TableHead>文号</TableHead>
-                          <TableHead>会议议题</TableHead>
-                          <TableHead>事项类别</TableHead>
-                          <TableHead>涉及金额</TableHead>
-                          <TableHead>状态</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
+                    <TableHead>会议时间</TableHead>
+                    <TableHead>文号</TableHead>
+                    <TableHead>会议议题</TableHead>
+                    <TableHead>事项类别</TableHead>
+                    <TableHead>涉及金额</TableHead>
+                    <TableHead>状态</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                         {groupedResults.flatMap((group) => 
                           group.results.length > 0 ? 
                             group.results.map((result, index) => (
                               <TableRow key={`${group.fileId}-${index}`}>
-                                <TableCell className="font-medium">
+                      <TableCell className="font-medium">
                                   {index === 0 ? (
-                                    <div className="flex items-center gap-2">
-                                      <FileText className="h-4 w-4 text-blue-500" />
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-blue-500" />
                                       <span className="truncate max-w-[160px]" title={group.fileName}>
                                         {group.fileName}
-                                      </span>
-                                    </div>
+                          </span>
+                        </div>
                                   ) : null}
-                                </TableCell>
-                                <TableCell>{result.meetingTime || '-'}</TableCell>
-                                <TableCell>{result.meetingNumber || '-'}</TableCell>
-                                <TableCell>
-                                  <span className="truncate max-w-[160px] block" title={result.meetingTopic}>
-                                    {result.meetingTopic || '-'}
-                                  </span>
-                                </TableCell>
-                                <TableCell>{result.eventCategory || '-'}</TableCell>
-                                <TableCell>{result.amountInvolved || '-'}</TableCell>
-                                <TableCell>
+                      </TableCell>
+                      <TableCell>{result.meetingTime || '-'}</TableCell>
+                      <TableCell>{result.meetingNumber || '-'}</TableCell>
+                      <TableCell>
+                        <span className="truncate max-w-[160px] block" title={result.meetingTopic}>
+                          {result.meetingTopic || '-'}
+                        </span>
+                      </TableCell>
+                      <TableCell>{result.eventCategory || '-'}</TableCell>
+                      <TableCell>{result.amountInvolved || '-'}</TableCell>
+                      <TableCell>
                                   {index === 0 ? renderStatus(group.status, group.error) : null}
                                 </TableCell>
                               </TableRow>
@@ -1066,13 +1066,13 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
                               </TableCell>
                               <TableCell>
                                 {renderStatus(group.status, group.error)}
-                              </TableCell>
-                            </TableRow>
+                      </TableCell>
+                    </TableRow>
                           )
                         )}
-                      </TableBody>
-                    </Table>
-                  </div>
+                </TableBody>
+              </Table>
+            </div>
                 </TabsContent>
               </Tabs>
             ) : (

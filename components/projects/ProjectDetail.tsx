@@ -1,10 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Building, FileText, BarChart3, TrashIcon } from 'lucide-react';
+import { ArrowLeft, Building, FileText, BarChart3, TrashIcon, PencilIcon } from 'lucide-react';
 import Link from 'next/link';
 import ProjectInfo from './ProjectInfo';
 import ProjectAnalysis from './ProjectAnalysis';
@@ -21,14 +20,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function ProjectDetail({ projectId }: { projectId: string }) {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('info');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showProjectInfo, setShowProjectInfo] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -111,16 +118,40 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Link href="/projects" className="text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Building className="h-6 w-6 text-primary" />
-            {project.name}
-          </h1>
-        </div>
+
+      
+      <Card className="mb-6">
+        <CardHeader className="pb-2">
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="text-lg">项目概览（{project.name}）</CardTitle>
+              <CardDescription>单位代码: {project.code}</CardDescription>
+            </div>
+
+<div className='flex justify-end gap-2'>
+
+<Dialog open={showProjectInfo} onOpenChange={setShowProjectInfo}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1">
+                  <PencilIcon className="h-4 w-4" />
+                  编辑基本信息
+                </Button>
+
+
+              </DialogTrigger>
+              <DialogContent className="max-w-3xl">
+                <DialogHeader>
+                  <DialogTitle>项目基本信息</DialogTitle>
+                  <DialogDescription>
+                    查看和编辑项目的详细信息
+                  </DialogDescription>
+                </DialogHeader>
+                <ProjectInfo project={project} onUpdate={handleProjectUpdate} />
+              </DialogContent>
+            </Dialog>
+
+            <div className="flex items-center justify-between gap-2">
+
         <Button 
           variant="destructive" 
           size="sm" 
@@ -131,11 +162,9 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
           删除项目
         </Button>
       </div>
-      
-      <Card className="mb-6">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">项目概览</CardTitle>
-          <CardDescription>单位代码: {project.code}</CardDescription>
+</div>
+
+          </div>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -153,29 +182,9 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
         </CardContent>
       </Card>
       
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
-          <TabsTrigger value="info" className="flex items-center gap-1.5">
-            <Building className="h-4 w-4" />
-            <span>基本信息</span>
-          </TabsTrigger>
 
-          <TabsTrigger value="analysis" className="flex items-center gap-1.5">
-            <BarChart3 className="h-4 w-4" />
-            <span>分析任务</span>
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="info" className="space-y-4">
-          <ProjectInfo project={project} onUpdate={handleProjectUpdate} />
-        </TabsContent>
-        
-        
-        <TabsContent value="analysis" className="space-y-4">
-          <ProjectAnalysis projectId={projectId} />
-        </TabsContent>
-      </Tabs>
-
+        <ProjectAnalysis projectId={projectId} />
+      
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
