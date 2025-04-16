@@ -100,10 +100,6 @@ export function GlobalNavbar() {
   const { user } = useUser();
   const pathname = usePathname();
 
-  // 如果用户未登录，不显示导航栏
-  if (!user) {
-    return null;
-  }
 
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200  max-w-7xl mx-auto w-full">

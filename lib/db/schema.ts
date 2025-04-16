@@ -10,18 +10,20 @@ import {
   timestamp,
   uuid,
   varchar,
+  jsonb,
+  decimal,
 } from 'drizzle-orm/pg-core';
 import { StorageProvider } from '../file-storage';
+import { sql } from 'drizzle-orm';
 
 export const users = pgTable('users', {
-  id: serial('id').primaryKey(),
-  name: varchar('name', { length: 100 }),
+  id: uuid('id').primaryKey().defaultRandom(),
   email: varchar('email', { length: 255 }).notNull().unique(),
-  passwordHash: text('password_hash').notNull(),
-  role: varchar('role', { length: 20 }).notNull().default('member'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-  deletedAt: timestamp('deleted_at'),
+  name: varchar('name', { length: 255 }),
+  passwordHash: varchar('password_hash', { length: 255 }).notNull(),
+  role: varchar('role', { length: 50 }).notNull().default('user'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow()
 });
 
 export const teams = pgTable('teams', {
@@ -82,6 +84,9 @@ export const teamsRelations = relations(teams, ({ many }) => ({
 export const usersRelations = relations(users, ({ many }) => ({
   teamMembers: many(teamMembers),
   invitationsSent: many(invitations),
+  auditUnits: many(auditUnits, { relationName: 'userCreatedAuditUnits' }),
+  uploadedFiles: many(files, { relationName: 'userUploadedFiles' }),
+  createdTasks: many(analysisTasks, { relationName: 'userCreatedTasks' })
 }));
 
 export const invitationsRelations = relations(invitations, ({ one }) => ({
@@ -343,20 +348,234 @@ export type NewComplianceRule = typeof complianceRules.$inferInsert;
 export type ComplianceCheck = typeof complianceChecks.$inferSelect;
 export type NewComplianceCheck = typeof complianceChecks.$inferInsert;
 
+// 文件类别表
+export const fileCategories = pgTable('file_categories', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 100 }).notNull().unique(),
+  description: text('description')
+});
+
+// 被审计单位表
+export const auditUnits = pgTable('audit_units', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  code: varchar('code', { length: 50 }).notNull().unique(),
+  name: varchar('name', { length: 255 }).notNull(),
+  type: varchar('type', { length: 100 }).notNull(),
+  address: text('address'),
+  contactPerson: varchar('contact_person', { length: 100 }),
+  phone: varchar('phone', { length: 50 }),
+  email: varchar('email', { length: 255 }),
+  description: text('description'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  createdBy: uuid('created_by').references(() => users.id)
+});
+
 // 文件表
 export const files = pgTable('files', {
-  id: uuid('id').primaryKey().notNull(),
+  id: uuid('id').primaryKey().defaultRandom(),
   name: varchar('name', { length: 255 }).notNull(),
   originalName: varchar('original_name', { length: 255 }).notNull(),
-  fileType: varchar('file_type', { length: 255 }).notNull(),
-  size: integer('size').notNull(),
-  url: varchar('url', { length: 500 }).notNull(),
-  storagePath: varchar('storage_path', { length: 500 }).notNull(),
-  storageProvider: varchar('storage_provider', { length: 50 }).notNull().$type<StorageProvider>(),
-  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  filePath: text('file_path').notNull(),
+  fileSize: integer('file_size', { mode: 'bigint' }).notNull(),
+  fileType: varchar('file_type', { length: 100 }).notNull(),
+  categoryId: integer('category_id').references(() => fileCategories.id),
+  isAnalyzed: boolean('is_analyzed').default(false),
+  uploadDate: timestamp('upload_date', { withTimezone: true }).defaultNow(),
+  userId: uuid('user_id').references(() => users.id),
+  auditUnitId: uuid('audit_unit_id').references(() => auditUnits.id, { onDelete: 'cascade' }),
+  metadata: text('metadata')
 });
 
 export type File = typeof files.$inferSelect;
 export type InsertFile = typeof files.$inferInsert;
+
+// 分析任务表
+export const analysisTasks = pgTable('analysis_tasks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 255 }).notNull(),
+  auditUnitId: uuid('audit_unit_id').notNull().references(() => auditUnits.id, { onDelete: 'cascade' }),
+  createdBy: uuid('created_by').references(() => users.id),
+  status: varchar('status', { length: 50 }).notNull().default('pending'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  taskType: varchar('task_type', { length: 50 }).notNull().default('three_important_one_big'),
+  taskConfig: jsonb('task_config')
+});
+
+// 任务文件关联表
+export const taskFiles = pgTable('task_files', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  taskId: uuid('task_id').notNull().references(() => analysisTasks.id, { onDelete: 'cascade' }),
+  fileId: uuid('file_id').notNull().references(() => files.id, { onDelete: 'cascade' }),
+  status: varchar('status', { length: 50 }).notNull().default('pending'),
+  startedAt: timestamp('started_at', { withTimezone: true }),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  errorMessage: text('error_message')
+});
+
+// 设置任务文件唯一约束
+export const taskFilesUnique = sql`
+  ALTER TABLE ${taskFiles} ADD CONSTRAINT task_files_unique UNIQUE(task_id, file_id);
+`;
+
+// 三重一大分析结果表
+export const analysisResults = pgTable('analysis_results', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  taskId: uuid('task_id').notNull().references(() => analysisTasks.id, { onDelete: 'cascade' }),
+  fileId: uuid('file_id').notNull().references(() => files.id, { onDelete: 'cascade' }),
+  
+  // 会议纪要信息
+  meetingTime: timestamp('meeting_time', { withTimezone: true }),
+  meetingNumber: varchar('meeting_number', { length: 100 }),
+  meetingTopic: text('meeting_topic'),
+  meetingConclusion: text('meeting_conclusion'),
+  contentSummary: text('content_summary'),
+  
+  // 三重一大分类
+  eventCategory: varchar('event_category', { length: 50 }),
+  eventDetails: text('event_details'),
+  amountInvolved: decimal('amount_involved', { precision: 20, scale: 2 }),
+  
+  // 相关人员与部门
+  relatedDepartments: text('related_departments'),
+  relatedPersonnel: text('related_personnel'),
+  decisionBasis: text('decision_basis'),
+  
+  // 原文与其他信息
+  originalText: text('original_text'),
+  confidence: decimal('confidence', { precision: 5, scale: 2 }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow()
+});
+
+// 设置分析结果唯一约束
+export const analysisResultsUnique = sql`
+  ALTER TABLE ${analysisResults} ADD CONSTRAINT analysis_results_unique UNIQUE(task_id, file_id);
+`;
+
+// 审计单位规则表
+export const auditUnitRules = pgTable('audit_unit_rules', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  auditUnitId: uuid('audit_unit_id').notNull().references(() => auditUnits.id, { onDelete: 'cascade' }),
+  ruleType: varchar('rule_type', { length: 100 }).notNull(),
+  ruleName: varchar('rule_name', { length: 255 }).notNull(),
+  ruleDescription: text('rule_description'),
+  ruleConfig: jsonb('rule_config').notNull(),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  createdBy: uuid('created_by').references(() => users.id)
+});
+
+// 设置规则唯一约束
+export const auditUnitRulesUnique = sql`
+  ALTER TABLE ${auditUnitRules} ADD CONSTRAINT audit_unit_rules_unique UNIQUE(audit_unit_id, rule_name);
+`;
+
+// 合规检查结果表
+export const complianceResults = pgTable('compliance_results', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  auditUnitId: uuid('audit_unit_id').notNull().references(() => auditUnits.id, { onDelete: 'cascade' }),
+  fileId: uuid('file_id').notNull().references(() => files.id, { onDelete: 'cascade' }),
+  ruleId: uuid('rule_id').notNull().references(() => auditUnitRules.id),
+  isCompliant: boolean('is_compliant').notNull(),
+  issueDescription: text('issue_description'),
+  severity: varchar('severity', { length: 50 }).notNull().default('medium'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow()
+});
+
+export const auditUnitsRelations = relations(auditUnits, ({ one, many }) => ({
+  createdByUser: one(users, {
+    fields: [auditUnits.createdBy],
+    references: [users.id],
+    relationName: 'userCreatedAuditUnits'
+  }),
+  files: many(files),
+  analysisTasks: many(analysisTasks),
+  rules: many(auditUnitRules)
+}));
+
+export const fileCategoriesRelations = relations(fileCategories, ({ many }) => ({
+  files: many(files)
+}));
+
+export const filesRelations = relations(files, ({ one, many }) => ({
+  auditUnit: one(auditUnits, {
+    fields: [files.auditUnitId],
+    references: [auditUnits.id]
+  }),
+  category: one(fileCategories, {
+    fields: [files.categoryId],
+    references: [fileCategories.id]
+  }),
+  uploadedBy: one(users, {
+    fields: [files.userId],
+    references: [users.id],
+    relationName: 'userUploadedFiles'
+  }),
+  taskFiles: many(taskFiles),
+  analysisResults: many(analysisResults)
+}));
+
+export const analysisTasksRelations = relations(analysisTasks, ({ one, many }) => ({
+  auditUnit: one(auditUnits, {
+    fields: [analysisTasks.auditUnitId],
+    references: [auditUnits.id]
+  }),
+  createdBy: one(users, {
+    fields: [analysisTasks.createdBy],
+    references: [users.id],
+    relationName: 'userCreatedTasks'
+  }),
+  taskFiles: many(taskFiles),
+  analysisResults: many(analysisResults)
+}));
+
+export const taskFilesRelations = relations(taskFiles, ({ one }) => ({
+  task: one(analysisTasks, {
+    fields: [taskFiles.taskId],
+    references: [analysisTasks.id]
+  }),
+  file: one(files, {
+    fields: [taskFiles.fileId],
+    references: [files.id]
+  })
+}));
+
+export const analysisResultsRelations = relations(analysisResults, ({ one }) => ({
+  task: one(analysisTasks, {
+    fields: [analysisResults.taskId],
+    references: [analysisTasks.id]
+  }),
+  file: one(files, {
+    fields: [analysisResults.fileId],
+    references: [files.id]
+  })
+}));
+
+export const auditUnitRulesRelations = relations(auditUnitRules, ({ one, many }) => ({
+  auditUnit: one(auditUnits, {
+    fields: [auditUnitRules.auditUnitId],
+    references: [auditUnits.id]
+  }),
+  createdBy: one(users, {
+    fields: [auditUnitRules.createdBy],
+    references: [users.id]
+  }),
+  complianceResults: many(complianceResults)
+}));
+
+export const complianceResultsRelations = relations(complianceResults, ({ one }) => ({
+  auditUnit: one(auditUnits, {
+    fields: [complianceResults.auditUnitId],
+    references: [auditUnits.id]
+  }),
+  file: one(files, {
+    fields: [complianceResults.fileId],
+    references: [files.id]
+  }),
+  rule: one(auditUnitRules, {
+    fields: [complianceResults.ruleId],
+    references: [auditUnitRules.id]
+  })
+}));

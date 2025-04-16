@@ -29,7 +29,7 @@ export async function comparePasswords(
 
 type SessionData = {
   user: { 
-    id: number;
+    id: string;
     email: string;
   };
   expires: string;

@@ -1,3 +1,7 @@
+import 'dotenv/config';
+// 或者
+import * as dotenv from 'dotenv';
+dotenv.config();
 import { stripe } from '../payments/stripe';
 import { db } from './drizzle';
 import { documentTypes, organizations, teams } from './schema';
