@@ -35,6 +35,7 @@ import { formatDate, formatFileSize } from '@/lib/utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { saveDocumentAnalysisResults } from '@/lib/api/analysis-api';
 
 interface FileAnalysisGroup {
   fileId: string;
@@ -173,12 +174,17 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
       const results = await Promise.allSettled(analysisPromises);
       
       // 更新解析结果
+      const successfulResults: MeetingAnalysisResult[] = [];
+      
       for (let i = 0; i < results.length; i++) {
         const result = results[i];
         const fileId = selectedFiles[i];
         
         if (result.status === 'fulfilled') {
-          // 成功解析
+          // 成功解析的结果添加到数组中
+          successfulResults.push(result.value);
+          
+          // 更新UI状态
           setRawAnalysisResults(prev => 
             prev.map(item => 
               item.id === fileId ? result.value : item
@@ -213,6 +219,16 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
                 : item
             )
           );
+        }
+      }
+
+      // 保存成功的分析结果到数据库
+      if (successfulResults.length > 0) {
+        try {
+          await saveDocumentAnalysisResults(projectId, successfulResults);
+        } catch (error) {
+          console.error('保存分析结果到数据库失败:', error);
+          toast.error('分析结果已生成，但保存到数据库失败');
         }
       }
 
@@ -370,15 +386,15 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
         </CardContent>
       </Card>
 
-      {groupedResults.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>分析结果</CardTitle>
-            <CardDescription>
-              提取的三重一大信息
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
+      <Card>
+        <CardHeader>
+          <CardTitle>分析结果</CardTitle>
+          <CardDescription>
+            提取的三重一大信息
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          {groupedResults.length > 0 ? (
             <Tabs defaultValue="card" className="w-full px-6">
               <div className="flex justify-between items-center border-b pb-4">
                 <TabsList>
@@ -564,9 +580,15 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
                 </div>
               </TabsContent>
             </Tabs>
-          </CardContent>
-        </Card>
-      )}
+          ) : (
+            <div className="p-6 text-center text-muted-foreground flex flex-col items-center">
+              <FileText className="h-16 w-16 text-muted-foreground/30 mb-4" />
+              <p className="text-lg mb-2">暂无分析结果</p>
+              <p className="text-sm">请从上方选择文件并点击"开始分析"</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 } 
