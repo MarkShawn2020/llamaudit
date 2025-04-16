@@ -377,7 +377,7 @@ export const files = pgTable('files', {
   name: varchar('name', { length: 255 }).notNull(),
   originalName: varchar('original_name', { length: 255 }).notNull(),
   filePath: text('file_path').notNull(),
-  fileSize: integer('file_size', { mode: 'bigint' }).notNull(),
+  fileSize: integer('file_size').notNull(),
   fileType: varchar('file_type', { length: 100 }).notNull(),
   categoryId: integer('category_id').references(() => fileCategories.id),
   isAnalyzed: boolean('is_analyzed').default(false),
@@ -427,6 +427,9 @@ export const analysisResults = pgTable('analysis_results', {
   taskId: uuid('task_id').notNull().references(() => analysisTasks.id, { onDelete: 'cascade' }),
   fileId: uuid('file_id').notNull().references(() => files.id, { onDelete: 'cascade' }),
   
+  // 分析项目编号（一个文件可能有多个三重一大事项）
+  itemIndex: integer('item_index').notNull().default(0),
+  
   // 会议纪要信息
   meetingTime: timestamp('meeting_time', { withTimezone: true }),
   meetingNumber: varchar('meeting_number', { length: 100 }),
@@ -451,9 +454,9 @@ export const analysisResults = pgTable('analysis_results', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow()
 });
 
-// 设置分析结果唯一约束
+// 设置分析结果复合唯一约束（文件ID + 任务ID + 项目索引）
 export const analysisResultsUnique = sql`
-  ALTER TABLE ${analysisResults} ADD CONSTRAINT analysis_results_unique UNIQUE(task_id, file_id);
+  ALTER TABLE ${analysisResults} ADD CONSTRAINT analysis_results_unique UNIQUE(task_id, file_id, item_index);
 `;
 
 // 审计单位规则表

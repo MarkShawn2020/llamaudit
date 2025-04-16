@@ -16,15 +16,43 @@ import {
   CheckboxIndicator 
 } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { PlayIcon, CheckCircle, XCircle, Loader2, FileText } from 'lucide-react';
+import { 
+  PlayIcon, 
+  CheckCircle, 
+  XCircle, 
+  Loader2, 
+  FileText, 
+  Calendar, 
+  FileUp,
+  CreditCard,
+  Users,
+  Building,
+  BarChart3
+} from 'lucide-react';
 import { MeetingAnalysisResult, analyzeMeetingDocuments } from '@/lib/api/document-api';
 import { getProjectFiles, updateFileAnalysisStatus, ProjectFile } from '@/lib/api/project-file-api';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatFileSize } from '@/lib/utils';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+interface FileAnalysisGroup {
+  fileId: string;
+  fileName: string;
+  fileUrl?: string;
+  fileSize?: number;
+  fileType?: string;
+  uploadDate?: string;
+  status: 'pending' | 'processing' | 'completed' | 'error';
+  error?: string;
+  results: MeetingAnalysisResult[];
+}
 
 export default function ProjectAnalysis({ projectId }: { projectId: string }) {
   const [files, setFiles] = useState<ProjectFile[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
-  const [analysisResults, setAnalysisResults] = useState<MeetingAnalysisResult[]>([]);
+  const [rawAnalysisResults, setRawAnalysisResults] = useState<MeetingAnalysisResult[]>([]);
+  const [groupedResults, setGroupedResults] = useState<FileAnalysisGroup[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -45,6 +73,47 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
 
     fetchFiles();
   }, [projectId]);
+
+  // 处理分析结果分组
+  useEffect(() => {
+    // 按文件ID分组结果
+    const groupMap = new Map<string, FileAnalysisGroup>();
+    
+    rawAnalysisResults.forEach(result => {
+      const fileId = result.id;
+      
+      if (!groupMap.has(fileId)) {
+        // 创建新的文件分组
+        const fileInfo = files.find(f => f.id === fileId);
+        groupMap.set(fileId, {
+          fileId,
+          fileName: result.fileName || fileInfo?.filename || '',
+          fileUrl: result.fileUrl || fileInfo?.url,
+          fileSize: result.fileSize || fileInfo?.size,
+          fileType: result.fileType || fileInfo?.type,
+          uploadDate: fileInfo?.createdAt,
+          status: result.status,
+          error: result.error,
+          results: []
+        });
+      }
+      
+      const group = groupMap.get(fileId)!;
+      
+      // 如果结果是已完成且有有效内容，则添加到结果列表
+      if (result.status === 'completed' && result.meetingTopic) {
+        group.results.push(result);
+      }
+      
+      // 更新组的状态
+      group.status = result.status;
+      if (result.error) {
+        group.error = result.error;
+      }
+    });
+    
+    setGroupedResults(Array.from(groupMap.values()));
+  }, [rawAnalysisResults, files]);
 
   const handleSelectFile = (fileId: string) => {
     setSelectedFiles(prev => {
@@ -86,10 +155,10 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
         };
       });
       
-      setAnalysisResults(prev => [...prev, ...pendingResults]);
+      setRawAnalysisResults(prev => [...prev, ...pendingResults]);
       
       // 更新为processing状态
-      setAnalysisResults(prev => 
+      setRawAnalysisResults(prev => 
         prev.map(result => 
           selectedFiles.includes(result.id) 
             ? { ...result, status: 'processing' as const } 
@@ -110,7 +179,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
         
         if (result.status === 'fulfilled') {
           // 成功解析
-          setAnalysisResults(prev => 
+          setRawAnalysisResults(prev => 
             prev.map(item => 
               item.id === fileId ? result.value : item
             )
@@ -131,7 +200,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
           }
         } else {
           // 解析失败
-          setAnalysisResults(prev => 
+          setRawAnalysisResults(prev => 
             prev.map(item => 
               item.id === fileId 
                 ? { 
@@ -163,31 +232,31 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
     switch (status) {
       case 'pending':
         return (
-          <span className="inline-flex items-center gap-1 text-yellow-600">
-            <span className="h-2 w-2 rounded-full bg-yellow-500"></span>
-            <span className="text-xs">等待处理</span>
-          </span>
+          <Badge variant="outline" className="bg-yellow-50 text-yellow-600 border-yellow-200">
+            <span className="h-2 w-2 rounded-full bg-yellow-500 mr-1"></span>
+            等待处理
+          </Badge>
         );
       case 'processing':
         return (
-          <span className="inline-flex items-center gap-1 text-blue-600">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            <span className="text-xs">解析中...</span>
-          </span>
+          <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
+            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+            解析中...
+          </Badge>
         );
       case 'completed':
         return (
-          <span className="inline-flex items-center gap-1 text-green-600">
-            <CheckCircle className="h-3 w-3" />
-            <span className="text-xs">已完成</span>
-          </span>
+          <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            已完成
+          </Badge>
         );
       case 'error':
         return (
-          <span className="inline-flex items-center gap-1 text-red-600" title={error}>
-            <XCircle className="h-3 w-3" />
-            <span className="text-xs">解析失败</span>
-          </span>
+          <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200" title={error}>
+            <XCircle className="h-3 w-3 mr-1" />
+            解析失败
+          </Badge>
         );
       default:
         return null;
@@ -301,7 +370,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
         </CardContent>
       </Card>
 
-      {analysisResults.length > 0 && (
+      {groupedResults.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>分析结果</CardTitle>
@@ -309,52 +378,193 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
               提取的三重一大信息
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="rounded-md border overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[250px]">文件名</TableHead>
-                    <TableHead>会议时间</TableHead>
-                    <TableHead>文号</TableHead>
-                    <TableHead>会议议题</TableHead>
-                    <TableHead>事项类别</TableHead>
-                    <TableHead>涉及金额</TableHead>
-                    <TableHead>状态</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {analysisResults.map((result) => (
-                    <TableRow key={result.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-blue-500" />
-                          <span className="truncate max-w-[160px]" title={result.fileName}>
-                            {result.fileName}
-                          </span>
+          <CardContent className="p-0">
+            <Tabs defaultValue="card" className="w-full px-6">
+              <div className="flex justify-between items-center border-b pb-4">
+                <TabsList>
+                  <TabsTrigger value="card">卡片视图</TabsTrigger>
+                  <TabsTrigger value="table">表格视图</TabsTrigger>
+                </TabsList>
+                <Button variant="outline">导出结果</Button>
+              </div>
+              
+              <TabsContent value="card" className="mt-4 pb-4">
+                <div className="space-y-6">
+                  {groupedResults.map((group) => (
+                    <Card key={group.fileId} className="overflow-hidden">
+                      <CardHeader className="bg-muted/30 py-4">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-blue-500" />
+                            <CardTitle className="text-lg">{group.fileName}</CardTitle>
+                            {renderStatus(group.status, group.error)}
+                          </div>
                         </div>
-                      </TableCell>
-                      <TableCell>{result.meetingTime || '-'}</TableCell>
-                      <TableCell>{result.meetingNumber || '-'}</TableCell>
-                      <TableCell>
-                        <span className="truncate max-w-[160px] block" title={result.meetingTopic}>
-                          {result.meetingTopic || '-'}
-                        </span>
-                      </TableCell>
-                      <TableCell>{result.eventCategory || '-'}</TableCell>
-                      <TableCell>{result.amountInvolved || '-'}</TableCell>
-                      <TableCell>
-                        {renderStatus(result.status, result.error)}
-                      </TableCell>
-                    </TableRow>
+                        <div className="grid grid-cols-3 gap-4 mt-2 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-4 w-4" />
+                            <span>{group.uploadDate ? formatDate(group.uploadDate) : '-'}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <FileUp className="h-4 w-4" />
+                            <span>{group.fileSize ? formatFileSize(group.fileSize) : '-'}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <BarChart3 className="h-4 w-4" />
+                            <span>{group.results.length} 项三重一大事项</span>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      {group.status === 'completed' ? (
+                        <CardContent className="p-0">
+                          {group.results.length > 0 ? (
+                            <Accordion type="multiple" className="w-full">
+                              {group.results.map((result, index) => (
+                                <AccordionItem key={`${group.fileId}-${index}`} value={`item-${index}`}>
+                                  <AccordionTrigger className="px-6 py-3 hover:bg-muted/20 hover:no-underline">
+                                    <div className="flex items-center gap-3 text-left">
+                                      <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 px-2">
+                                        {result.eventCategory || '未分类'}
+                                      </Badge>
+                                      <span className="font-medium">{result.meetingTopic || '未知议题'}</span>
+                                    </div>
+                                  </AccordionTrigger>
+                                  <AccordionContent className="px-6 pt-2 pb-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <div>
+                                        <div className="text-sm font-medium mb-1">会议时间</div>
+                                        <div>{result.meetingTime || '-'}</div>
+                                      </div>
+                                      <div>
+                                        <div className="text-sm font-medium mb-1">文号</div>
+                                        <div>{result.meetingNumber || '-'}</div>
+                                      </div>
+                                      <div>
+                                        <div className="text-sm font-medium mb-1">事项类别</div>
+                                        <div>{result.eventCategory || '-'}</div>
+                                      </div>
+                                      <div>
+                                        <div className="text-sm font-medium mb-1">涉及金额</div>
+                                        <div>{result.amountInvolved || '-'}</div>
+                                      </div>
+                                      <div className="col-span-2">
+                                        <div className="text-sm font-medium mb-1">会议议题</div>
+                                        <div>{result.meetingTopic || '-'}</div>
+                                      </div>
+                                      <div className="col-span-2">
+                                        <div className="text-sm font-medium mb-1">事项详情</div>
+                                        <div>{result.eventDetails || '-'}</div>
+                                      </div>
+                                      <div>
+                                        <div className="text-sm font-medium mb-1">相关部门</div>
+                                        <div className="flex items-center gap-1">
+                                          <Building className="h-4 w-4 text-muted-foreground" />
+                                          <span>{result.relatedDepartments || '-'}</span>
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <div className="text-sm font-medium mb-1">相关人员</div>
+                                        <div className="flex items-center gap-1">
+                                          <Users className="h-4 w-4 text-muted-foreground" />
+                                          <span>{result.relatedPersonnel || '-'}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </AccordionContent>
+                                </AccordionItem>
+                              ))}
+                            </Accordion>
+                          ) : (
+                            <div className="py-8 text-center text-muted-foreground">
+                              <p>未检测到三重一大相关内容</p>
+                            </div>
+                          )}
+                        </CardContent>
+                      ) : group.status === 'error' ? (
+                        <CardContent className="py-8 text-center text-muted-foreground">
+                          <p>分析失败：{group.error || '未知错误'}</p>
+                        </CardContent>
+                      ) : (
+                        <CardContent className="py-8 text-center">
+                          <div className="flex justify-center items-center gap-2">
+                            <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                            <p>正在分析中...</p>
+                          </div>
+                        </CardContent>
+                      )}
+                    </Card>
                   ))}
-                </TableBody>
-              </Table>
-            </div>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="table" className="mt-4">
+                <div className="rounded-md border overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[200px]">文件名</TableHead>
+                        <TableHead>会议时间</TableHead>
+                        <TableHead>文号</TableHead>
+                        <TableHead>会议议题</TableHead>
+                        <TableHead>事项类别</TableHead>
+                        <TableHead>涉及金额</TableHead>
+                        <TableHead>状态</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {groupedResults.flatMap((group) => 
+                        group.results.length > 0 ? 
+                          group.results.map((result, index) => (
+                            <TableRow key={`${group.fileId}-${index}`}>
+                              <TableCell className="font-medium">
+                                {index === 0 ? (
+                                  <div className="flex items-center gap-2">
+                                    <FileText className="h-4 w-4 text-blue-500" />
+                                    <span className="truncate max-w-[160px]" title={group.fileName}>
+                                      {group.fileName}
+                                    </span>
+                                  </div>
+                                ) : null}
+                              </TableCell>
+                              <TableCell>{result.meetingTime || '-'}</TableCell>
+                              <TableCell>{result.meetingNumber || '-'}</TableCell>
+                              <TableCell>
+                                <span className="truncate max-w-[160px] block" title={result.meetingTopic}>
+                                  {result.meetingTopic || '-'}
+                                </span>
+                              </TableCell>
+                              <TableCell>{result.eventCategory || '-'}</TableCell>
+                              <TableCell>{result.amountInvolved || '-'}</TableCell>
+                              <TableCell>
+                                {index === 0 ? renderStatus(group.status, group.error) : null}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        : (
+                          <TableRow key={group.fileId}>
+                            <TableCell className="font-medium">
+                              <div className="flex items-center gap-2">
+                                <FileText className="h-4 w-4 text-blue-500" />
+                                <span className="truncate max-w-[160px]" title={group.fileName}>
+                                  {group.fileName}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell colSpan={5} className="text-center text-muted-foreground">
+                              {group.status === 'completed' ? '未检测到三重一大相关内容' : ''}
+                            </TableCell>
+                            <TableCell>
+                              {renderStatus(group.status, group.error)}
+                            </TableCell>
+                          </TableRow>
+                        )
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+            </Tabs>
           </CardContent>
-          <CardFooter className="flex justify-end border-t pt-4">
-            <Button variant="outline">导出结果</Button>
-          </CardFooter>
         </Card>
       )}
     </div>
