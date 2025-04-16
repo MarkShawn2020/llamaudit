@@ -1,6 +1,38 @@
 import { toast } from "sonner";
 
 /**
+ * 三重一大事项接口
+ */
+export interface ImportantBigItem {
+  // 事项ID (内部生成的UUID)
+  itemId: string;
+  // 会议时间
+  meetingTime?: string;
+  // 文号
+  meetingNumber?: string;
+  // 会议议题
+  meetingTopic?: string;
+  // 会议结论
+  meetingConclusion?: string;
+  // 内容摘要
+  contentSummary?: string;
+  // 事项类别（重大决策、重要干部任免、重大项目、大额资金）
+  eventCategory?: string; 
+  // 事项详情
+  eventDetails?: string;
+  // 涉及金额
+  amountInvolved?: string;
+  // 相关部门
+  relatedDepartments?: string;
+  // 相关人员
+  relatedPersonnel?: string;
+  // 决策依据
+  decisionBasis?: string;
+  // 原文
+  originalText?: string;
+}
+
+/**
  * 会议纪要解析结果接口
  */
 export interface MeetingAnalysisResult {
@@ -11,13 +43,15 @@ export interface MeetingAnalysisResult {
   fileSize?: number;
   fileType?: string;
   parseDate?: string;
-  // 以下为三重一大会议解析内容
+  // 三重一大事项列表 (一个文件可能包含多个事项)
+  items?: ImportantBigItem[];
+  // 兼容旧代码的单事项字段
   meetingTime?: string;
   meetingNumber?: string;
   meetingTopic?: string;
   meetingConclusion?: string;
   contentSummary?: string;
-  eventCategory?: string; // 事项类别（重大决策、重要干部任免、重大项目、大额资金）
+  eventCategory?: string;
   eventDetails?: string;
   amountInvolved?: string;
   relatedDepartments?: string;
@@ -51,22 +85,60 @@ export async function analyzeMeetingDocument(fileId: string): Promise<MeetingAna
       setTimeout(() => {
         // 模拟95%的成功率
         if (Math.random() > 0.05) {
-          resolve({
+          // 随机生成1-3个三重一大事项
+          const itemCount = Math.floor(Math.random() * 3) + 1;
+          const items: ImportantBigItem[] = [];
+          
+          // 生成模拟数据
+          for (let i = 0; i < itemCount; i++) {
+            const eventTypes = ['重大决策', '重要干部任免', '重大项目', '大额资金'];
+            const eventCategory = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+            
+            items.push({
+              itemId: `item-${fileId}-${i}`,
+              meetingTime: `2023年${10 + i}月${15 + i}日`,
+              meetingNumber: `企发[2023]${42 + i}号`,
+              meetingTopic: `关于${eventCategory}${i + 1}号方案的议题`,
+              meetingConclusion: `一致通过该${eventCategory}方案`,
+              contentSummary: `讨论了${eventCategory}方案的实施细节和影响`,
+              eventCategory,
+              eventDetails: `${eventCategory}详情：涉及范围广泛，影响重大`,
+              amountInvolved: eventCategory === '大额资金' ? `${(i + 1) * 1000}万元` : undefined,
+              relatedDepartments: '财务部、工程部、法务部',
+              relatedPersonnel: '张三、李四、王五',
+              decisionBasis: '公司发展战略规划及市场调研报告',
+              originalText: `会议讨论了${eventCategory}方案，与会人员一致通过...`
+            });
+          }
+          
+          // 构建完整结果
+          const result: MeetingAnalysisResult = {
             ...pendingResult,
             status: 'completed',
-            meetingTime: '2023年10月15日',
-            meetingNumber: '企发[2023]42号',
-            meetingTopic: '关于XX项目投资决策的会议',
-            meetingConclusion: '一致通过该项目投资计划',
-            contentSummary: '讨论了XX项目的投资规模、回报率及风险评估',
-            eventCategory: Math.random() > 0.5 ? '重大项目' : '大额资金',
-            eventDetails: '项目总投资约5000万元，建设周期18个月',
-            amountInvolved: '5000万元',
-            relatedDepartments: '财务部、工程部、法务部',
-            relatedPersonnel: '张三、李四、王五',
-            decisionBasis: '公司发展战略规划及市场调研报告',
             parseDate: new Date().toISOString(),
-          });
+            items
+          };
+          
+          // 为了兼容旧代码，设置第一个事项的信息到顶层字段
+          if (items.length > 0) {
+            const firstItem = items[0];
+            Object.assign(result, {
+              meetingTime: firstItem.meetingTime,
+              meetingNumber: firstItem.meetingNumber,
+              meetingTopic: firstItem.meetingTopic,
+              meetingConclusion: firstItem.meetingConclusion,
+              contentSummary: firstItem.contentSummary,
+              eventCategory: firstItem.eventCategory,
+              eventDetails: firstItem.eventDetails,
+              amountInvolved: firstItem.amountInvolved,
+              relatedDepartments: firstItem.relatedDepartments,
+              relatedPersonnel: firstItem.relatedPersonnel,
+              decisionBasis: firstItem.decisionBasis,
+              originalText: firstItem.originalText
+            });
+          }
+          
+          resolve(result);
         } else {
           // 模拟解析失败的情况
           resolve({

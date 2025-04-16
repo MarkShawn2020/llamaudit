@@ -101,15 +101,45 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
       
       const group = groupMap.get(fileId)!;
       
-      // 如果结果是已完成且有有效内容，则添加到结果列表
-      if (result.status === 'completed' && result.meetingTopic) {
-        group.results.push(result);
-      }
-      
       // 更新组的状态
       group.status = result.status;
       if (result.error) {
         group.error = result.error;
+      }
+
+      // 如果是已完成状态，添加结果
+      if (result.status === 'completed') {
+        // 处理新格式（带items数组）
+        if (result.items && result.items.length > 0) {
+          // 将每个item转换为MeetingAnalysisResult格式并添加到结果数组
+          result.items.forEach(item => {
+            group.results.push({
+              id: `${fileId}-${item.itemId}`,
+              fileName: result.fileName,
+              status: 'completed',
+              meetingTime: item.meetingTime,
+              meetingNumber: item.meetingNumber,
+              meetingTopic: item.meetingTopic,
+              meetingConclusion: item.meetingConclusion,
+              contentSummary: item.contentSummary,
+              eventCategory: item.eventCategory,
+              eventDetails: item.eventDetails,
+              amountInvolved: item.amountInvolved,
+              relatedDepartments: item.relatedDepartments,
+              relatedPersonnel: item.relatedPersonnel,
+              decisionBasis: item.decisionBasis,
+              originalText: item.originalText
+            });
+          });
+        } 
+        // 处理旧格式（单个事项）
+        else if (result.meetingTopic || result.eventCategory) {
+          group.results.push({
+            ...result,
+            // 确保每个结果有唯一ID
+            id: `${fileId}-legacy`
+          });
+        }
       }
     });
     

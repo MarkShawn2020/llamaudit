@@ -50,28 +50,63 @@ export async function saveDocumentAnalysisResults(
     const taskName = `文档分析任务 ${new Date().toLocaleString('zh-CN')}`;
     const { taskId } = await createAnalysisTask(projectId, taskName);
 
-    // 转换格式
-    const formattedResults: AnalysisResultInput[] = completedResults.map(result => ({
-      fileId: result.id,
-      meetingTime: result.meetingTime,
-      meetingNumber: result.meetingNumber,
-      meetingTopic: result.meetingTopic,
-      meetingConclusion: result.meetingConclusion,
-      contentSummary: result.contentSummary,
-      eventCategory: result.eventCategory,
-      eventDetails: result.eventDetails,
-      amountInvolved: result.amountInvolved,
-      relatedDepartments: result.relatedDepartments,
-      relatedPersonnel: result.relatedPersonnel,
-      decisionBasis: result.decisionBasis,
-      originalText: result.originalText
-    }));
+    // 将所有文件的所有三重一大事项平铺成一个数组
+    const allItems: AnalysisResultInput[] = [];
+    
+    completedResults.forEach(result => {
+      // 如果文件包含多个三重一大事项（新格式）
+      if (result.items && result.items.length > 0) {
+        result.items.forEach(item => {
+          allItems.push({
+            fileId: result.id,
+            meetingTime: item.meetingTime,
+            meetingNumber: item.meetingNumber,
+            meetingTopic: item.meetingTopic,
+            meetingConclusion: item.meetingConclusion,
+            contentSummary: item.contentSummary,
+            eventCategory: item.eventCategory,
+            eventDetails: item.eventDetails,
+            amountInvolved: item.amountInvolved,
+            relatedDepartments: item.relatedDepartments,
+            relatedPersonnel: item.relatedPersonnel,
+            decisionBasis: item.decisionBasis,
+            originalText: item.originalText
+          });
+        });
+      } 
+      // 兼容旧格式（单个事项）
+      else if (result.meetingTopic || result.eventCategory) {
+        allItems.push({
+          fileId: result.id,
+          meetingTime: result.meetingTime,
+          meetingNumber: result.meetingNumber,
+          meetingTopic: result.meetingTopic,
+          meetingConclusion: result.meetingConclusion,
+          contentSummary: result.contentSummary,
+          eventCategory: result.eventCategory,
+          eventDetails: result.eventDetails,
+          amountInvolved: result.amountInvolved,
+          relatedDepartments: result.relatedDepartments,
+          relatedPersonnel: result.relatedPersonnel,
+          decisionBasis: result.decisionBasis,
+          originalText: result.originalText
+        });
+      }
+    });
+
+    // 检查是否有有效的事项需要保存
+    if (allItems.length === 0) {
+      return { 
+        success: false, 
+        message: '没有有效的三重一大事项可保存' 
+      };
+    }
 
     // 保存分析结果
-    const response = await saveAnalysisResults(projectId, taskId, formattedResults);
+    const response = await saveAnalysisResults(projectId, taskId, allItems);
     
     if (response.success) {
-      toast.success(response.message || '保存分析结果成功');
+      toast.success(`成功保存${allItems.length}条三重一大事项`);
     } else {
       toast.error(response.message || '保存分析结果失败');
     }
