@@ -22,6 +22,7 @@ export default function ProjectFiles({ project, onUpdate }: ProjectFilesProps) {
   const [files, setFiles] = useState<ProjectFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchFiles();
@@ -48,6 +49,7 @@ export default function ProjectFiles({ project, onUpdate }: ProjectFilesProps) {
     try {
       setUploading(true);
       setUploadProgress(0);
+      setUploadError(null);
       
       // 转换FileList为数组
       const filesArray = Array.from(selectedFiles);
@@ -68,10 +70,20 @@ export default function ProjectFiles({ project, onUpdate }: ProjectFilesProps) {
       toast.success(`成功上传 ${filesArray.length} 个文件`);
     } catch (error) {
       console.error('文件上传失败:', error);
-      toast.error('文件上传失败');
+      
+      // 获取具体错误信息
+      let errorMessage = '文件上传失败';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      // 设置错误状态
+      setUploadError(errorMessage);
+      
+      // 重置进度
+      setUploadProgress(0);
     } finally {
       setUploading(false);
-      setUploadProgress(0);
       // 重置文件输入
       e.target.value = '';
     }
@@ -116,40 +128,67 @@ export default function ProjectFiles({ project, onUpdate }: ProjectFilesProps) {
         <CardDescription>管理项目相关的所有文件</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="mb-6 flex items-center gap-2">
-          <Input
-            type="file"
-            id="fileUpload"
-            multiple
-            className="hidden"
-            onChange={handleFileChange}
-            disabled={uploading}
-          />
-          <label htmlFor="fileUpload">
-            <Button 
-              variant="outline" 
-              disabled={uploading} 
-              className="cursor-pointer" 
-              asChild
-            >
-              <span>
-                {uploading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    上传中... {uploadProgress}%
-                  </>
-                ) : (
-                  <>
-                    <FileUp className="mr-2 h-4 w-4" />
-                    选择文件
-                  </>
-                )}
-              </span>
-            </Button>
-          </label>
-          <span className="text-sm text-muted-foreground">
-            上传项目相关的文档和资料
-          </span>
+        <div className="mb-6 flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <Input
+              type="file"
+              id="fileUpload"
+              multiple
+              className="hidden"
+              onChange={handleFileChange}
+              disabled={uploading}
+            />
+            <label htmlFor="fileUpload">
+              <Button 
+                variant="outline" 
+                disabled={uploading} 
+                className="cursor-pointer" 
+                asChild
+              >
+                <span>
+                  {uploading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      上传中... {uploadProgress}%
+                    </>
+                  ) : (
+                    <>
+                      <FileUp className="mr-2 h-4 w-4" />
+                      选择文件
+                    </>
+                  )}
+                </span>
+              </Button>
+            </label>
+            <span className="text-sm text-muted-foreground">
+              上传项目相关的文档和资料
+            </span>
+          </div>
+          
+          {uploadError && (
+            <div className="text-sm text-red-500 bg-red-50 p-2 rounded-md border border-red-200 flex items-start gap-2">
+              <div className="h-4 w-4 mt-0.5 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+              </div>
+              <div>
+                <strong>上传失败：</strong> {uploadError}
+                <div className="mt-1">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-7 text-xs" 
+                    onClick={() => setUploadError(null)}
+                  >
+                    关闭
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="rounded-md border">

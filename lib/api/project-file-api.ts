@@ -52,6 +52,24 @@ export async function uploadProjectFile(
   onProgress?: (progress: number) => void
 ): Promise<{files: ProjectFile[]}> {
   try {
+    // 检查文件大小
+    const maxSizeInBytes = 10 * 1024 * 1024; // 10MB，与next.config.ts中的设置保持一致
+    const oversizedFiles = files.filter(file => file.size > maxSizeInBytes);
+    
+    if (oversizedFiles.length > 0) {
+      const fileNames = oversizedFiles.map(f => `${f.name} (${(f.size / (1024 * 1024)).toFixed(2)}MB)`).join(', ');
+      const errorMessage = `文件大小超过限制(10MB): ${fileNames}`;
+      
+      // 显示错误提示
+      toast.error(errorMessage);
+      
+      if (onProgress) {
+        onProgress(0); // 重置进度
+      }
+      
+      throw new Error(errorMessage);
+    }
+    
     // 创建FormData对象
     const formData = new FormData();
     formData.append('projectId', projectId);
@@ -66,25 +84,51 @@ export async function uploadProjectFile(
       onProgress(10); // 开始上传
     }
 
-    // 调用server action上传文件
-    const result = await uploadProjectFiles(formData);
-    
-    if (onProgress) {
-      onProgress(100); // 上传完成
+    try {
+      // 调用server action上传文件
+      const result = await uploadProjectFiles(formData);
+      
+      if (onProgress) {
+        onProgress(100); // 上传完成
+      }
+      
+      // 为每个文件添加类别信息
+      if (result.files) {
+        result.files = result.files.map((file: FileResponse) => ({
+          ...file,
+          category: determineFileCategory(file.filename)
+        }));
+      }
+      
+      return result;
+    } catch (uploadError) {
+      if (onProgress) {
+        onProgress(0); // 重置进度
+      }
+      
+      // 检查错误类型和消息
+      let errorMessage = '文件上传失败';
+      
+      if (uploadError instanceof Error) {
+        // 检查是否包含特定错误信息
+        if (uploadError.message.includes('body size limit')) {
+          errorMessage = `文件总大小超过限制(10MB)`;
+        } else {
+          errorMessage = uploadError.message;
+        }
+      }
+      
+      toast.error(errorMessage);
+      throw uploadError;
     }
-    
-    // 为每个文件添加类别信息
-    if (result.files) {
-      result.files = result.files.map((file: FileResponse) => ({
-        ...file,
-        category: determineFileCategory(file.filename)
-      }));
-    }
-    
-    return result;
   } catch (error) {
     console.error(`上传项目[${projectId}]文件失败:`, error);
-    toast.error('文件上传失败');
+    
+    // 避免重复显示错误消息
+    if (!(error instanceof Error && error.message.includes('文件大小超过限制'))) {
+      toast.error('文件上传失败');
+    }
+    
     throw error;
   }
 }
