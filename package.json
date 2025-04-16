@@ -42,7 +42,7 @@
     "clsx": "^2.1.1",
     "dotenv": "^16.4.7",
     "drizzle-kit": "^0.30.5",
-    "drizzle-orm": "^0.40.0",
+    "drizzle-orm": "^0.42.0",
     "jose": "^6.0.8",
     "lucide-react": "^0.479.0",
     "nanoid": "^5.1.3",

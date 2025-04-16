@@ -2,7 +2,10 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   experimental: {
-    ppr: true
+    ppr: true,
+    serverActions: {
+      bodySizeLimit: '10mb'
+    }
   },
   webpack: (config, { isServer }) => {
     config.ignoreWarnings = [

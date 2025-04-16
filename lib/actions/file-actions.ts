@@ -2,12 +2,16 @@
 
 import { db } from '@/lib/db/drizzle';
 import { auditUnits, files } from '@/lib/db/schema';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/postgres-js';
 import { getUser } from '@/lib/db/queries';
 import { writeFile, unlink, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
+import OSS from 'ali-oss';
+import { createStorage, StorageProvider } from '@/lib/file-storage';
+import postgres from 'postgres';
 
 export interface FileResponse {
   id: string;
@@ -70,6 +74,67 @@ export async function getProjectFiles(projectId: string): Promise<FileResponse[]
 }
 
 /**
+ * 系统初始化函数，确保数据库结构正确
+ * 在应用启动时自动执行
+ */
+export async function initializeStorageSystem() {
+  console.log('正在初始化文件存储系统...');
+  
+  try {
+    const connectionString = process.env.POSTGRES_URL;
+    if (!connectionString) {
+      console.error('未设置POSTGRES_URL环境变量');
+      return false;
+    }
+    
+    // 创建临时连接
+    const client = postgres(connectionString, { max: 1 });
+    const tempDb = drizzle(client);
+    
+    try {
+      // 检查storage_provider列是否存在
+      const storageProviderResult = await tempDb.execute(sql`
+        SELECT column_name FROM information_schema.columns 
+        WHERE table_name = 'files' AND column_name = 'storage_provider';
+      `);
+      
+      // 如果不存在，添加列
+      if (!storageProviderResult.length) {
+        console.log('添加 storage_provider 列...');
+        await tempDb.execute(sql`
+          ALTER TABLE files ADD COLUMN IF NOT EXISTS storage_provider TEXT;
+        `);
+      }
+      
+      // 检查storage_path列是否存在
+      const storagePathResult = await tempDb.execute(sql`
+        SELECT column_name FROM information_schema.columns 
+        WHERE table_name = 'files' AND column_name = 'storage_path';
+      `);
+      
+      // 如果不存在，添加列
+      if (!storagePathResult.length) {
+        console.log('添加 storage_path 列...');
+        await tempDb.execute(sql`
+          ALTER TABLE files ADD COLUMN IF NOT EXISTS storage_path TEXT;
+        `);
+      }
+      
+      await client.end();
+      console.log('文件存储系统初始化完成');
+      return true;
+    } catch (dbError) {
+      console.error('数据库初始化失败:', dbError);
+      await client.end();
+      return false;
+    }
+  } catch (error) {
+    console.error('初始化存储系统失败:', error);
+    return false;
+  }
+}
+
+/**
  * 上传文件到项目
  */
 export async function uploadProjectFiles(
@@ -100,38 +165,52 @@ export async function uploadProjectFiles(
       throw new Error('没有上传文件');
     }
 
-    // 准备上传目录
-    const uploadDir = join(process.cwd(), 'public', 'uploads', projectId);
-    
-    // 确保目录存在
-    await mkdir(uploadDir, { recursive: true });
+    // 创建存储服务实例（根据环境变量会自动选择OSS或本地存储）
+    const storage = createStorage();
+    const isOssStorage = process.env.STORAGE_PROVIDER === StorageProvider.ALIYUN_OSS;
+    console.log('使用存储类型:', isOssStorage ? 'OSS存储' : '本地存储');
     
     const savedFiles: FileResponse[] = [];
     
     for (const file of uploadedFiles) {
       const fileId = randomUUID();
-      const fileExt = file.name.split('.').pop() || '';
-      const fileName = `${fileId}.${fileExt}`;
-      const filePath = join(uploadDir, fileName);
       
-      // 保存文件到本地（实际生产环境应该使用云存储）
-      const fileBuffer = Buffer.from(await file.arrayBuffer());
-      await writeFile(filePath, fileBuffer);
+      let filePath = '';
+      let publicUrl = '';
       
-      // 文件相对路径（用于访问）
-      const publicPath = `/uploads/${projectId}/${fileName}`;
+      // 使用存储服务上传文件
+      try {
+        // 上传文件并获取结果
+        const result = await storage.uploadFile(file, fileId);
+        filePath = result.path;  // OSS中的对象路径或本地文件路径
+        publicUrl = result.url;  // 文件的访问URL
+        
+        console.log('文件上传成功:', {
+          fileId,
+          filePath,
+          publicUrl,
+          provider: result.provider
+        });
+      } catch (uploadError) {
+        console.error('文件上传失败:', uploadError);
+        throw new Error(`文件 ${file.name} 上传失败: ${uploadError instanceof Error ? uploadError.message : '未知错误'}`);
+      }
       
-      // 创建文件记录 (移除id字段，让数据库自动生成)
+      // 创建文件记录
       const newFile = await db.insert(files).values({
-        name: fileName,
+        name: fileId,
         originalName: file.name,
-        filePath: publicPath,
-        fileSize: Number(file.size), // 将BigInt转换为Number
+        filePath: publicUrl, // 存储文件的访问URL
+        fileSize: Number(file.size),
         fileType: file.type,
         uploadDate: new Date(),
         userId: user.id,
         auditUnitId: projectId,
-        isAnalyzed: false
+        isAnalyzed: false,
+        metadata: JSON.stringify({
+          storageProvider: isOssStorage ? 'aliyun_oss' : 'local',
+          storagePath: filePath
+        })
       }).returning();
       
       if (newFile[0]) {
@@ -199,18 +278,33 @@ export async function deleteProjectFile(
       )
     );
 
-    // 尝试删除文件系统中的文件
+    // 创建存储服务实例
+    const storage = createStorage();
+    
+    // 尝试删除文件
     try {
-      // 先获取文件路径
-      const filePath = fileInfo.filePath;
-      if (filePath && filePath.startsWith('/uploads/')) {
-        const relativePath = filePath.substring(1); // 移除前导斜杠
-        const fullPath = join(process.cwd(), 'public', relativePath);
-        await unlink(fullPath);
+      // 获取文件ID和存储路径
+      const fileIdForStorage = fileInfo.name;  // 用作存储的文件ID
+      let storagePath = fileInfo.filePath;
+      
+      // 尝试从metadata解析存储信息
+      if (fileInfo.metadata) {
+        try {
+          const metadata = JSON.parse(fileInfo.metadata);
+          if (metadata.storagePath) {
+            storagePath = metadata.storagePath;
+          }
+        } catch (e) {
+          console.warn('解析文件元数据失败:', e);
+        }
       }
+      
+      // 删除存储中的文件
+      await storage.deleteFile(fileIdForStorage, storagePath);
+      console.log('文件删除成功:', {fileId, storagePath});
     } catch (fileError) {
       // 文件删除失败不影响整体流程，只记录日志
-      console.error('物理文件删除失败:', fileError);
+      console.error('文件删除失败:', fileError);
     }
 
     // 刷新项目页面的缓存

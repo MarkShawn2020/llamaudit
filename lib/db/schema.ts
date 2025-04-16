@@ -384,7 +384,9 @@ export const files = pgTable('files', {
   uploadDate: timestamp('upload_date', { withTimezone: true }).defaultNow(),
   userId: uuid('user_id').references(() => users.id),
   auditUnitId: uuid('audit_unit_id').references(() => auditUnits.id, { onDelete: 'cascade' }),
-  metadata: text('metadata')
+  metadata: text('metadata'),
+  storageProvider: text('storage_provider'),
+  storagePath: text('storage_path')
 });
 
 export type File = typeof files.$inferSelect;

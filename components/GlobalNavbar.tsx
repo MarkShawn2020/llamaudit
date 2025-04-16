@@ -1,8 +1,8 @@
 'use client';
 
-import { useUser } from '@/lib/auth';
+import { useUser } from '@/components/user-provider';
 import { cn } from '@/lib/utils';
-import { CircleIcon, SettingsIcon, FolderIcon, BarChartIcon, HomeIcon, LogOut } from 'lucide-react';
+import { CircleIcon, SettingsIcon, FolderIcon, BarChartIcon, HomeIcon, LogOut, ShieldAlertIcon } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from '@/app/(login)/actions';
@@ -38,6 +38,15 @@ const navItems = [
     name: '设置',
     href: '/settings',
     icon: SettingsIcon
+  }
+];
+
+// 管理员专用菜单项
+const adminNavItems = [
+  {
+    name: '系统管理',
+    href: '/admin/db',
+    icon: ShieldAlertIcon
   }
 ];
 
@@ -99,6 +108,7 @@ function UserMenu() {
 export function GlobalNavbar() {
   const { user } = useUser();
   const pathname = usePathname();
+  const isAdmin = user?.role === 'admin';
 
 
   return (
@@ -124,6 +134,28 @@ export function GlobalNavbar() {
                     isActive 
                       ? "text-primary bg-primary/5" 
                       : "text-muted-foreground"
+                  )}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.name}
+                </Link>
+              );
+            })}
+            
+            {/* 管理员菜单项 */}
+            {isAdmin && adminNavItems.map((item) => {
+              const isActive = pathname === item.href || 
+                              (item.href !== '/' && pathname?.startsWith(item.href));
+                
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center text-sm font-medium transition-colors hover:text-primary gap-1.5 px-3 py-2 rounded-md",
+                    isActive 
+                      ? "text-red-600 bg-red-50" 
+                      : "text-red-600/80"
                   )}
                 >
                   <item.icon className="h-4 w-4" />
