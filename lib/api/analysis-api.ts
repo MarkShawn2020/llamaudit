@@ -70,8 +70,7 @@ export async function saveDocumentAnalysisResults(
     
     completedResults.forEach(result => {
       // 如果文件包含多个三重一大事项（新格式）
-      if (result.items && result.items.length > 0) {
-        result.items.forEach(item => {
+        result.items?.forEach(item => {
           allItems.push({
             fileId: result.id,
             meetingTime: item.meetingTime,
@@ -88,25 +87,6 @@ export async function saveDocumentAnalysisResults(
             originalText: item.originalText
           });
         });
-      } 
-      // 兼容旧格式（单个事项）
-      else if (result.meetingTopic || result.eventCategory) {
-        allItems.push({
-          fileId: result.id,
-          meetingTime: result.meetingTime,
-          meetingNumber: result.meetingNumber,
-          meetingTopic: result.meetingTopic,
-          meetingConclusion: result.meetingConclusion,
-          contentSummary: result.contentSummary,
-          eventCategory: result.eventCategory,
-          eventDetails: result.eventDetails,
-          amountInvolved: result.amountInvolved,
-          relatedDepartments: result.relatedDepartments,
-          relatedPersonnel: result.relatedPersonnel,
-          decisionBasis: result.decisionBasis,
-          originalText: result.originalText
-        });
-      }
     });
 
     // 检查是否有有效的事项需要保存

@@ -119,7 +119,7 @@ export async function analyzeMeetingDocument(fileId: string, projectId?: string)
             const isoDate = date.toISOString();
             
             items.push({
-              itemId: `item-${fileId}-${i}`,
+              itemId: `item-${fileId}-${i}-${isoDate}`,
               meetingTime: isoDate, // 使用ISO日期格式
               meetingNumber: `企发[2023]${42 + i}号`,
               meetingTopic: `关于${eventCategory}${i + 1}号方案的议题`,
