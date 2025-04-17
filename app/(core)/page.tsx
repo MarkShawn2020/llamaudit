@@ -30,7 +30,7 @@ export default function HomePage() {
             <div className="mt-12 relative sm:max-w-lg sm:mx-auto lg:mt-0 lg:max-w-none lg:mx-0 lg:col-span-6 lg:flex lg:items-center">
               <Image 
                 src="/hero.png" 
-                alt="智审 - AI驱动的审计辅助系统" 
+                alt="智审大师 - AI驱动的审计辅助系统" 
                 width={600} 
                 height={400}
                 className="rounded-lg shadow-lg"
