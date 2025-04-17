@@ -1,12 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { useProjectFiles, useAnalysisResults } from './hooks';
+import { useProjectFiles } from './hooks';
 import { FileList } from './fileManagement';
 import { AnalysisResults } from './analysisResults';
 
 export default function ProjectAnalysis({ projectId }: { projectId: string }) {
-  const [activeTab, setActiveTab] = useState('files');
 
   // 文件管理相关逻辑
   const {
@@ -30,13 +29,11 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
     isAnalyzing,
     loadingResults,
     handleAnalyze
-  } = useAnalysisResults(projectId, files, updateFilesAnalysisStatus);
+  } = useAnalysisResults(files.map(f => f.id), updateFilesAnalysisStatus);
 
   // 处理开始分析按钮点击
   const onAnalyzeStart = async () => {
     await handleAnalyze(selectedFiles);
-    // 切换到分析结果标签页
-      setActiveTab('analysis');
       // 清空选择
     clearSelection();
   };

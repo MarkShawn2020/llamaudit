@@ -86,7 +86,6 @@ export const usersRelations = relations(users, ({ many }) => ({
   invitationsSent: many(invitations),
   auditUnits: many(auditUnits, { relationName: 'userCreatedAuditUnits' }),
   uploadedFiles: many(files, { relationName: 'userUploadedFiles' }),
-  createdTasks: many(analysisTasks, { relationName: 'userCreatedTasks' })
 }));
 
 export const invitationsRelations = relations(invitations, ({ one }) => ({
@@ -392,39 +391,9 @@ export const files = pgTable('files', {
 export type File = typeof files.$inferSelect;
 export type InsertFile = typeof files.$inferInsert;
 
-// 分析任务表
-export const analysisTasks = pgTable('analysis_tasks', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: varchar('name', { length: 255 }).notNull(),
-  auditUnitId: uuid('audit_unit_id').notNull().references(() => auditUnits.id, { onDelete: 'cascade' }),
-  createdBy: uuid('created_by').references(() => users.id),
-  status: varchar('status', { length: 50 }).notNull().default('pending'),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-  completedAt: timestamp('completed_at', { withTimezone: true }),
-  taskType: varchar('task_type', { length: 50 }).notNull().default('three_important_one_big'),
-  taskConfig: jsonb('task_config')
-});
-
-// 任务文件关联表
-export const taskFiles = pgTable('task_files', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  taskId: uuid('task_id').notNull().references(() => analysisTasks.id, { onDelete: 'cascade' }),
-  fileId: uuid('file_id').notNull().references(() => files.id, { onDelete: 'cascade' }),
-  status: varchar('status', { length: 50 }).notNull().default('pending'),
-  startedAt: timestamp('started_at', { withTimezone: true }),
-  completedAt: timestamp('completed_at', { withTimezone: true }),
-  errorMessage: text('error_message')
-});
-
-// 设置任务文件唯一约束
-export const taskFilesUnique = sql`
-  ALTER TABLE ${taskFiles} ADD CONSTRAINT task_files_unique UNIQUE(task_id, file_id);
-`;
-
 // 三重一大分析结果表
 export const analysisResults = pgTable('analysis_results', {
   id: uuid('id').primaryKey().defaultRandom(),
-  taskId: uuid('task_id').notNull().references(() => analysisTasks.id, { onDelete: 'cascade' }),
   fileId: uuid('file_id').notNull().references(() => files.id, { onDelete: 'cascade' }),
   
   // 分析项目编号（一个文件可能有多个三重一大事项）
@@ -450,13 +419,17 @@ export const analysisResults = pgTable('analysis_results', {
   // 原文与其他信息
   originalText: text('original_text'),
   confidence: decimal('confidence', { precision: 5, scale: 2 }),
+  status: varchar('status', { length: 50 }).notNull().default('pending'),
+  errorMessage: text('error_message'),
+  startedAt: timestamp('started_at', { withTimezone: true }),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow()
 });
 
-// 设置分析结果复合唯一约束（文件ID + 任务ID + 项目索引）
+// 设置分析结果复合唯一约束（文件ID + 项目索引）
 export const analysisResultsUnique = sql`
-  ALTER TABLE ${analysisResults} ADD CONSTRAINT analysis_results_unique UNIQUE(task_id, file_id, item_index);
+  ALTER TABLE ${analysisResults} ADD CONSTRAINT analysis_results_unique UNIQUE(file_id, item_index);
 `;
 
 // 审计单位规则表
@@ -496,7 +469,6 @@ export const auditUnitsRelations = relations(auditUnits, ({ one, many }) => ({
     relationName: 'userCreatedAuditUnits'
   }),
   files: many(files),
-  analysisTasks: many(analysisTasks),
   rules: many(auditUnitRules)
 }));
 
@@ -518,40 +490,10 @@ export const filesRelations = relations(files, ({ one, many }) => ({
     references: [users.id],
     relationName: 'userUploadedFiles'
   }),
-  taskFiles: many(taskFiles),
   analysisResults: many(analysisResults)
-}));
-
-export const analysisTasksRelations = relations(analysisTasks, ({ one, many }) => ({
-  auditUnit: one(auditUnits, {
-    fields: [analysisTasks.auditUnitId],
-    references: [auditUnits.id]
-  }),
-  createdBy: one(users, {
-    fields: [analysisTasks.createdBy],
-    references: [users.id],
-    relationName: 'userCreatedTasks'
-  }),
-  taskFiles: many(taskFiles),
-  analysisResults: many(analysisResults)
-}));
-
-export const taskFilesRelations = relations(taskFiles, ({ one }) => ({
-  task: one(analysisTasks, {
-    fields: [taskFiles.taskId],
-    references: [analysisTasks.id]
-  }),
-  file: one(files, {
-    fields: [taskFiles.fileId],
-    references: [files.id]
-  })
 }));
 
 export const analysisResultsRelations = relations(analysisResults, ({ one }) => ({
-  task: one(analysisTasks, {
-    fields: [analysisResults.taskId],
-    references: [analysisTasks.id]
-  }),
   file: one(files, {
     fields: [analysisResults.fileId],
     references: [files.id]
