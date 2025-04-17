@@ -28,9 +28,8 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  let initialUser;
-  
-  try {
+  let initialUser = null
+
     // 仅在首次加载时初始化存储系统
     if (!global.storageInitialized) {
       console.log('首次执行存储系统初始化');
@@ -40,10 +39,6 @@ export default async function RootLayout({
     
     // 获取初始用户信息
     initialUser = await getUser();
-  } catch (error) {
-    console.error('初始用户获取失败:', error);
-    initialUser = null;
-  }
 
   return (
     <html lang="zh" suppressHydrationWarning>

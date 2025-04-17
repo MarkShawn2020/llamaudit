@@ -28,7 +28,7 @@ export async function comparePasswords(
 }
 
 type SessionData = {
-  user: { 
+  user: {
     id: number | string;
     email: string;
   };
@@ -44,19 +44,14 @@ export async function signToken(payload: SessionData) {
 }
 
 export async function verifyToken(input: string) {
-  try {
-    if (!AUTH_SECRET) {
-      throw new Error('AUTH_SECRET is not defined');
-    }
-    
-    const { payload } = await jwtVerify(input, key, {
-      algorithms: ['HS256'],
-    });
-    return payload as SessionData;
-  } catch (error) {
-    console.error('Token verification failed:', error);
-    throw error;
+  if (!AUTH_SECRET) {
+    throw new Error('AUTH_SECRET is not defined');
   }
+
+  const { payload } = await jwtVerify(input, key, {
+    algorithms: ['HS256'],
+  });
+  return payload as SessionData;
 }
 
 export async function getSession() {
