@@ -4,6 +4,7 @@ import { desc, eq } from 'drizzle-orm';
 import { withConnection, type DB } from '.';
 import { auth } from '../auth/session';
 import { activityLogs, teamMembers, teams, users } from './schema';
+import type { User } from './schema';
 
 export async function getUser() {
   const session = await auth();
@@ -51,7 +52,7 @@ export async function updateTeamSubscription(
   });
 }
 
-export async function getUserWithTeam(userId: number) {
+export async function getUserWithTeam(userId: string | number) {
   return withConnection(async (db: DB) => {
     const result = await db
       .select({
@@ -59,8 +60,8 @@ export async function getUserWithTeam(userId: number) {
         teamId: teamMembers.teamId,
       })
       .from(users)
-      .leftJoin(teamMembers, eq(users.id, teamMembers.userId))
-      .where(eq(users.id, userId))
+      .leftJoin(teamMembers, eq(users.id, userId.toString()))
+      .where(eq(users.id, userId.toString()))
       .limit(1);
 
     return result[0];
@@ -83,17 +84,17 @@ export async function getActivityLogs() {
         userName: users.name,
       })
       .from(activityLogs)
-      .leftJoin(users, eq(activityLogs.userId, users.id))
-      .where(eq(activityLogs.userId, user.id))
+      .leftJoin(users, eq(activityLogs.userId, typeof user.id === 'string' ? Number(user.id) : user.id))
+      .where(eq(activityLogs.userId, typeof user.id === 'string' ? Number(user.id) : user.id))
       .orderBy(desc(activityLogs.timestamp))
       .limit(10);
   });
 }
 
-export async function getTeamForUser(userId: number) {
+export async function getTeamForUser(userId: string | number) {
   return withConnection(async (db: DB) => {
     const result = await db.query.users.findFirst({
-      where: eq(users.id, userId),
+      where: eq(users.id, userId.toString()),
       with: {
         teamMembers: {
           with: {
@@ -118,5 +119,16 @@ export async function getTeamForUser(userId: number) {
     });
 
     return result?.teamMembers[0]?.team || null;
+  });
+}
+
+export async function getUserActivity(user: User) {
+  return withConnection(async (db: DB) => {
+    return db
+      .select()
+      .from(activityLogs)
+      .where(eq(activityLogs.userId, typeof user.id === 'string' ? Number(user.id) : user.id))
+      .orderBy(desc(activityLogs.timestamp))
+      .limit(20);
   });
 }

@@ -165,7 +165,7 @@ export async function POST(
             fileType: file.type,
             documentTypeId,
             organizationId,
-            uploadedBy: user.id,
+            uploadedBy: typeof user.id === 'string' ? Number(user.id) : user.id,
             teamId,
         });
 

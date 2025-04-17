@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     const user = await db
       .select()
       .from(users)
-      .where(eq(users.id, Number(userId)))
+      .where(eq(users.id, userId.toString()))
       .limit(1);
 
     if (user.length === 0) {
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
         teamId: teamMembers.teamId,
       })
       .from(teamMembers)
-      .where(eq(teamMembers.userId, user[0].id))
+      .where(eq(teamMembers.userId, typeof user[0].id === 'string' ? Number(user[0].id) : user[0].id))
       .limit(1);
 
     if (userTeam.length === 0) {
