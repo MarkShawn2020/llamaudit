@@ -13,6 +13,11 @@ const fontSans = FontSans({
   variable: '--font-sans',
 });
 
+// 全局初始化状态标记
+declare global {
+  var storageInitialized: boolean | undefined;
+}
+
 export const metadata: Metadata = {
   title: '审计系统',
   description: '提供安全可靠的审计体验',
@@ -26,8 +31,12 @@ export default async function RootLayout({
   let initialUser;
   
   try {
-    // 尝试初始化存储系统
-    await initializeStorageSystem();
+    // 仅在首次加载时初始化存储系统
+    if (!global.storageInitialized) {
+      console.log('首次执行存储系统初始化');
+      await initializeStorageSystem();
+      global.storageInitialized = true;
+    }
     
     // 获取初始用户信息
     initialUser = await getUser();

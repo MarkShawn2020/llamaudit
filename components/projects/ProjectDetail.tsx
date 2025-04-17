@@ -48,13 +48,13 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
       setLoading(true);
       setError(null);
       const data = await getProject(projectId);
-      
+
       if (!data) {
         setError('项目不存在');
         toast.error('无法找到该项目');
         return;
       }
-      
+
       setProject(data);
     } catch (error) {
       console.error('加载项目详情失败:', error);
@@ -72,11 +72,11 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
 
   const handleDeleteProject = async () => {
     if (!project) return;
-    
+
     try {
       setDeleteLoading(true);
       const success = await deleteProject(project.id);
-      
+
       if (success) {
         toast.success('项目已成功删除');
         router.push('/projects');
@@ -119,7 +119,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
   return (
     <div className="container mx-auto py-6 space-y-6">
 
-      
+
       <Card className="mb-6">
         <CardHeader className="pb-2">
           <div className="flex justify-between items-center">
@@ -128,41 +128,41 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
               <CardDescription>单位代码: {project.code}</CardDescription>
             </div>
 
-<div className='flex justify-end gap-2'>
+            <div className='flex justify-end gap-2'>
 
-<Dialog open={showProjectInfo} onOpenChange={setShowProjectInfo}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1">
-                  <PencilIcon className="h-4 w-4" />
-                  编辑基本信息
+              <Dialog open={showProjectInfo} onOpenChange={setShowProjectInfo}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1">
+                    <PencilIcon className="h-4 w-4" />
+                    编辑基本信息
+                  </Button>
+
+
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl">
+                  <DialogHeader>
+                    <DialogTitle>项目基本信息</DialogTitle>
+                    <DialogDescription>
+                      查看和编辑项目的详细信息
+                    </DialogDescription>
+                  </DialogHeader>
+                  <ProjectInfo project={project} onUpdate={handleProjectUpdate} />
+                </DialogContent>
+              </Dialog>
+
+              <div className="flex items-center justify-between gap-2">
+
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="gap-1"
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  <TrashIcon className="h-4 w-4" />
+                  删除项目
                 </Button>
-
-
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl">
-                <DialogHeader>
-                  <DialogTitle>项目基本信息</DialogTitle>
-                  <DialogDescription>
-                    查看和编辑项目的详细信息
-                  </DialogDescription>
-                </DialogHeader>
-                <ProjectInfo project={project} onUpdate={handleProjectUpdate} />
-              </DialogContent>
-            </Dialog>
-
-            <div className="flex items-center justify-between gap-2">
-
-        <Button 
-          variant="destructive" 
-          size="sm" 
-          className="gap-1"
-          onClick={() => setDeleteDialogOpen(true)}
-        >
-          <TrashIcon className="h-4 w-4" />
-          删除项目
-        </Button>
-      </div>
-</div>
+              </div>
+            </div>
 
           </div>
         </CardHeader>
@@ -181,10 +181,10 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
           </div>
         </CardContent>
       </Card>
-      
 
-        <ProjectAnalysis projectId={projectId} />
-      
+
+      <ProjectAnalysis projectId={projectId} />
+
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -195,8 +195,8 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteLoading}>取消</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDeleteProject} 
+            <AlertDialogAction
+              onClick={handleDeleteProject}
               disabled={deleteLoading}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

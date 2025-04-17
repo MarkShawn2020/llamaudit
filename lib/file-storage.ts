@@ -59,6 +59,20 @@ export interface FileStorage {
   getFileUrl(fileId: string, filePath: string): string;
 }
 
+// 以下代码与drizzle.ts中的模式相匹配，确保连接管理一致
+const globalForStorage = global as unknown as {
+  ossClient: OSS | undefined;
+  fileStorage: FileStorage | undefined;
+};
+
+// DEBUG标记
+const DEBUG = process.env.NODE_ENV !== 'production';
+
+// 模块级别变量
+let ossClientInstance: OSS | undefined = undefined;
+let fileStorageInstance: FileStorage | undefined = undefined;
+let storageCount = 0;
+
 /**
  * 本地文件存储实现
  */
@@ -169,14 +183,27 @@ export class AliyunOssStorage implements FileStorage {
       throw new Error('阿里云OSS配置不完整，请检查环境变量');
     }
     
-    // 创建OSS客户端
-    this.client = new OSS({
-      region,
-      accessKeyId,
-      accessKeySecret,
-      bucket: this.bucket,
-      endpoint: process.env.ALIYUN_OSS_ENDPOINT, // 如果有自定义域名，可以使用它
-    });
+    // 使用模块级变量创建OSS客户端
+    if (!ossClientInstance) {
+      storageCount++;
+      
+      if (DEBUG) {
+        console.log(`[OSS-${process.env.NODE_ENV}] 创建新的OSS客户端连接 #${storageCount}`);
+        console.log(`[OSS-DEBUG] 进程ID: ${process.pid}, 时间戳: ${Date.now()}`);
+      }
+      
+      ossClientInstance = new OSS({
+        region,
+        accessKeyId,
+        accessKeySecret,
+        bucket: this.bucket,
+        endpoint: process.env.ALIYUN_OSS_ENDPOINT,
+      });
+    } else if (DEBUG) {
+      console.log(`[OSS-${process.env.NODE_ENV}] 复用现有OSS客户端连接 #${storageCount}`);
+    }
+    
+    this.client = ossClientInstance;
   }
 
   /**
@@ -265,32 +292,69 @@ export class AliyunOssStorage implements FileStorage {
  * @returns 文件存储服务实例
  */
 export function createStorage(): FileStorage {
+  // 检查是否已有实例
+  if (fileStorageInstance) {
+    if (DEBUG) {
+      console.log(`[STORAGE-${process.env.NODE_ENV}] 复用现有的存储实例 #${storageCount}`);
+    }
+    return fileStorageInstance;
+  }
+
   // 从环境变量获取存储提供商
   const provider = process.env.STORAGE_PROVIDER as StorageProvider || StorageProvider.LOCAL;
   
-  console.log('创建存储提供者:', provider);
-  console.log('OSS配置:', {
-    region: process.env.ALIYUN_OSS_REGION,
-    bucket: process.env.ALIYUN_OSS_BUCKET,
-    endpoint: process.env.ALIYUN_OSS_ENDPOINT,
-  });
+  if (DEBUG) {
+    console.log(`[STORAGE-${process.env.NODE_ENV}] 创建存储提供者: ${provider}`);
+  }
+  
+  let storage: FileStorage;
   
   switch (provider) {
     case StorageProvider.ALIYUN_OSS:
       try {
-        const storage = new AliyunOssStorage();
-        console.log('成功创建阿里云OSS存储');
-        return storage;
+        storage = new AliyunOssStorage();
+        if (DEBUG) console.log(`[STORAGE-${process.env.NODE_ENV}] 成功创建阿里云OSS存储`);
       } catch (error) {
-        console.error('创建阿里云OSS存储失败，将使用本地存储:', error);
-        return new LocalFileStorage();
+        console.error(`[STORAGE-${process.env.NODE_ENV}] 创建阿里云OSS存储失败，将使用本地存储:`, error);
+        storage = new LocalFileStorage();
       }
+      break;
     case StorageProvider.LOCAL:
     default:
-      console.log('使用本地存储');
-      return new LocalFileStorage();
+      if (DEBUG) console.log(`[STORAGE-${process.env.NODE_ENV}] 使用本地存储`);
+      storage = new LocalFileStorage();
+  }
+  
+  // 存储实例
+  fileStorageInstance = storage;
+  
+  return storage;
+}
+
+// 注册进程终止时的清理函数
+if (process.env.NODE_ENV !== 'production') {
+  const registerCleanup = () => {
+    process.on('SIGTERM', async () => {
+      console.log('[STORAGE] 正在关闭OSS连接...');
+      ossClientInstance = undefined;
+      fileStorageInstance = undefined;
+    });
+    
+    process.on('SIGINT', async () => {
+      console.log('[STORAGE] 正在关闭OSS连接...');
+      ossClientInstance = undefined;
+      fileStorageInstance = undefined;
+      process.exit(0);
+    });
+  };
+  
+  // 确保只注册一次
+  let isCleanupRegistered = false;
+  if (!isCleanupRegistered) {
+    registerCleanup();
+    isCleanupRegistered = true;
   }
 }
 
 // 默认导出当前环境配置的存储提供者
-export default createStorage(); 
+// export default createStorage(); 

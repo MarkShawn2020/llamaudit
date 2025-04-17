@@ -87,13 +87,14 @@ export async function initializeStorageSystem() {
       return false;
     }
     
-    // 创建临时连接
-    const client = postgres(connectionString, { max: 1 });
-    const tempDb = drizzle(client);
-    
+    // 使用全局连接池而非创建新连接
     try {
+      // 使用已有的db实例
+      const { getDb } = await import('../db/drizzle');
+      const db = getDb();
+      
       // 检查storage_provider列是否存在
-      const storageProviderResult = await tempDb.execute(sql`
+      const storageProviderResult = await db.execute(sql`
         SELECT column_name FROM information_schema.columns 
         WHERE table_name = 'files' AND column_name = 'storage_provider';
       `);
@@ -101,13 +102,13 @@ export async function initializeStorageSystem() {
       // 如果不存在，添加列
       if (!storageProviderResult.length) {
         console.log('添加 storage_provider 列...');
-        await tempDb.execute(sql`
+        await db.execute(sql`
           ALTER TABLE files ADD COLUMN IF NOT EXISTS storage_provider TEXT;
         `);
       }
       
       // 检查storage_path列是否存在
-      const storagePathResult = await tempDb.execute(sql`
+      const storagePathResult = await db.execute(sql`
         SELECT column_name FROM information_schema.columns 
         WHERE table_name = 'files' AND column_name = 'storage_path';
       `);
@@ -115,17 +116,15 @@ export async function initializeStorageSystem() {
       // 如果不存在，添加列
       if (!storagePathResult.length) {
         console.log('添加 storage_path 列...');
-        await tempDb.execute(sql`
+        await db.execute(sql`
           ALTER TABLE files ADD COLUMN IF NOT EXISTS storage_path TEXT;
         `);
       }
       
-      await client.end();
       console.log('文件存储系统初始化完成');
       return true;
     } catch (dbError) {
       console.error('数据库初始化失败:', dbError);
-      await client.end();
       return false;
     }
   } catch (error) {
