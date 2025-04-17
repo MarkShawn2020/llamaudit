@@ -40,6 +40,19 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // 检查是否已经初始化过
+  if (!request.cookies.has('system_initialized')) {
+    // 在Cookie中记录已初始化标记
+    res.cookies.set('system_initialized', 'true', {
+      httpOnly: true,
+      maxAge: 60 * 60 * 24 * 30, // 30天
+      path: '/',
+    });
+    
+    // 设置X-Initialize请求头，触发服务器端初始化
+    res.headers.set('X-Initialize-System', 'true');
+  }
+
   return res;
 }
 

@@ -6,17 +6,11 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { UserProvider } from '@/components/user-provider';
 import { GlobalNavbar } from '@/components/GlobalNavbar';
 import { getUser } from '@/lib/db/queries';
-import { initializeStorageSystem } from '@/lib/actions/file-actions';
 
 const fontSans = FontSans({
   subsets: ['latin'],
   variable: '--font-sans',
 });
-
-// 全局初始化状态标记
-declare global {
-  var storageInitialized: boolean | undefined;
-}
 
 export const metadata: Metadata = {
   title: '审计系统',
@@ -30,15 +24,21 @@ export default async function RootLayout({
 }) {
   let initialUser = null
 
-    // 仅在首次加载时初始化存储系统
-    if (!global.storageInitialized) {
-      console.log('首次执行存储系统初始化');
-      await initializeStorageSystem();
-      global.storageInitialized = true;
-    }
-    
-    // 获取初始用户信息
-    initialUser = await getUser();
+  // 获取初始用户信息
+  initialUser = await getUser();
+
+  // 客户端初始化服务
+  const initScript = `
+    (async function() {
+      try {
+        // 只在客户端环境下异步触发一次初始化
+        const res = await fetch('/api/system/initialize', { cache: 'force-cache' });
+        console.log('系统初始化状态:', res.ok ? '成功' : '失败');
+      } catch (e) {
+        console.error('系统初始化请求失败:', e);
+      }
+    })();
+  `;
 
   return (
     <html lang="zh" suppressHydrationWarning>
@@ -49,6 +49,10 @@ export default async function RootLayout({
           fontSans.variable
         )}
       >
+        <script 
+          dangerouslySetInnerHTML={{ __html: initScript }} 
+          id="system-init"
+        />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

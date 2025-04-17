@@ -3,13 +3,16 @@
   "scripts": {
     "dev": "next dev",
     "dev:turbo": "next dev --turbopack",
-    "build": "next build",
+    "build": "pnpm run init:system && next build",
+    "build:normal": "next build",
     "start": "next start",
     "db:setup": "npx tsx lib/db/setup.ts",
     "db:seed": "npx tsx lib/db/seed.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "init:system": "npx tsx scripts/initialize.ts --verbose",
+    "init:system:dry": "npx tsx scripts/initialize.ts --dry-run --verbose"
   },
   "dependencies": {
     "@alicloud/sts-sdk": "^1.0.2",

@@ -12,6 +12,7 @@ import { revalidatePath } from 'next/cache';
 import OSS from 'ali-oss';
 import { createStorage, StorageProvider } from '@/lib/file-storage';
 import postgres from 'postgres';
+import { initializeOnce } from '../server/initialize';
 
 export interface FileResponse {
   id: string;
@@ -131,6 +132,19 @@ export async function initializeStorageSystem() {
     console.error('初始化存储系统失败:', error);
     return false;
   }
+}
+
+/**
+ * 安全的初始化函数，使用通用初始化工具
+ * 确保在应用生命周期内只执行一次初始化
+ */
+export async function safeInitializeStorageSystem() {
+  return initializeOnce('storage-system', async () => {
+    console.log('开始初始化存储系统...');
+    return initializeStorageSystem();
+  }, {
+    logPrefix: '[STORAGE-INIT]'
+  });
 }
 
 /**
