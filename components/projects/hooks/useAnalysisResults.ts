@@ -101,7 +101,7 @@ export function useAnalysisResults(
     } finally {
       setLoadingResults(false);
     }
-  }, [projectId, files]);
+  }, [projectId, JSON.stringify(files.map(f => f.id))]);
 
   // 初始化加载
   useEffect(() => {
@@ -211,7 +211,7 @@ export function useAnalysisResults(
       const fileIdsToUpdate = filesToUpdate.map(file => file.id);
       onUpdateFilesStatus(fileIdsToUpdate);
     }
-  }, [rawAnalysisResults, files, onUpdateFilesStatus]);
+  }, [JSON.stringify(rawAnalysisResults), JSON.stringify(files.map(f => f.id)), onUpdateFilesStatus]);
 
   // 开始分析文件
   const handleAnalyze = useCallback(async (selectedFiles: string[]) => {
