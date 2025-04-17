@@ -16,8 +16,10 @@ export default async function ProjectPage({ params }: { params: { id: string } }
     redirect('/sign-in');
   }
 
-  // 实际项目中应该从数据库获取项目信息
-  const projectId = params.id;
+  const {id: projectId} = await params;
+
 
   return <ProjectDetail projectId={projectId} />;
 } 
+
+ 
