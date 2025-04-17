@@ -1,5 +1,6 @@
 import { toast } from "sonner";
 import { saveDocumentAnalysisResults } from "@/lib/api/analysis-api";
+import { getFile } from "@/lib/actions/file-actions";
 
 /**
  * 三重一大事项接口
@@ -75,11 +76,22 @@ export interface MeetingAnalysisResult {
  */
 export async function analyzeMeetingDocument(fileId: string, projectId?: string): Promise<MeetingAnalysisResult> {
   try {
-    // 这里只是模拟API调用，实际上需要调用后端API
+    // 从数据库获取真实文件信息
+    let fileName = `document-${fileId}.docx`; // 设置默认值
+    try {
+      const fileInfo = await getFile(fileId);
+      if (fileInfo?.filename) {
+        fileName = fileInfo.filename;
+      }
+    } catch (error) {
+      console.error(`获取文件[${fileId}]信息失败:`, error);
+      // 已有默认文件名作为后备，不需额外处理
+    }
+    
     // 先返回pending状态
     const pendingResult: MeetingAnalysisResult = {
       id: fileId,
-      fileName: `document-${fileId}.docx`, // 模拟文件名
+      fileName, // 使用从数据库获取的真实文件名
       status: 'processing',
     };
     
@@ -191,7 +203,7 @@ export async function analyzeMeetingDocument(fileId: string, projectId?: string)
     
     return {
       id: fileId,
-      fileName: `document-${fileId}.docx`,
+      fileName: `document-${fileId}.docx`, // 错误情况使用默认文件名
       status: 'error',
       error: error instanceof Error ? error.message : '未知错误',
     };

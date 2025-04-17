@@ -398,4 +398,47 @@ export async function updateFileAnalysisStatus(
     console.error('更新文件失败:', error);
     throw error;
   }
+}
+
+/**
+ * 获取单个文件信息
+ */
+export async function getFile(fileId: string): Promise<FileResponse | null> {
+  try {
+    const user = await getUser();
+    if (!user) {
+      throw new Error('未授权访问');
+    }
+
+    // 获取文件信息
+    const fileInfo = await db.query.files.findFirst({
+      where: eq(files.id, fileId),
+      with: {
+        uploadedBy: {
+          columns: {
+            name: true,
+          }
+        }
+      }
+    });
+
+    if (!fileInfo) {
+      return null;
+    }
+
+    // 格式化响应
+    return {
+      id: fileInfo.id,
+      filename: fileInfo.originalName,
+      size: Number(fileInfo.fileSize),
+      type: fileInfo.fileType,
+      url: fileInfo.filePath,
+      createdAt: fileInfo.uploadDate?.toISOString() || new Date().toISOString(),
+      uploadedBy: fileInfo.uploadedBy?.name || '未知用户',
+      isAnalyzed: !!fileInfo.isAnalyzed
+    };
+  } catch (error) {
+    console.error(`获取文件[${fileId}]信息失败:`, error);
+    throw error;
+  }
 } 
