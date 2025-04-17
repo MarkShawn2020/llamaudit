@@ -1,18 +1,12 @@
 'use server';
 
 import { db } from '@/lib/db/drizzle';
-import { auditUnits, files } from '@/lib/db/schema';
-import { and, eq, sql } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/postgres-js';
 import { getUser } from '@/lib/db/queries';
-import { writeFile, unlink, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { randomUUID } from 'crypto';
-import { revalidatePath } from 'next/cache';
-import OSS from 'ali-oss';
+import { auditUnits, files } from '@/lib/db/schema';
 import { createStorage, StorageProvider } from '@/lib/file-storage';
-import postgres from 'postgres';
-import { initializeOnce } from '../server/initialize';
+import { randomUUID } from 'crypto';
+import { and, eq } from 'drizzle-orm';
+import { revalidatePath } from 'next/cache';
 
 export interface FileResponse {
   id: string;
@@ -74,78 +68,6 @@ export async function getProjectFiles(projectId: string): Promise<FileResponse[]
   }
 }
 
-/**
- * 系统初始化函数，确保数据库结构正确
- * 在应用启动时自动执行
- */
-export async function initializeStorageSystem() {
-  console.log('正在初始化文件存储系统...');
-  
-  try {
-    const connectionString = process.env.POSTGRES_URL;
-    if (!connectionString) {
-      console.error('未设置POSTGRES_URL环境变量');
-      return false;
-    }
-    
-    // 使用全局连接池而非创建新连接
-    try {
-      // 使用已有的db实例
-      const { getDb } = await import('../db/drizzle');
-      const db = getDb();
-      
-      // 检查storage_provider列是否存在
-      const storageProviderResult = await db.execute(sql`
-        SELECT column_name FROM information_schema.columns 
-        WHERE table_name = 'files' AND column_name = 'storage_provider';
-      `);
-      
-      // 如果不存在，添加列
-      if (!storageProviderResult.length) {
-        console.log('添加 storage_provider 列...');
-        await db.execute(sql`
-          ALTER TABLE files ADD COLUMN IF NOT EXISTS storage_provider TEXT;
-        `);
-      }
-      
-      // 检查storage_path列是否存在
-      const storagePathResult = await db.execute(sql`
-        SELECT column_name FROM information_schema.columns 
-        WHERE table_name = 'files' AND column_name = 'storage_path';
-      `);
-      
-      // 如果不存在，添加列
-      if (!storagePathResult.length) {
-        console.log('添加 storage_path 列...');
-        await db.execute(sql`
-          ALTER TABLE files ADD COLUMN IF NOT EXISTS storage_path TEXT;
-        `);
-      }
-      
-      console.log('文件存储系统初始化完成');
-      return true;
-    } catch (dbError) {
-      console.error('数据库初始化失败:', dbError);
-      return false;
-    }
-  } catch (error) {
-    console.error('初始化存储系统失败:', error);
-    return false;
-  }
-}
-
-/**
- * 安全的初始化函数，使用通用初始化工具
- * 确保在应用生命周期内只执行一次初始化
- */
-export async function safeInitializeStorageSystem() {
-  return initializeOnce('storage-system', async () => {
-    console.log('开始初始化存储系统...');
-    return initializeStorageSystem();
-  }, {
-    logPrefix: '[STORAGE-INIT]'
-  });
-}
 
 /**
  * 上传文件到项目
