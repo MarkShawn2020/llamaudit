@@ -1,22 +1,14 @@
-import { and, eq, desc, isNull } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { db } from './drizzle';
 import {
-    organizations,
+    complianceChecks,
+    complianceRules,
+    contracts,
     documentTypes,
     documents,
     meetingMinutes,
-    contracts,
-    complianceRules,
-    complianceChecks,
-    users,
-    teams,
-    type Organization,
-    type DocumentType,
-    type Document,
-    type MeetingMinutes,
-    type Contract,
-    type ComplianceRule,
-    type ComplianceCheck,
+    organizations,
+    users
 } from './schema';
 
 // 组织管理
@@ -157,27 +149,6 @@ export async function getDocumentById(id: number, teamId: number) {
         .then((docs) => (docs.length ? docs[0] : null));
 }
 
-export async function createDocument(data: {
-    name: string;
-    filePath: string;
-    fileType: string;
-    documentTypeId: number;
-    organizationId: number;
-    uploadedBy: number;
-    teamId: number;
-}) {
-    return db.insert(documents).values({
-        name: data.name,
-        filePath: data.filePath,
-        fileType: data.fileType,
-        documentTypeId: data.documentTypeId,
-        organizationId: data.organizationId,
-        uploadedBy: data.uploadedBy,
-        teamId: data.teamId,
-        uploadedAt: new Date(),
-        extractedInfo: false,
-    }).returning();
-}
 
 export async function updateDocumentExtractedStatus(
     id: number,
@@ -289,26 +260,6 @@ export async function getComplianceRuleById(id: number, teamId: number) {
         .innerJoin(users, eq(complianceRules.createdBy, users.id))
         .where(and(eq(complianceRules.id, id), eq(complianceRules.teamId, teamId)))
         .then((rules) => (rules.length ? rules[0] : null));
-}
-
-export async function createComplianceRule(data: {
-    name: string;
-    description?: string;
-    ruleType: string;
-    ruleConfig: any;
-    createdBy: number;
-    teamId: number;
-}) {
-    return db.insert(complianceRules).values({
-        name: data.name,
-        description: data.description,
-        ruleType: data.ruleType,
-        ruleConfig: data.ruleConfig,
-        createdBy: data.createdBy,
-        teamId: data.teamId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-    }).returning();
 }
 
 export async function updateComplianceRule(
