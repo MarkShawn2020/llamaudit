@@ -52,19 +52,28 @@ export async function updateTeamSubscription(
   });
 }
 
-export async function getUserWithTeam(userId: string | number) {
+export async function getUserWithTeam(userId: string) {
+  if (!userId || userId === 'NaN' || userId === 'undefined') {
+    return null;
+  }
+  
   return withConnection(async (db: DB) => {
-    const result = await db
-      .select({
-        user: users,
-        teamId: teamMembers.teamId,
-      })
-      .from(users)
-      .leftJoin(teamMembers, eq(users.id, userId.toString()))
-      .where(eq(users.id, userId.toString()))
-      .limit(1);
+    try {
+      const result = await db
+        .select({
+          user: users,
+          teamId: teamMembers.teamId,
+        })
+        .from(users)
+        .leftJoin(teamMembers, eq(users.id, userId))
+        .where(eq(users.id, userId))
+        .limit(1);
 
-    return result[0];
+      return result.length > 0 ? result[0] : null;
+    } catch (error) {
+      console.error("Error in getUserWithTeam:", error);
+      return null;
+    }
   });
 }
 
@@ -84,8 +93,8 @@ export async function getActivityLogs() {
         userName: users.name,
       })
       .from(activityLogs)
-      .leftJoin(users, eq(activityLogs.userId, typeof user.id === 'string' ? Number(user.id) : user.id))
-      .where(eq(activityLogs.userId, typeof user.id === 'string' ? Number(user.id) : user.id))
+      .leftJoin(users, eq(activityLogs.userId, user.id))
+      .where(eq(activityLogs.userId, user.id))
       .orderBy(desc(activityLogs.timestamp))
       .limit(10);
   });
@@ -127,7 +136,7 @@ export async function getUserActivity(user: User) {
     return db
       .select()
       .from(activityLogs)
-      .where(eq(activityLogs.userId, typeof user.id === 'string' ? Number(user.id) : user.id))
+      .where(eq(activityLogs.userId, user.id))
       .orderBy(desc(activityLogs.timestamp))
       .limit(20);
   });

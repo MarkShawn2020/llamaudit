@@ -148,7 +148,7 @@ XX公司2023年第三季度经营决策会议纪要
         </div>
         
         <div className="flex justify-center mt-16">
-          <Link href="/dashboard">
+          <Link href="/projects">
             <Button className="bg-primary hover:bg-primary/90 text-white px-8 py-3 rounded-full text-lg flex items-center">
               进入系统体验
               <ChevronRight className="ml-2 h-5 w-5" />

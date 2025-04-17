@@ -80,6 +80,12 @@ export async function auth() {
   if (!session) {
     return null;
   }
+  
+  // Validate that session.user and its properties are valid
+  if (!session.user || !session.user.id || !session.user.email) {
+    return null;
+  }
+  
   return {
     user: {
       id: session.user.id,

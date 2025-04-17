@@ -40,7 +40,7 @@ export const teams = pgTable('teams', {
 
 export const teamMembers = pgTable('team_members', {
   id: serial('id').primaryKey(),
-  userId: integer('user_id')
+  userId: uuid('user_id')
     .notNull()
     .references(() => users.id),
   teamId: integer('team_id')
@@ -55,7 +55,7 @@ export const activityLogs = pgTable('activity_logs', {
   teamId: integer('team_id')
     .notNull()
     .references(() => teams.id),
-  userId: integer('user_id').references(() => users.id),
+  userId: uuid('user_id').references(() => users.id),
   action: text('action').notNull(),
   timestamp: timestamp('timestamp').notNull().defaultNow(),
   ipAddress: varchar('ip_address', { length: 45 }),
@@ -68,7 +68,7 @@ export const invitations = pgTable('invitations', {
     .references(() => teams.id),
   email: varchar('email', { length: 255 }).notNull(),
   role: varchar('role', { length: 50 }).notNull(),
-  invitedBy: integer('invited_by')
+  invitedBy: uuid('invited_by')
     .notNull()
     .references(() => users.id),
   invitedAt: timestamp('invited_at').notNull().defaultNow(),
@@ -182,7 +182,7 @@ export const documents = pgTable('documents', {
   organizationId: integer('organization_id')
     .notNull()
     .references(() => organizations.id),
-  uploadedBy: integer('uploaded_by')
+  uploadedBy: uuid('uploaded_by')
     .notNull()
     .references(() => users.id),
   uploadedAt: timestamp('uploaded_at').notNull().defaultNow(),
@@ -238,7 +238,7 @@ export const complianceRules = pgTable('compliance_rules', {
   description: text('description'),
   ruleType: varchar('rule_type', { length: 50 }).notNull(),
   ruleConfig: json('rule_config').notNull(),
-  createdBy: integer('created_by')
+  createdBy: uuid('created_by')
     .notNull()
     .references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),

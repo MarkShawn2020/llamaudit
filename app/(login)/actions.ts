@@ -29,20 +29,26 @@ import { z } from 'zod';
 
 async function logActivity(
   teamId: number | null | undefined,
-  userId: number | string,
+  userId: string, // Expect UUID as string
   type: ActivityType,
   ipAddress?: string,
 ) {
   if (teamId === null || teamId === undefined) {
     return;
   }
-  const newActivity: NewActivityLog = {
-    teamId,
-    userId: typeof userId === 'string' ? Number(userId) : userId,
-    action: type,
-    ipAddress: ipAddress || '',
-  };
-  await db.insert(activityLogs).values(newActivity);
+  
+  try {
+    const newActivity: NewActivityLog = {
+      teamId,
+      userId,
+      action: type,
+      ipAddress: ipAddress || '',
+    };
+    
+    await db.insert(activityLogs).values(newActivity);
+  } catch (error) {
+    console.error('Error logging activity:', error);
+  }
 }
 
 const signInSchema = z.object({
@@ -98,7 +104,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     return createCheckoutSession({ team: foundTeam, priceId });
   }
 
-  redirect('/dashboard');
+  redirect('/projects');
 });
 
 const signUpSchema = z.object({
@@ -201,17 +207,26 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     await logActivity(teamId, createdUser.id, ActivityType.CREATE_TEAM);
   }
 
-  const newTeamMember: NewTeamMember = {
-    userId: typeof createdUser.id === 'string' ? Number(createdUser.id) : createdUser.id,
-    teamId: teamId,
-    role: userRole,
-  };
+  try {
+    const newTeamMember: NewTeamMember = {
+      userId: createdUser.id, // Now using UUID directly
+      teamId: teamId,
+      role: userRole,
+    };
 
-  await Promise.all([
-    db.insert(teamMembers).values(newTeamMember),
-    logActivity(teamId, createdUser.id, ActivityType.SIGN_UP),
-    setSession(createdUser),
-  ]);
+    await Promise.all([
+      db.insert(teamMembers).values(newTeamMember),
+      logActivity(teamId, createdUser.id, ActivityType.SIGN_UP),
+      setSession(createdUser),
+    ]);
+  } catch (error) {
+    console.error("Error creating team member:", error);
+    return {
+      error: 'Failed to create user account. Please try again.',
+      email,
+      password,
+    };
+  }
 
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
@@ -223,9 +238,23 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
 });
 
 export async function signOut() {
-  const user = (await getUser()) as User;
-  const userWithTeam = await getUserWithTeam(user.id);
-  await logActivity(userWithTeam?.teamId, user.id, ActivityType.SIGN_OUT);
+  const user = await getUser();
+  
+  // Check if user exists before logging activity
+  if (user) {
+    try {
+      const userWithTeam = await getUserWithTeam(user.id);
+      // Only log if we have both user and team
+      if (userWithTeam?.teamId) {
+        await logActivity(userWithTeam.teamId, user.id, ActivityType.SIGN_OUT);
+      }
+    } catch (error) {
+      console.error("Error during signOut activity logging:", error);
+      // Continue with cookie deletion even if logging fails
+    }
+  }
+  
+  // Always clear the session cookie
   (await cookies()).delete('session');
 }
 
@@ -311,7 +340,7 @@ export const deleteAccount = validatedActionWithUser(
         .delete(teamMembers)
         .where(
           and(
-            eq(teamMembers.userId, typeof user.id === 'string' ? Number(user.id) : user.id),
+            eq(teamMembers.userId, user.id), // Using UUID directly
             eq(teamMembers.teamId, userWithTeam.teamId),
           ),
         );
@@ -434,7 +463,7 @@ export const inviteTeamMember = validatedActionWithUser(
       teamId: userWithTeam.teamId,
       email,
       role,
-      invitedBy: typeof user.id === 'string' ? Number(user.id) : user.id,
+      invitedBy: user.id, // Using UUID directly now
       status: 'pending',
     });
 
