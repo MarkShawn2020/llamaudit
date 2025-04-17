@@ -4,26 +4,26 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
-import { 
-  Checkbox, 
-  CheckboxIndicator 
+import {
+  Checkbox,
+  CheckboxIndicator
 } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { 
-  PlayIcon, 
-  CheckCircle, 
-  XCircle, 
-  Loader2, 
-  FileText, 
-  Calendar, 
+import {
+  PlayIcon,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  FileText,
+  Calendar,
   FileUp,
   CreditCard,
   Users,
@@ -42,7 +42,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { saveDocumentAnalysisResults } from '@/lib/api/analysis-api';
 import { getProjectAnalysisResults } from '@/lib/api/analysis-api';
-import { 
+import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
@@ -64,14 +64,14 @@ interface FileAnalysisGroup {
 }
 
 // 优化全选复选框组件
-const SelectAllCheckbox = React.memo(({ 
-  checked, 
-  onChange, 
-  disabled 
-}: { 
-  checked: boolean, 
-  onChange: () => void, 
-  disabled?: boolean 
+const SelectAllCheckbox = React.memo(({
+  checked,
+  onChange,
+  disabled
+}: {
+  checked: boolean,
+  onChange: () => void,
+  disabled?: boolean
 }) => {
   // 使用useCallback防止每次渲染创建新函数
   const handleChange = React.useCallback(() => {
@@ -79,7 +79,7 @@ const SelectAllCheckbox = React.memo(({
   }, [onChange]);
 
   return (
-    <Checkbox 
+    <Checkbox
       checked={checked}
       onCheckedChange={handleChange}
       disabled={disabled}
@@ -89,21 +89,21 @@ const SelectAllCheckbox = React.memo(({
   );
 }, (prevProps, nextProps) => {
   // 自定义比较函数，避免不必要的重渲染
-  return prevProps.checked === nextProps.checked && 
-         prevProps.disabled === nextProps.disabled;
+  return prevProps.checked === nextProps.checked &&
+    prevProps.disabled === nextProps.disabled;
 });
 
 // 优化文件选择复选框组件
-const ItemCheckbox = React.memo(({ 
-  fileId, 
-  checked, 
-  onChange, 
-  disabled 
-}: { 
-  fileId: string, 
-  checked: boolean, 
-  onChange: (fileId: string, checked: boolean) => void, 
-  disabled?: boolean 
+const ItemCheckbox = React.memo(({
+  fileId,
+  checked,
+  onChange,
+  disabled
+}: {
+  fileId: string,
+  checked: boolean,
+  onChange: (fileId: string, checked: boolean) => void,
+  disabled?: boolean
 }) => {
   // 使用useCallback防止每次渲染创建新函数
   const handleChange = React.useCallback((value: boolean | "indeterminate") => {
@@ -111,7 +111,7 @@ const ItemCheckbox = React.memo(({
   }, [onChange, fileId]);
 
   return (
-    <Checkbox 
+    <Checkbox
       checked={checked}
       onCheckedChange={handleChange}
       disabled={disabled}
@@ -121,9 +121,9 @@ const ItemCheckbox = React.memo(({
   );
 }, (prevProps, nextProps) => {
   // 自定义比较函数，避免不必要的重渲染
-  return prevProps.checked === nextProps.checked && 
-         prevProps.disabled === nextProps.disabled && 
-         prevProps.fileId === nextProps.fileId;
+  return prevProps.checked === nextProps.checked &&
+    prevProps.disabled === nextProps.disabled &&
+    prevProps.fileId === nextProps.fileId;
 });
 
 export default function ProjectAnalysis({ projectId }: { projectId: string }) {
@@ -134,7 +134,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingResults, setLoadingResults] = useState(true);
-  
+
   // 文件上传相关状态
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -144,7 +144,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
 
   // 维护一个已处理文件ID的集合，避免重复处理
   const processedFileIdsRef = useRef<Set<string>>(new Set());
-  
+
   // 添加引用来跟踪前一次的结果和文件状态，避免不必要的重新计算
   const prevResultsRef = useRef<MeetingAnalysisResult[]>([]);
   const prevFilesRef = useRef<ProjectFile[]>([]);
@@ -159,34 +159,34 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
   // 修改useEffect，避免在依赖项改变时重新执行
   useEffect(() => {
     console.log(`处理分析结果: ${rawAnalysisResults.length}个结果`);
-    
+
     // 如果结果为空，直接返回
     if (rawAnalysisResults.length === 0) {
       return;
     }
-    
+
     // 检查是否需要重新处理结果 - 使用JSON.stringify比较对象内容而不是引用
     const currentResultsJson = JSON.stringify(rawAnalysisResults);
     const prevResultsJson = JSON.stringify(prevResultsRef.current);
-    
+
     // 如果结果没有变化，则不处理
     if (currentResultsJson === prevResultsJson) {
       console.log('分析结果未变化，跳过处理');
       return;
     }
-    
+
     // 更新结果引用
     prevResultsRef.current = JSON.parse(currentResultsJson);
-    
+
     console.log('开始处理分析结果...');
-    
+
     // 按文件ID分组结果
     const groupMap = new Map<string, FileAnalysisGroup>();
-    
+
     // 处理每个分析结果
     rawAnalysisResults.forEach(result => {
       const fileId = result.id;
-      
+
       if (!groupMap.has(fileId)) {
         // 查找文件信息
         const fileInfo = files.find(f => f.id === fileId);
@@ -202,10 +202,10 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
           results: []
         });
       }
-      
+
       // 获取当前组
       const group = groupMap.get(fileId)!;
-      
+
       // 更新组的状态
       group.status = result.status;
       if (result.error) {
@@ -218,7 +218,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
           // 处理多项分析结果
           result.items.forEach(item => {
             if (!item.meetingTopic && !item.eventCategory) return;
-            
+
             group.results.push({
               id: `${fileId}-${item.itemId || Math.random().toString(36).substring(2, 9)}`,
               fileName: result.fileName,
@@ -246,43 +246,43 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
         }
       }
     });
-    
+
     // 更新分组结果状态
     const groupedResultsData = Array.from(groupMap.values());
     console.log(`生成了${groupedResultsData.length}个文件分析组`);
     setGroupedResults(groupedResultsData);
-    
+
     // 收集需要更新isAnalyzed状态的文件
     const analyzedFileIds = Array.from(groupMap.keys());
     const filesToUpdate = files.filter(
       file => analyzedFileIds.includes(file.id) && !file.isAnalyzed
     );
-    
+
     // 只有在有文件需要更新状态时才更新files状态
     if (filesToUpdate.length > 0) {
       console.log(`更新${filesToUpdate.length}个文件的分析状态`);
-      
+
       // 将更新文件和状态更新的逻辑移到这个函数外执行，打破依赖循环
       requestAnimationFrame(() => {
         // 防止循环更新：创建新的files数组而不是直接修改
-        const updatedFiles = files.map(file => 
+        const updatedFiles = files.map(file =>
           analyzedFileIds.includes(file.id) && !file.isAnalyzed
             ? { ...file, isAnalyzed: true }
             : file
         );
-        
+
         // 更新files状态，但用一个单独的setFiles调用来批量更新
         setFiles(updatedFiles);
-        
+
         // 更新文件分析状态到数据库
         filesToUpdate.forEach(file => {
-          updateFileAnalysisStatus(projectId, file.id, true).catch(err => 
+          updateFileAnalysisStatus(projectId, file.id, true).catch(err =>
             console.error(`更新文件状态失败: ${file.id}`, err)
           );
         });
       });
     }
-    
+
   }, [rawAnalysisResults, projectId]); // 去掉files依赖，只依赖于rawAnalysisResults和projectId
 
   // 获取已保存的分析结果
@@ -290,30 +290,30 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
     try {
       setLoadingResults(true);
       console.log('正在获取项目分析结果:', projectId);
-      
+
       const results = await getProjectAnalysisResults(projectId);
       console.log('获取到分析结果:', results);
-      
+
       if (!results || results.length === 0) {
         console.log('没有找到已保存的分析结果');
         setLoadingResults(false);
         return;
       }
-      
+
       // 处理结果，将数据库中的结果转换为MeetingAnalysisResult格式
       const processedResults: MeetingAnalysisResult[] = [];
-      
+
       // 遍历每个文件
       results.forEach(file => {
         if (!file || !file.analysisResults || file.analysisResults.length === 0) {
           return;
         }
-        
+
         console.log(`处理文件 ${file.id}: ${file.originalName}, 分析结果数量: ${file.analysisResults.length}`);
-        
+
         // 将文件的所有分析结果按itemIndex分组
         const itemGroups = new Map<number, any[]>();
-        
+
         file.analysisResults.forEach(result => {
           const index = result.itemIndex || 0;
           if (!itemGroups.has(index)) {
@@ -321,9 +321,9 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
           }
           itemGroups.get(index)!.push(result);
         });
-        
+
         console.log(`文件 ${file.id} 分析事项组数: ${itemGroups.size}`);
-        
+
         // 为每个文件创建一个分析结果对象
         const fileResult: MeetingAnalysisResult = {
           id: file.id || `file-${Date.now()}`,
@@ -334,12 +334,12 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
           fileType: file.fileType,
           items: []
         };
-        
+
         // 将每组分析结果添加到items中
         itemGroups.forEach((items, index) => {
           // 使用每组的第一条记录作为代表
           const representative = items[0];
-          
+
           fileResult.items?.push({
             itemId: String(index),
             meetingTime: representative.meetingTime ? new Date(representative.meetingTime).toISOString() : undefined,
@@ -356,15 +356,15 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
             originalText: representative.originalText || undefined
           });
         });
-        
+
         console.log(`文件 ${file.id} 处理后的结果项数量: ${fileResult.items?.length || 0}`);
-        
+
         // 把整个文件的分析结果添加到结果数组
         processedResults.push(fileResult);
       });
-      
+
       console.log('所有文件处理后的分析结果数量:', processedResults.length);
-      
+
       // 更新状态
       if (processedResults.length > 0) {
         setRawAnalysisResults(processedResults);
@@ -423,7 +423,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
     }
 
     setIsAnalyzing(true);
-    
+
     try {
       // 将选中的文件添加到分析结果列表，初始状态为pending
       const pendingResults = selectedFiles.map(fileId => {
@@ -437,67 +437,67 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
           fileType: file?.type
         };
       });
-      
+
       setRawAnalysisResults(prev => [...prev, ...pendingResults]);
-      
+
       // 更新为processing状态
-      setRawAnalysisResults(prev => 
-        prev.map(result => 
-          selectedFiles.includes(result.id) 
-            ? { ...result, status: 'processing' as const } 
+      setRawAnalysisResults(prev =>
+        prev.map(result =>
+          selectedFiles.includes(result.id)
+            ? { ...result, status: 'processing' as const }
             : result
         )
       );
 
       // 调用API批量解析文件，传入projectId以便直接保存到数据库
       const analysisPromises = analyzeMeetingDocuments(selectedFiles, projectId);
-      
+
       // 使用Promise.allSettled处理所有解析请求
       const results = await Promise.allSettled(analysisPromises);
-      
+
       // 更新解析结果
       const successfulResults: MeetingAnalysisResult[] = [];
-      
+
       for (let i = 0; i < results.length; i++) {
         const result = results[i];
         const fileId = selectedFiles[i];
-        
+
         if (result.status === 'fulfilled') {
           // 成功解析的结果添加到数组中
           successfulResults.push(result.value);
-          
+
           // 更新UI状态
-          setRawAnalysisResults(prev => 
-            prev.map(item => 
+          setRawAnalysisResults(prev =>
+            prev.map(item =>
               item.id === fileId ? result.value : item
             )
           );
-          
+
           try {
             // 调用API更新文件的分析状态
             await updateFileAnalysisStatus(projectId, fileId, true);
-            
+
             // 更新本地文件状态
-          setFiles(prev => 
-            prev.map(file => 
-              file.id === fileId ? { ...file, isAnalyzed: true } : file
-            )
-          );
+            setFiles(prev =>
+              prev.map(file =>
+                file.id === fileId ? { ...file, isAnalyzed: true } : file
+              )
+            );
           } catch (error) {
             console.error(`更新文件[${fileId}]分析状态失败:`, error);
           }
         } else {
           // 解析失败
-          setRawAnalysisResults(prev => 
-            prev.map(item => 
-              item.id === fileId 
-                ? { 
-                    ...item, 
-                    status: 'error' as const, 
-                    error: result.reason instanceof Error 
-                      ? result.reason.message 
-                      : '解析失败' 
-                  } 
+          setRawAnalysisResults(prev =>
+            prev.map(item =>
+              item.id === fileId
+                ? {
+                  ...item,
+                  status: 'error' as const,
+                  error: result.reason instanceof Error
+                    ? result.reason.message
+                    : '解析失败'
+                }
                 : item
             )
           );
@@ -505,10 +505,10 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
       }
 
       toast.success(`已完成${results.length}个文件的解析`);
-      
+
       // 切换到分析结果标签
       setActiveTab('analysis');
-      
+
       // 清空选择
       setSelectedFiles([]);
     } catch (error) {
@@ -524,7 +524,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
       toast.warning('没有可导出的数据');
       return;
     }
-    
+
     try {
       exportAnalysisResults(groupedResults, format);
       toast.success(`已成功导出${format.toUpperCase()}格式文件`);
@@ -543,33 +543,33 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
       setUploading(true);
       setUploadProgress(0);
       setUploadError(null);
-      
+
       // 转换FileList为数组
       const filesArray = Array.from(selectedFiles);
-      
+
       // 使用新API上传文件
       const result = await uploadProjectFile(
-        projectId, 
+        projectId,
         filesArray,
         (progress) => setUploadProgress(progress)
       );
-      
+
       // 更新本地文件状态
       setFiles(prev => [...prev, ...result.files]);
-      
+
       toast.success(`成功上传 ${filesArray.length} 个文件`);
     } catch (error) {
       console.error('文件上传失败:', error);
-      
+
       // 获取具体错误信息
       let errorMessage = '文件上传失败';
       if (error instanceof Error) {
         errorMessage = error.message;
       }
-      
+
       // 设置错误状态
       setUploadError(errorMessage);
-      
+
       // 重置进度
       setUploadProgress(0);
     } finally {
@@ -583,10 +583,10 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
     try {
       setDeleting(fileId);
       await deleteProjectFile(projectId, fileId);
-      
+
       // 更新本地状态 - 移除已删除文件
       setFiles(files.filter(file => file.id !== fileId));
-      
+
       toast.success('文件已删除');
     } catch (error) {
       console.error('删除文件失败:', error);
@@ -647,191 +647,209 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
     <div className="space-y-6">
       <div className="grid md:grid-cols-1 gap-6">
         {/* 文件管理卡片 */}
-      <Card>
+        <Card>
 
           <div className='flex gap-3 justify-between items-center px-4'>
 
-        <CardHeader>
-            <CardTitle>项目文件管理</CardTitle>
-          <CardDescription>
-              上传、管理和准备分析的文件
-          </CardDescription>
+            <CardHeader>
+              <CardTitle>项目文件管理</CardTitle>
+              <CardDescription>
+                上传、管理和准备分析的文件
+              </CardDescription>
 
-        </CardHeader>
+            </CardHeader>
 
-          <div className='flex gap-3 justify-between items-center px-4'>
+            <div className='flex gap-3 justify-between items-center px-4'>
 
-          <div className=" flex flex-col gap-3 px-2">
-              <div className="flex items-center gap-2">
-                <Input
-                  type="file"
-                  id="fileUpload"
-                  multiple
-                  className="hidden"
-                  onChange={handleFileChange}
-                  disabled={uploading}
-                />
-                <label htmlFor="fileUpload">
-                  <Button 
-                    variant="outline" 
-                    disabled={uploading} 
-                    className="cursor-pointer" 
-                    asChild
-                  >
-                    <span>
-                      {uploading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          上传中... {uploadProgress}%
-                        </>
-                      ) : (
-                        <>
-                          <FileUp className="mr-2 h-4 w-4" />
-                          选择文件
-                        </>
-                      )}
-                    </span>
-                  </Button>
-                </label>
+              <div className=" flex flex-col gap-3 px-2">
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="file"
+                    id="fileUpload"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileChange}
+                    disabled={uploading}
+                  />
+                  <label htmlFor="fileUpload">
+                    <Button
+                      variant="outline"
+                      disabled={uploading}
+                      className="cursor-pointer"
+                      asChild
+                    >
+                      <span>
+                        {uploading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            上传中... {uploadProgress}%
+                          </>
+                        ) : (
+                          <>
+                            <FileUp className="mr-2 h-4 w-4" />
+                            选择文件
+                          </>
+                        )}
+                      </span>
+                    </Button>
+                  </label>
 
-              </div>
-              
-              {uploadError && (
-                <div className="text-sm text-red-500 bg-red-50 p-2 rounded-md border border-red-200 flex items-start gap-2">
-                  <div className="h-4 w-4 mt-0.5 flex-shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <line x1="12" y1="8" x2="12" y2="12"></line>
-                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                    </svg>
-                  </div>
-                  <div>
-                    <strong>上传失败：</strong> {uploadError}
-                    <div className="mt-1">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-7 text-xs" 
-                        onClick={() => setUploadError(null)}
-                      >
-                        关闭
-                      </Button>
+                </div>
+
+                {uploadError && (
+                  <div className="text-sm text-red-500 bg-red-50 p-2 rounded-md border border-red-200 flex items-start gap-2">
+                    <div className="h-4 w-4 mt-0.5 flex-shrink-0">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                      </svg>
+                    </div>
+                    <div>
+                      <strong>上传失败：</strong> {uploadError}
+                      <div className="mt-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => setUploadError(null)}
+                        >
+                          关闭
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex">
-              <Button
-                onClick={handleAnalyze}
-                disabled={selectedFiles.length === 0 || isAnalyzing}
-                className="gap-2"
-              >
-                {isAnalyzing ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    正在分析...
-                  </>
-                ) : (
-                  <>
-                    <PlayIcon className="h-4 w-4" />
-                    开始分析
-                  </>
                 )}
-              </Button>
+              </div>
+
+              <div className="flex">
+                <Button
+                  onClick={handleAnalyze}
+                  disabled={selectedFiles.length === 0 || isAnalyzing}
+                  className="gap-2"
+                >
+                  {isAnalyzing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      正在分析...
+                    </>
+                  ) : (
+                    <>
+                      <PlayIcon className="h-4 w-4" />
+                      开始分析
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
-          </div>
 
 
-        <CardContent>
+          <CardContent>
 
 
             <div className="rounded-md border overflow-auto max-h-[400px]">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]">
-                      <SelectAllCheckbox 
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]">
+                      <SelectAllCheckbox
                         checked={allFilesSelected}
                         onChange={handleSelectAll}
-                      disabled={loading || isAnalyzing}
+                        disabled={loading || isAnalyzing}
                       />
-                  </TableHead>
-                  <TableHead>文件名</TableHead>
-                  <TableHead>类型</TableHead>
+                    </TableHead>
+                    <TableHead>文件名</TableHead>
+                    <TableHead>类型</TableHead>
                     <TableHead>大小</TableHead>
-                  <TableHead>上传日期</TableHead>
-                  <TableHead>状态</TableHead>
+                    <TableHead>上传日期</TableHead>
+                    <TableHead>状态</TableHead>
                     <TableHead className="text-right">操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
                       <TableCell colSpan={7} className="text-center py-8">
                         <div className="flex justify-center items-center">
                           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                           <span>加载文件列表...</span>
                         </div>
-                    </TableCell>
-                  </TableRow>
-                ) : files.length === 0 ? (
-                  <TableRow>
+                      </TableCell>
+                    </TableRow>
+                  ) : files.length === 0 ? (
+                    <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      <p>暂无可分析的文件</p>
-                      <p className="text-sm mt-1">请先上传会议纪要、合同等文件</p>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  files.map((file) => (
-                    <TableRow key={file.id}>
-                      <TableCell>
+                        <p>暂无可分析的文件</p>
+                        <p className="text-sm mt-1">请先上传会议纪要、合同等文件</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    files.map((file) => (
+                      <TableRow 
+                        key={file.id} 
+                        className="cursor-pointer hover:bg-muted/30 transition-colors"
+                        onClick={(e) => {
+                          // 如果点击事件源自操作按钮区域，不触发行选择
+                          if (!(e.target as HTMLElement).closest('.action-buttons')) {
+                            handleSelectFile(file.id, !selectedFiles.includes(file.id));
+                          }
+                        }}
+                      >
+                        <TableCell>
                           <ItemCheckbox
                             fileId={file.id}
-                          checked={selectedFiles.includes(file.id)}
+                            checked={selectedFiles.includes(file.id)}
                             onChange={handleSelectFile}
                             disabled={isAnalyzing}
                           />
-                      </TableCell>
-                      <TableCell className="font-medium flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-blue-500" />
+                        </TableCell>
+                        <TableCell className="font-medium flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-blue-500" />
                           <span className="truncate max-w-[200px]" title={file.filename}>
                             {file.filename}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {file.category === 'meeting' && '会议纪要'}
-                        {file.category === 'contract' && '合同文件'}
-                        {file.category === 'attachment' && '附件'}
-                      </TableCell>
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {file.category === 'meeting' && '会议纪要'}
+                          {file.category === 'contract' && '合同文件'}
+                          {file.category === 'attachment' && '附件'}
+                        </TableCell>
                         <TableCell>{formatFileSize(file.size)}</TableCell>
                         <TableCell>{formatDate(file.createdAt)}</TableCell>
-                      <TableCell>
-                        {file.isAnalyzed ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            已分析
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                            未分析
-                          </span>
-                        )}
-                      </TableCell>
+                        <TableCell>
+                          {file.isAnalyzed ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              已分析
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              未分析
+                            </span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button size="sm" variant="ghost" onClick={() => viewFile(file)}>
+                          <div className="flex justify-end gap-2 action-buttons">
+                            <Button size="sm" variant="ghost" onClick={(e) => {
+                              e.stopPropagation();
+                              viewFile(file);
+                            }}>
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => downloadFile(file)}>
+                            <Button size="sm" variant="ghost" onClick={(e) => {
+                              e.stopPropagation();
+                              downloadFile(file);
+                            }}>
                               <Download className="h-4 w-4" />
                             </Button>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
+                            <Button
+                              size="sm"
+                              variant="ghost"
                               className="text-red-500 hover:text-red-700"
-                              onClick={() => handleDeleteFile(file.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteFile(file.id);
+                              }}
                               disabled={deleting === file.id}
                             >
                               {deleting === file.id ? (
@@ -842,16 +860,16 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
                             </Button>
                           </div>
                         </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-          
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
 
-        </CardContent>
-      </Card>
+
+          </CardContent>
+        </Card>
 
         {/* 分析结果卡片 */}
         <Card>
@@ -859,9 +877,9 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
             <div className="flex justify-between items-center">
               <div>
                 <CardTitle>三重一大分析结果</CardTitle>
-            <CardDescription>
-              提取的三重一大信息
-            </CardDescription>
+                <CardDescription>
+                  提取的三重一大信息
+                </CardDescription>
               </div>
               {groupedResults.length > 0 && (
                 <DropdownMenu>
@@ -898,7 +916,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
                     <TabsTrigger value="table">表格视图</TabsTrigger>
                   </TabsList>
                 </div>
-                
+
                 <TabsContent value="card" className="mt-4 pb-4">
                   <div className="space-y-6 max-h-[500px] overflow-auto pr-2">
                     {groupedResults.map((group) => (
@@ -1007,72 +1025,72 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
                     ))}
                   </div>
                 </TabsContent>
-                
+
                 <TabsContent value="table" className="mt-4">
                   <div className="rounded-md border overflow-x-auto max-h-[500px]">
-              <Table>
-                <TableHeader>
-                  <TableRow>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
                           <TableHead className="w-[200px]">文件名</TableHead>
-                    <TableHead>会议时间</TableHead>
-                    <TableHead>文号</TableHead>
-                    <TableHead>会议议题</TableHead>
-                    <TableHead>事项类别</TableHead>
-                    <TableHead>涉及金额</TableHead>
-                    <TableHead>状态</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                        {groupedResults.flatMap((group) => 
-                          group.results.length > 0 ? 
+                          <TableHead>会议时间</TableHead>
+                          <TableHead>文号</TableHead>
+                          <TableHead>会议议题</TableHead>
+                          <TableHead>事项类别</TableHead>
+                          <TableHead>涉及金额</TableHead>
+                          <TableHead>状态</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {groupedResults.flatMap((group) =>
+                          group.results.length > 0 ?
                             group.results.map((result, index) => (
                               <TableRow key={`${group.fileId}-${index}`}>
-                      <TableCell className="font-medium">
+                                <TableCell className="font-medium">
                                   {index === 0 ? (
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-blue-500" />
+                                    <div className="flex items-center gap-2">
+                                      <FileText className="h-4 w-4 text-blue-500" />
                                       <span className="truncate max-w-[160px]" title={group.fileName}>
                                         {group.fileName}
-                          </span>
-                        </div>
+                                      </span>
+                                    </div>
                                   ) : null}
-                      </TableCell>
-                      <TableCell>{result.meetingTime || '-'}</TableCell>
-                      <TableCell>{result.meetingNumber || '-'}</TableCell>
-                      <TableCell>
-                        <span className="truncate max-w-[160px] block" title={result.meetingTopic}>
-                          {result.meetingTopic || '-'}
-                        </span>
-                      </TableCell>
-                      <TableCell>{result.eventCategory || '-'}</TableCell>
-                      <TableCell>{result.amountInvolved || '-'}</TableCell>
-                      <TableCell>
+                                </TableCell>
+                                <TableCell>{result.meetingTime || '-'}</TableCell>
+                                <TableCell>{result.meetingNumber || '-'}</TableCell>
+                                <TableCell>
+                                  <span className="truncate max-w-[160px] block" title={result.meetingTopic}>
+                                    {result.meetingTopic || '-'}
+                                  </span>
+                                </TableCell>
+                                <TableCell>{result.eventCategory || '-'}</TableCell>
+                                <TableCell>{result.amountInvolved || '-'}</TableCell>
+                                <TableCell>
                                   {index === 0 ? renderStatus(group.status, group.error) : null}
                                 </TableCell>
                               </TableRow>
                             ))
-                          : (
-                            <TableRow key={group.fileId}>
-                              <TableCell className="font-medium">
-                                <div className="flex items-center gap-2">
-                                  <FileText className="h-4 w-4 text-blue-500" />
-                                  <span className="truncate max-w-[160px]" title={group.fileName}>
-                                    {group.fileName}
-                                  </span>
-                                </div>
-                              </TableCell>
-                              <TableCell colSpan={5} className="text-center text-muted-foreground">
-                                {group.status === 'completed' ? '未检测到三重一大相关内容' : ''}
-                              </TableCell>
-                              <TableCell>
-                                {renderStatus(group.status, group.error)}
-                      </TableCell>
-                    </TableRow>
-                          )
+                            : (
+                              <TableRow key={group.fileId}>
+                                <TableCell className="font-medium">
+                                  <div className="flex items-center gap-2">
+                                    <FileText className="h-4 w-4 text-blue-500" />
+                                    <span className="truncate max-w-[160px]" title={group.fileName}>
+                                      {group.fileName}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                                  {group.status === 'completed' ? '未检测到三重一大相关内容' : ''}
+                                </TableCell>
+                                <TableCell>
+                                  {renderStatus(group.status, group.error)}
+                                </TableCell>
+                              </TableRow>
+                            )
                         )}
-                </TableBody>
-              </Table>
-            </div>
+                      </TableBody>
+                    </Table>
+                  </div>
                 </TabsContent>
               </Tabs>
             ) : (
