@@ -32,7 +32,16 @@ import {
   ChevronDown,
   Download,
   Trash,
-  Eye
+  Eye,
+  FileType,
+  Image,
+  FileSpreadsheet,
+  FileCode,
+  FileCog,
+  FileAudio,
+  FileVideo,
+  FileX,
+  File
 } from 'lucide-react';
 import { MeetingAnalysisResult, analyzeMeetingDocuments } from '@/lib/api/document-api';
 import { getProjectFiles, updateFileAnalysisStatus, uploadProjectFile, deleteProjectFile, ProjectFile } from '@/lib/api/project-file-api';
@@ -125,6 +134,63 @@ const ItemCheckbox = React.memo(({
     prevProps.disabled === nextProps.disabled &&
     prevProps.fileId === nextProps.fileId;
 });
+
+// 添加文件图标判断函数
+const getFileIcon = (filename: string) => {
+  if (!filename) return <FileText className="h-4 w-4 text-blue-500" />;
+  
+  const extension = filename.split('.').pop()?.toLowerCase();
+  
+  switch (extension) {
+    case 'pdf':
+      return <FileType className="h-4 w-4 text-red-500" />;
+    case 'jpg':
+    case 'jpeg':
+    case 'png':
+    case 'gif':
+    case 'svg':
+    case 'webp':
+      return <Image className="h-4 w-4 text-purple-500" />;
+    case 'xls':
+    case 'xlsx':
+    case 'csv':
+      return <FileSpreadsheet className="h-4 w-4 text-green-500" />;
+    case 'doc':
+    case 'docx':
+      return <FileText className="h-4 w-4 text-blue-500" />;
+    case 'js':
+    case 'ts':
+    case 'jsx':
+    case 'tsx':
+    case 'html':
+    case 'css':
+    case 'py':
+    case 'java':
+    case 'c':
+    case 'cpp':
+      return <FileCode className="h-4 w-4 text-yellow-500" />;
+    case 'json':
+    case 'xml':
+      return <FileCog className="h-4 w-4 text-orange-500" />;
+    case 'mp3':
+    case 'wav':
+    case 'ogg':
+      return <FileAudio className="h-4 w-4 text-pink-500" />;
+    case 'mp4':
+    case 'avi':
+    case 'mov':
+    case 'wmv':
+      return <FileVideo className="h-4 w-4 text-indigo-500" />;
+    case 'zip':
+    case 'rar':
+    case '7z':
+    case 'tar':
+    case 'gz':
+      return <FileX className="h-4 w-4 text-stone-500" />;
+    default:
+      return <File className="h-4 w-4 text-gray-500" />;
+  }
+};
 
 export default function ProjectAnalysis({ projectId }: { projectId: string }) {
   const [files, setFiles] = useState<ProjectFile[]>([]);
@@ -805,7 +871,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
                           />
                         </TableCell>
                         <TableCell className="font-medium flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-blue-500" />
+                          {getFileIcon(file.filename)}
                           <span className="truncate max-w-[200px]" title={file.filename}>
                             {file.filename}
                           </span>
@@ -909,7 +975,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
                 <p>加载分析结果中...</p>
               </div>
             ) : groupedResults.length > 0 ? (
-              <Tabs defaultValue="card" className="w-full px-6">
+              <Tabs defaultValue="card" className="w-full p-6 pt-0">
                 <div className="flex justify-between items-center border-b pb-4">
                   <TabsList>
                     <TabsTrigger value="card">卡片视图</TabsTrigger>
@@ -917,14 +983,14 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
                   </TabsList>
                 </div>
 
-                <TabsContent value="card" className="mt-4 pb-4">
+                <TabsContent value="card" className="mt-4">
                   <div className="space-y-6 max-h-[500px] overflow-auto pr-2">
                     {groupedResults.map((group) => (
                       <Card key={group.fileId} className="overflow-hidden">
                         <CardHeader className="bg-muted/30 py-4">
                           <div className="flex justify-between items-center">
                             <div className="flex items-center gap-2">
-                              <FileText className="h-5 w-5 text-blue-500" />
+                              {getFileIcon(group.fileName)}
                               <CardTitle className="text-lg">{group.fileName}</CardTitle>
                               {renderStatus(group.status, group.error)}
                             </div>
@@ -1048,7 +1114,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
                                 <TableCell className="font-medium">
                                   {index === 0 ? (
                                     <div className="flex items-center gap-2">
-                                      <FileText className="h-4 w-4 text-blue-500" />
+                                      {getFileIcon(group.fileName)}
                                       <span className="truncate max-w-[160px]" title={group.fileName}>
                                         {group.fileName}
                                       </span>
@@ -1073,7 +1139,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
                               <TableRow key={group.fileId}>
                                 <TableCell className="font-medium">
                                   <div className="flex items-center gap-2">
-                                    <FileText className="h-4 w-4 text-blue-500" />
+                                    {getFileIcon(group.fileName)}
                                     <span className="truncate max-w-[160px]" title={group.fileName}>
                                       {group.fileName}
                                     </span>
