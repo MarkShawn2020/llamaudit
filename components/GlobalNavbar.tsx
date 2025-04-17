@@ -29,11 +29,12 @@ const navItems = [
     href: '/projects',
     icon: FolderIcon
   },
-  {
-    name: '分析系统',
-    href: '/dashboard',
-    icon: BarChartIcon
-  },
+  // todo: 分析系统
+  // {
+  //   name: '分析系统',
+  //   href: '/dashboard',
+  //   icon: BarChartIcon
+  // },
   {
     name: '设置',
     href: '/settings',
