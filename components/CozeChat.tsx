@@ -2,11 +2,18 @@
 
 import { useEffect } from 'react';
 import Script from 'next/script';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 export function CozeChat() {
   useEffect(() => {
     // 确保脚本加载完成后初始化Coze客户端
     const initCozeClient = () => {
+      const pat = process.env.NEXT_PUBLIC_COZE_PAT;
+      console.log({pat});
+      
+
       if (typeof window !== 'undefined' && window.CozeWebSDK) {
         new window.CozeWebSDK.WebChatClient({
           config: {
@@ -17,9 +24,9 @@ export function CozeChat() {
           },
           auth: {
             type: 'token',
-            token: 'pat_********',
+            token: pat,
             onRefreshToken: function () {
-              return 'pat_********'
+              return pat
             }
           }
         });
