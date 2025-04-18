@@ -1,0 +1,4 @@
+## 开发原则
+
+- 后端 api 尽可能使用 server action
+- 尽可能使用 @lib/db/schema 的衍生结构

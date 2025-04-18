@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/theme-provider';
 import { UserProvider } from '@/components/user-provider';
 import { GlobalNavbar } from '@/components/GlobalNavbar';
+import { CozeChat } from '@/components/CozeChat';
 import { getUser } from '@/lib/db/queries';
 
 const fontSans = FontSans({
@@ -51,6 +52,7 @@ export default async function RootLayout({
             </div>
           </UserProvider>
         </ThemeProvider>
+        <CozeChat />
       </body>
     </html>
   );

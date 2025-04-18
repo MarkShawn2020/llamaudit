@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useProjectFiles } from './hooks';
+import { useAnalysisResults, useProjectFiles } from './hooks';
 import { FileList } from './fileManagement';
 import { AnalysisResults } from './analysisResults';
 
