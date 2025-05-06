@@ -101,7 +101,7 @@ export default function ProjectsList() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="code">单位代码</Label>
+                <Label htmlFor="code">单位代码（可选）</Label>
                 <Input 
                   id="code" 
                   value={newProject.code}
@@ -110,7 +110,7 @@ export default function ProjectsList() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="type">单位类型</Label>
+                <Label htmlFor="type">单位类型（可选）</Label>
                 <Input 
                   id="type" 
                   value={newProject.type}
@@ -123,7 +123,7 @@ export default function ProjectsList() {
               <Button variant="outline" onClick={() => setOpen(false)}>取消</Button>
               <Button 
                 onClick={handleAddProject} 
-                disabled={!newProject.name || !newProject.code || !newProject.type || loading}
+                disabled={!newProject.name || loading}
               >
                 确认添加
               </Button>

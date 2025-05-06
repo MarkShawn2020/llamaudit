@@ -5,6 +5,7 @@ import { db } from '@/lib/db/drizzle';
 import { auditUnits, files } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import crypto from 'crypto';
 
 export interface Project {
   id: string;
@@ -157,24 +158,29 @@ export async function createProject(projectData: Omit<Project, 'id' | 'createdAt
     }
     
     // 检查必填字段
-    if (!projectData.name || !projectData.code || !projectData.type) {
-      throw new Error('缺少必要的项目信息');
+    if (!projectData.name) {
+      throw new Error('单位名称为必填项');
     }
 
-    // 检查项目代码是否已存在
-    const existingProject = await db.query.auditUnits.findFirst({
-      where: eq(auditUnits.code, projectData.code)
-    });
+    // 检查项目代码是否已存在（如果提供了代码）
+    if (projectData.code) {
+      const existingProject = await db.query.auditUnits.findFirst({
+        where: eq(auditUnits.code, projectData.code)
+      });
 
-    if (existingProject) {
-      throw new Error('项目代码已存在');
+      if (existingProject) {
+        throw new Error('项目代码已存在');
+      }
     }
 
+    // 生成唯一的单位代码（如果未提供）
+    const unitCode = projectData.code || `AU-${crypto.randomUUID().substring(0, 8).toUpperCase()}`;
+    
     // 创建新项目，处理字段名称差异
     const newProject = await db.insert(auditUnits).values({
       name: projectData.name,
-      code: projectData.code,
-      type: projectData.type,
+      code: unitCode, // 使用用户提供的代码或生成的唯一代码
+      type: projectData.type || '', // 单位类型可选
       address: projectData.address || '',
       contactPerson: projectData.contact || '', // 接收前端的 contact 字段
       phone: projectData.phone || '',
