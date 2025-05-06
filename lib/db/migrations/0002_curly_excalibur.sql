@@ -1,1 +1,0 @@
-ALTER TABLE "analysis_results" ADD COLUMN "item_index" integer DEFAULT 0 NOT NULL;

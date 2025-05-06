@@ -25,6 +25,9 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
 
   // 分析结果相关逻辑
   const {
+    /**
+     * 分析结果，key为文件ID，value为该文件下的分析结果
+     */
     groupedResults,
     isAnalyzing,
     loadingResults,

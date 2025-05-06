@@ -1,26 +1,12 @@
 {
-  "version": "5",
-  "dialect": "pg",
+  "version": "7",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "5",
-      "when": 1716179812354,
-      "tag": "0003_dashing_phil_sheldon",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "5",
-      "when": 1716179812355,
-      "tag": "0003_past_sasquatch",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
       "version": "7",
-      "when": 1744839861486,
-      "tag": "0002_curly_excalibur",
+      "when": 1746532932266,
+      "tag": "0000_old_firelord",
       "breakpoints": true
     }
   ]
