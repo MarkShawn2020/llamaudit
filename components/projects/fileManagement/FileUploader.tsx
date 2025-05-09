@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, FileUp } from 'lucide-react';
 import { toast } from 'sonner';
-import { uploadProjectFile } from '@/lib/api/project-file-api';
 import { ProjectFile } from '@/lib/api/project-file-api';
+import { logger } from '@/lib/logger';
 
 interface FileUploaderProps {
   projectId: string;
@@ -17,6 +17,35 @@ export function FileUploader({ projectId, onUploadComplete }: FileUploaderProps)
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  /**
+   * 使用Dify API上传文件
+   * @param file 要上传的文件
+   * @param userId 用户ID
+   * @returns 上传的文件信息
+   */
+  const uploadFileToDify = async (file: File, userId: string): Promise<any> => {
+    logger.info('开始上传文件到Dify API', { filename: file.name, size: file.size });
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('user', userId); // Dify API需要用户标识符
+    
+    const response = await fetch('/api/dify/upload', {
+      method: 'POST',
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: '上传失败' }));
+      logger.error('Dify文件上传失败', { status: response.status, error: errorData });
+      throw new Error(errorData.error || `上传失败 (${response.status})`);
+    }
+    
+    const data = await response.json();
+    logger.info('Dify文件上传成功', { fileId: data.id, filename: data.name });
+    return data;
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
@@ -29,20 +58,45 @@ export function FileUploader({ projectId, onUploadComplete }: FileUploaderProps)
 
       // 转换FileList为数组
       const filesArray = Array.from(selectedFiles);
-
-      // 使用API上传文件
-      const result = await uploadProjectFile(
-        projectId,
-        filesArray,
-        (progress) => setUploadProgress(progress)
-      );
-
+      
+      // 使用Dify API上传文件
+      const uploadedFiles: ProjectFile[] = [];
+      const totalFiles = filesArray.length;
+      
+      for (let i = 0; i < filesArray.length; i++) {
+        const file = filesArray[i];
+        
+        // 更新进度
+        const currentProgress = Math.floor((i / totalFiles) * 90); // 保留最后10%用于处理完成
+        setUploadProgress(currentProgress);
+        
+        // 上传到Dify API
+        const difyResponse = await uploadFileToDify(file, projectId);
+        
+        // 将Dify API返回的文件信息转换为ProjectFile格式
+        uploadedFiles.push({
+          id: difyResponse.id,
+          filename: difyResponse.name,
+          size: difyResponse.size,
+          type: difyResponse.mime_type,
+          url: `/api/dify/files?id=${difyResponse.id}`, // 使用查询参数方式获取文件
+          createdAt: new Date(difyResponse.created_at * 1000).toISOString(),
+          uploadedBy: 'current_user',
+          category: 'attachment',
+          isAnalyzed: false
+        });
+      }
+      
+      // 设置完成进度
+      setUploadProgress(100);
+      
       // 通知父组件上传完成
-      onUploadComplete(result.files);
+      onUploadComplete(uploadedFiles);
 
       toast.success(`成功上传 ${filesArray.length} 个文件`);
+      logger.info('所有文件上传完成', { count: filesArray.length });
     } catch (error) {
-      console.error('文件上传失败:', error);
+      logger.error('文件上传失败', { error });
 
       // 获取具体错误信息
       let errorMessage = '文件上传失败';
