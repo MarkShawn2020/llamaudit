@@ -56,11 +56,11 @@ export function AnalysisResults({ groupedResults, loading }: AnalysisResultsProp
   };
 
   // 检查是否有任何结果
-  const hasResults = (
-    groupedResults.majorDecisions.length > 0 ||
-    groupedResults.personnelAppointments.length > 0 ||
-    groupedResults.majorProjects.length > 0 ||
-    groupedResults.largeAmounts.length > 0
+  const hasResults = !!groupedResults && (
+    (groupedResults.majorDecisions?.length > 0) ||
+    (groupedResults.personnelAppointments?.length > 0) ||
+    (groupedResults.majorProjects?.length > 0) ||
+    (groupedResults.largeAmounts?.length > 0)
   );
   
   // 将分组结果转换为展示所需格式

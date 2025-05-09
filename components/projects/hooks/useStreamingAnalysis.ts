@@ -36,7 +36,7 @@ export function useStreamingAnalysis(
       
       try {
         // 调用API路由取消分析
-        const response = await fetch('/api/dify/stream-analysis', {
+        const response = await fetch('/api/dify/stream-analysis/', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ taskId: taskIdRef.current }),
@@ -69,7 +69,7 @@ export function useStreamingAnalysis(
         closeEventSource();
         
         // 尝试取消分析任务
-        fetch('/api/dify/stream-analysis', {
+        fetch('/api/dify/stream-analysis/', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ taskId: taskIdRef.current }),
@@ -143,7 +143,7 @@ export function useStreamingAnalysis(
       }
       
       // 建立SSE连接
-      const es = new EventSource(`/api/dify/stream-analysis?${new URLSearchParams({ 
+      const es = new EventSource(`/api/dify/stream-analysis/?${new URLSearchParams({ 
         fileIds: JSON.stringify(fileIds) 
       }).toString()}`);
       

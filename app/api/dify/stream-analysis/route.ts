@@ -166,6 +166,8 @@ export async function GET(request: NextRequest) {
           buffer = lines.pop() || ""; // 保留最后一行（可能不完整）
           
           for (const line of lines) {
+logger.info("处理SSE消息", { line });
+
             if (line.trim() === "") continue;
             if (!line.startsWith("data:")) continue;
             
