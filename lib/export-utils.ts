@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
-import { MeetingAnalysisResult } from './api/document-api';
+
 
 /**
  * 文件分析结果分组接口
