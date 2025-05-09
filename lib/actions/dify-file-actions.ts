@@ -63,6 +63,7 @@ export async function saveDifyFileToDatabase(
 
     // 将Dify文件信息保存到数据库
     const newFile = await db.insert(files).values({
+      id: difyFileData.id, // todo: general
       name: difyFileData.id, // 使用Dify文件ID作为唯一标识
       originalName: difyFileData.name,
       filePath: fileUrl, // 文件访问路径
