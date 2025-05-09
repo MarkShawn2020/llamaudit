@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { FileStatus } from '../types';
 import { streamAnalyzeDifyFiles, cancelDifyAnalysis, DifySSEMessage } from '@/lib/actions/dify-streaming-actions';
 import { logger } from '@/lib/logger';
-import { IKeyDecisionItem } from '@/types/analysis';
+import { IKeyDecisionItem, IMeeting } from '@/types/analysis';
 
 /**
  * 流式分析Hook，支持实时打字机效果的分析结果展示
@@ -171,7 +171,7 @@ export function useStreamingAnalysis(
     }
   }, [updateFilesStatus, handleMessage, closeEventSource]);
 
-  // 从流式结果提取结构化数据
+  // 从流式结果提取结构化数据 (旧格式)
   const extractStructuredResults = useCallback(() => {
     if (!isComplete || !streamingResult) return null;
     
@@ -202,6 +202,62 @@ export function useStreamingAnalysis(
       return null;
     }
   }, [isComplete, streamingResult]);
+  
+  // 从流式结果提取会议数据 (新格式 - IMeeting[]格式)
+  const extractMeetingsFromStreamingResult = useCallback((): IMeeting[] | null => {
+    if (!isComplete || !streamingResult) return null;
+    
+    try {
+      // 直接查找JSON格式
+      const jsonMatch = streamingResult.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jsonMatch && jsonMatch[1]) {
+        try {
+          const jsonData = JSON.parse(jsonMatch[1]);
+          logger.info('成功从流式结果中提取会议数据');
+          
+          // 如果直接返回了会议数组 
+          if (Array.isArray(jsonData["会议数据"])) {
+            return jsonData["会议数据"] as IMeeting[];
+          }
+          
+          // 如果有分开的会议基本信息和三重一大事项列表，需要组装
+          if (jsonData["会议基本信息"] && jsonData["三重一大具体事项"]) {
+            const meetingInfo = jsonData["会议基本信息"];
+            const keyDecisionItems = (jsonData["三重一大具体事项"] || []) as IKeyDecisionItem[];
+            
+            if (Array.isArray(meetingInfo)) {
+              // 返回了多个会议
+              return meetingInfo.map((meeting: any) => ({
+                ...meeting,
+                keyDecisionItems: keyDecisionItems.filter(item => 
+                  // 使用documentName来关联会议和决策项
+                  item.originalText.includes(meeting.documentName)
+                )
+              }));
+            } else {
+              // 返回了单个会议
+              return [{
+                ...meetingInfo,
+                keyDecisionItems
+              }];
+            }
+          }
+          
+          // 如果无法解析出会议数据，返回空数组
+          logger.warn('无法从流式结果提取会议数据', { jsonData });
+          return [];
+        } catch (e) {
+          logger.error('解析JSON格式数据时出错', { error: e });
+        }
+      }
+      
+      logger.warn('未能成功从流式结果提取会议数据', { streamingResult });
+      return null;
+    } catch (error) {
+      logger.error('从流式结果提取会议数据时出错', { error });
+      return null;
+    }
+  }, [isComplete, streamingResult]);
 
   return {
     isAnalyzing,
@@ -210,6 +266,7 @@ export function useStreamingAnalysis(
     error,
     startStreamingAnalysis,
     cancelAnalysis,
-    extractStructuredResults
+    extractStructuredResults,
+    extractMeetingsFromStreamingResult
   };
 }

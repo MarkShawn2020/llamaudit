@@ -7,6 +7,7 @@ import { AnalysisResult } from '../types';
 import { getFileIcon } from '../utils/fileIcons';
 import { StatusBadge } from './StatusBadge';
 import { formatDate } from '@/lib/utils';
+import { IMeeting } from '@/types/analysis';
 
 interface ResultItem {
   category: string;
@@ -15,6 +16,8 @@ interface ResultItem {
 
 interface TableViewProps {
   groupedResults: ResultItem[];
+  // Note: We're keeping the same interface for backward compatibility
+  // even though we're now working with the IMeeting structure under the hood
 }
 
 export function TableView({ groupedResults }: TableViewProps) {
@@ -48,7 +51,7 @@ export function TableView({ groupedResults }: TableViewProps) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[180px] sticky left-0 bg-white">文件</TableHead>
+            <TableHead className="w-[180px] sticky left-0 bg-white">文件/会议</TableHead>
             <TableHead>分类</TableHead>
             <TableHead className="min-w-[200px]">会议主题</TableHead>
             <TableHead>事项详情</TableHead>
@@ -67,8 +70,8 @@ export function TableView({ groupedResults }: TableViewProps) {
                     {index === 0 ? (
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-blue-500" />
-                        <span className="truncate max-w-[140px]" title={`文件ID: ${fileId}`}>
-                          {fileId.substring(0, 8)}
+                        <span className="truncate max-w-[140px]" title={`编号: ${fileId}`}>
+                          {fileId.includes('meeting-') ? '会议: ' + fileId.replace('meeting-', '') : fileId.substring(0, 8)}
                         </span>
                       </div>
                     ) : (

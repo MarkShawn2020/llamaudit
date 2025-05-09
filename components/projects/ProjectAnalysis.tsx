@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Markdown } from '@/components/ui/markdown';
 import { Loader2, XCircle } from 'lucide-react';
+import { IMeeting, IKeyDecisionItem } from '@/types/analysis';
 
 export default function ProjectAnalysis({ projectId }: { projectId: string }) {
   // 当前活动的分析模式："standard"（标准模式）或 "streaming"（流式模式）
@@ -35,8 +36,9 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
   const {
     /**
      * 分析结果，key为文件ID，value为该文件下的分析结果
+     * 使用新的数据结构 IMeeting 和 IKeyDecisionItem
      */
-    groupedResults,
+    meetings,
     isAnalyzing: isStandardAnalyzing,
     loadingResults,
     handleAnalyze: handleStandardAnalyze
@@ -50,7 +52,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
     error,
     startStreamingAnalysis,
     cancelAnalysis,
-    extractStructuredResults
+    extractMeetingsFromStreamingResult
   } = useStreamingAnalysis(updateFilesAnalysisStatus);
 
   // 处理开始分析按钮点击
@@ -67,7 +69,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
   // 分析进行中（任意模式）
   const isAnalyzing = isStandardAnalyzing || isStreamAnalyzing;
 
-  // console.log({files, groupedResults});
+  // console.log({files, meetings});
   
 
   return (
@@ -169,7 +171,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
         {/* 分析结果卡片（标准模式或流式分析完成后） */}
         {(analysisMode === 'standard' || isComplete) && (
           <AnalysisResults
-            groupedResults={analysisMode === 'standard' ? groupedResults : extractStructuredResults() || groupedResults}
+            meetings={analysisMode === 'standard' ? meetings : extractMeetingsFromStreamingResult() || meetings}
             loading={loadingResults}
           />
         )}

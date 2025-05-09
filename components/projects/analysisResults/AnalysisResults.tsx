@@ -6,22 +6,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { exportAnalysisResults, ExportFormat } from '@/lib/export-utils';
-import { AnalysisResult, GroupedResults } from '../types';
+import { AnalysisResult } from '../types';
+import { IMeeting, IKeyDecisionItem } from '@/types/analysis';
 import { ResultsHeader } from './ResultsHeader';
 import { CardView } from './CardView';
 import { TableView } from './TableView';
 
+// 旧版数据项，用于兼容现有组件
 interface ResultItem {
   category: string;
   result: AnalysisResult;
 }
 
+// 新版接口定义
 interface AnalysisResultsProps {
-  groupedResults: GroupedResults;
+  meetings: IMeeting[];
   loading: boolean;
 }
 
-export function AnalysisResults({ groupedResults, loading }: AnalysisResultsProps) {
+export function AnalysisResults({ meetings, loading }: AnalysisResultsProps) {
   const [activeView, setActiveView] = useState('card');
 
   const handleExport = (format: ExportFormat) => {
@@ -31,19 +34,45 @@ export function AnalysisResults({ groupedResults, loading }: AnalysisResultsProp
     }
 
     try {
-      // 将结果转换为导出所需的格式
+      // 将会议结果转换为导出所需的格式
+      // 由于exportAnalysisResults函数预期的是旧格式，这里需要进行转换
+      const allKeyDecisions: AnalysisResult[] = [];
+      
+      // 从每个会议中提取三重一大事项
+      meetings.forEach(meeting => {
+        if (meeting.keyDecisionItems && meeting.keyDecisionItems.length > 0) {
+          // 将每个决策项转换为旧的AnalysisResult格式
+          meeting.keyDecisionItems.forEach(item => {
+            // 构建一个临时的AnalysisResult对象以满足导出函数需求
+            const tempResult: Partial<AnalysisResult> = {
+              fileId: 'meeting-' + meeting.documentNo,
+              meetingTime: meeting.meetingDate ? new Date(meeting.meetingDate) : undefined,
+              meetingNumber: meeting.documentNo,
+              meetingTopic: meeting.meetingTopic,
+              meetingConclusion: meeting.conclusion,
+              contentSummary: meeting.summary,
+              eventCategory: item.categoryType,
+              eventDetails: item.details,
+              amountInvolved: item.amount ? parseFloat(item.amount.replace('￥', '')).toString() : undefined,
+              relatedDepartments: item.departments?.join(','),
+              relatedPersonnel: item.personnel?.join(','),
+              decisionBasis: item.decisionBasis,
+              originalText: item.originalText,
+              status: 'completed'
+            };
+            
+            allKeyDecisions.push(tempResult as AnalysisResult);
+          });
+        }
+      });
+      
       const exportData = [
         // 创建一个文件分析组来满足导出函数需要的格式
         {
           fileId: 'combined-results',
           fileName: '三重一大分析结果汇总',
           status: 'completed' as const,
-          results: [
-            ...groupedResults.majorDecisions,
-            ...groupedResults.personnelAppointments,
-            ...groupedResults.majorProjects,
-            ...groupedResults.largeAmounts
-          ]
+          results: allKeyDecisions
         }
       ];
       
@@ -56,32 +85,54 @@ export function AnalysisResults({ groupedResults, loading }: AnalysisResultsProp
   };
 
   // 检查是否有任何结果
-  const hasResults = !!groupedResults && (
-    (groupedResults.majorDecisions?.length > 0) ||
-    (groupedResults.personnelAppointments?.length > 0) ||
-    (groupedResults.majorProjects?.length > 0) ||
-    (groupedResults.largeAmounts?.length > 0)
-  );
+  const hasResults = !!meetings && meetings.length > 0 && 
+    meetings.some(meeting => meeting.keyDecisionItems && meeting.keyDecisionItems.length > 0);
   
-  // 将分组结果转换为展示所需格式
-  const adaptedResults: ResultItem[] = !groupedResults ? [] : [
-    ...(groupedResults.majorDecisions?.map(item => ({
-      category: '重大决策',
-      result: item
-    })) || []),
-    ...(groupedResults.personnelAppointments?.map(item => ({
-      category: '重要干部任免',
-      result: item
-    })) || []),
-    ...(groupedResults.majorProjects?.map(item => ({
-      category: '重大项目',
-      result: item
-    })) || []),
-    ...(groupedResults.largeAmounts?.map(item => ({
-      category: '大额资金',
-      result: item
-    })) || [])
-  ];
+  // 将新的会议结构转换为旧的展示格式以兼容现有组件
+  const adaptedResults: ResultItem[] = !meetings ? [] : 
+    meetings.flatMap(meeting => {
+      if (!meeting.keyDecisionItems || meeting.keyDecisionItems.length === 0) {
+        return [];
+      }
+      
+      return meeting.keyDecisionItems.map(item => {
+        // 为每个决策项创建一个虚拟的AnalysisResult
+        const virtualResult: Partial<AnalysisResult> = {
+          id: `${meeting.documentNo}-${item.categoryType}`,
+          fileId: `meeting-${meeting.documentNo}`,
+          meetingTime: meeting.meetingDate ? new Date(meeting.meetingDate) : undefined,
+          meetingNumber: meeting.documentNo,
+          meetingTopic: meeting.meetingTopic, 
+          meetingConclusion: meeting.conclusion,
+          contentSummary: meeting.summary,
+          // 将决策项类型映射到三重一大分类
+          eventCategory: getCategoryFromType(item.categoryType),
+          eventDetails: item.details,
+          amountInvolved: item.amount,
+          relatedDepartments: item.departments?.join(','), 
+          relatedPersonnel: item.personnel?.join(','),
+          decisionBasis: item.decisionBasis,
+          originalText: item.originalText,
+          status: 'completed'
+        };
+        
+        return {
+          category: getCategoryFromType(item.categoryType),
+          result: virtualResult as AnalysisResult
+        };
+      });
+    });
+  
+  // 将决策项类型映射为中文类别名称
+  function getCategoryFromType(type: string): string {
+    switch(type) {
+      case 'majorDecision': return '重大决策';
+      case 'personnelAppointment': return '重要干部任免';
+      case 'majorProject': return '重大项目';
+      case 'largeAmount': return '大额资金';
+      default: return '其他';
+    }
+  }
 
   return (
     <Card>
