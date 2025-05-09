@@ -64,23 +64,23 @@ export function AnalysisResults({ groupedResults, loading }: AnalysisResultsProp
   );
   
   // 将分组结果转换为展示所需格式
-  const adaptedResults: ResultItem[] = [
-    ...groupedResults.majorDecisions.map(item => ({
+  const adaptedResults: ResultItem[] = !groupedResults ? [] : [
+    ...(groupedResults.majorDecisions?.map(item => ({
       category: '重大决策',
       result: item
-    })),
-    ...groupedResults.personnelAppointments.map(item => ({
+    })) || []),
+    ...(groupedResults.personnelAppointments?.map(item => ({
       category: '重要干部任免',
       result: item
-    })),
-    ...groupedResults.majorProjects.map(item => ({
+    })) || []),
+    ...(groupedResults.majorProjects?.map(item => ({
       category: '重大项目',
       result: item
-    })),
-    ...groupedResults.largeAmounts.map(item => ({
+    })) || []),
+    ...(groupedResults.largeAmounts?.map(item => ({
       category: '大额资金',
       result: item
-    }))
+    })) || [])
   ];
 
   return (

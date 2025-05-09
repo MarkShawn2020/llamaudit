@@ -170,16 +170,29 @@ export function useStreamingAnalysis(
     }
   }, [updateFilesStatus, handleMessage, closeEventSource]);
 
-  // 从流式结果提取结构化数据（待实现）
+  // 从流式结果提取结构化数据
   const extractStructuredResults = useCallback(() => {
     if (!isComplete || !streamingResult) return null;
     
     try {
-      // 尝试从结果中提取JSON格式的结构化数据
+      // 直接查找JSON格式
       const jsonMatch = streamingResult.match(/```json\s*([\s\S]*?)\s*```/);
       if (jsonMatch && jsonMatch[1]) {
-        return JSON.parse(jsonMatch[1]);
+        try {
+          const jsonData = JSON.parse(jsonMatch[1]);
+          logger.info('成功从标准JSON格式提取数据');
+          return {
+            majorDecisions: jsonData["三重一大具体事项"]?.filter(item => item.categoryType === "majorDecision") || [],
+            personnelAppointments: jsonData["三重一大具体事项"]?.filter(item => item.categoryType === "personnelAppointment") || [],
+            majorProjects: jsonData["三重一大具体事项"]?.filter(item => item.categoryType === "majorProject") || [],
+            largeAmounts: jsonData["三重一大具体事项"]?.filter(item => item.categoryType === "largeAmount") || []
+          };
+        } catch (e) {
+          logger.error('解析JSON格式数据时出错', { error: e });
+        }
       }
+      
+      logger.warn('未能成功提取结构化数据', { streamingResult });
       return null;
     } catch (error) {
       logger.error('从流式结果提取结构化数据时出错', { error });
