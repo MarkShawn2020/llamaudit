@@ -18,6 +18,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
     handleViewFile,
     handleDownloadFile,
     handleDeleteFile,
+    handleBatchDeleteFiles,
     updateFilesAnalysisStatus,
     handleFilesUploaded,
     clearSelection
@@ -59,6 +60,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
           onSelectAllFiles={handleSelectAll}
           onAnalyze={onAnalyzeStart}
           onDeleteFile={handleDeleteFile}
+          onBatchDeleteFiles={handleBatchDeleteFiles}
           onViewFile={handleViewFile}
           onDownloadFile={handleDownloadFile}
           onUploadComplete={handleFilesUploaded}

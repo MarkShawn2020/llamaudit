@@ -67,7 +67,7 @@ export function useProjectFiles(projectId: string) {
     }
   }, []);
 
-  // 删除文件
+  // 删除单个文件
   const handleDeleteFile = useCallback(
     async (fileId: string) => {
       try {
@@ -84,6 +84,64 @@ export function useProjectFiles(projectId: string) {
       } catch (error) {
         console.error("删除文件失败:", error);
         toast.error("删除文件失败");
+        logger.error("删除文件失败", { projectId, fileId, error });
+      } finally {
+        setDeleting(null);
+      }
+    },
+    [projectId]
+  );
+
+  // 批量删除多个文件
+  const handleBatchDeleteFiles = useCallback(
+    async (fileIds: string[]) => {
+      if (fileIds.length === 0) return;
+      
+      try {
+        const totalCount = fileIds.length;
+        let successCount = 0;
+        let errorCount = 0;
+        
+        // 设置整批删除中的状态
+        setDeleting('batch');
+        
+        // 使用Promise.all并行处理多个删除请求
+        const deletePromises = fileIds.map(async (fileId) => {
+          try {
+            await deleteProjectFile(projectId, fileId);
+            successCount++;
+            return { success: true, fileId };
+          } catch (error) {
+            errorCount++;
+            logger.error("批量删除文件失败", { projectId, fileId, error });
+            return { success: false, fileId };
+          }
+        });
+        
+        const results = await Promise.all(deletePromises);
+        
+        // 更新本地状态 - 移除成功删除的文件
+        const successfullyDeletedIds = results
+          .filter(result => result.success)
+          .map(result => result.fileId);
+          
+        if (successfullyDeletedIds.length > 0) {
+          setFiles(prev => prev.filter(file => !successfullyDeletedIds.includes(file.id)));
+          setSelectedFiles(prev => prev.filter(id => !successfullyDeletedIds.includes(id)));
+        }
+        
+        // 显示结果通知
+        if (successCount > 0 && errorCount === 0) {
+          toast.success(`已成功删除 ${successCount} 个文件`);
+        } else if (successCount > 0 && errorCount > 0) {
+          toast.warning(`已删除 ${successCount} 个文件，${errorCount} 个文件删除失败`);
+        } else {
+          toast.error("删除文件失败");
+        }
+      } catch (error) {
+        console.error("批量删除文件失败:", error);
+        toast.error("批量删除文件失败");
+        logger.error("批量删除文件操作失败", { projectId, fileIds, error });
       } finally {
         setDeleting(null);
       }
@@ -137,6 +195,7 @@ export function useProjectFiles(projectId: string) {
     handleViewFile,
     handleDownloadFile,
     handleDeleteFile,
+    handleBatchDeleteFiles,
     updateFilesAnalysisStatus,
     handleFilesUploaded,
     clearSelection,

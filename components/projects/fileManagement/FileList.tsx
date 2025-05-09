@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Checkbox, CheckboxIndicator } from '@/components/ui/checkbox';
-import { Loader2, PlayIcon } from 'lucide-react';
+import { Loader2, PlayIcon, Trash2 } from 'lucide-react';
 import { FileItem } from './FileItem';
 import { FileUploader } from './FileUploader';
 
@@ -21,6 +21,7 @@ interface FileListProps {
   onSelectAllFiles: () => void;
   onAnalyze: () => void;
   onDeleteFile: (fileId: string) => void;
+  onBatchDeleteFiles: (fileIds: string[]) => void;
   onViewFile: (file: ProjectFile) => void;
   onDownloadFile: (file: ProjectFile) => void;
   onUploadComplete: (newFiles: ProjectFile[]) => void;
@@ -37,6 +38,7 @@ export function FileList({
   onSelectAllFiles,
   onAnalyze,
   onDeleteFile,
+  onBatchDeleteFiles,
   onViewFile,
   onDownloadFile,
   onUploadComplete
@@ -62,7 +64,28 @@ export function FileList({
             onUploadComplete={onUploadComplete} 
           />
 
-          <div className="flex">
+          <div className="flex gap-2">
+            {selectedFiles.length > 0 && (
+              <Button
+                variant="destructive"
+                onClick={() => onBatchDeleteFiles(selectedFiles)}
+                disabled={selectedFiles.length === 0 || isAnalyzing || deletingFileId === 'batch'}
+                className="gap-2"
+              >
+                {deletingFileId === 'batch' ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    删除中...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4" />
+                    删除所选 ({selectedFiles.length})
+                  </>
+                )}
+              </Button>
+            )}
+            
             <Button
               onClick={onAnalyze}
               disabled={selectedFiles.length === 0 || isAnalyzing}
