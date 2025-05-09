@@ -1,14 +1,27 @@
-'use client';
+"use client";
 
-import { useMemo } from 'react';
-import { ProjectFile } from '@/lib/api/project-file-api';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Checkbox, CheckboxIndicator } from '@/components/ui/checkbox';
-import { Loader2, PlayIcon, Trash2 } from 'lucide-react';
-import { FileItem } from './FileItem';
-import { FileUploader } from './FileUploader';
+import { useMemo } from "react";
+import { ProjectFile } from "@/lib/api/project-file-api";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Checkbox, CheckboxIndicator } from "@/components/ui/checkbox";
+import { Loader2, PlayIcon, Trash2 } from "lucide-react";
+import { FileItem } from "./FileItem";
+import { FileUploader } from "./FileUploader";
 
 interface FileListProps {
   projectId: string;
@@ -41,7 +54,7 @@ export function FileList({
   onBatchDeleteFiles,
   onViewFile,
   onDownloadFile,
-  onUploadComplete
+  onUploadComplete,
 }: FileListProps) {
   // 判断是否所有文件都已被选中
   const allFilesSelected = useMemo(() => {
@@ -50,42 +63,42 @@ export function FileList({
 
   return (
     <Card>
-      <div className='flex gap-3 justify-between items-center px-4'>
+      <div className="flex gap-3 justify-between items-center px-4">
         <CardHeader>
           <CardTitle>项目文件管理</CardTitle>
-          <CardDescription>
-            上传、管理和准备分析的文件
-          </CardDescription>
+          <CardDescription>上传、管理和准备分析的文件</CardDescription>
         </CardHeader>
 
-        <div className='flex gap-3 justify-between items-center px-4'>
-          <FileUploader 
-            projectId={projectId} 
-            onUploadComplete={onUploadComplete} 
+        <div className="flex gap-3 justify-between items-center px-4">
+          <FileUploader
+            projectId={projectId}
+            onUploadComplete={onUploadComplete}
           />
 
-          <div className="flex gap-2">
-            {selectedFiles.length > 0 && (
-              <Button
-                variant="destructive"
-                onClick={() => onBatchDeleteFiles(selectedFiles)}
-                disabled={selectedFiles.length === 0 || isAnalyzing || deletingFileId === 'batch'}
-                className="gap-2"
-              >
-                {deletingFileId === 'batch' ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    删除中...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="h-4 w-4" />
-                    删除所选 ({selectedFiles.length})
-                  </>
-                )}
-              </Button>
-            )}
-            
+
+            <Button
+              variant="outline"
+              onClick={() => onBatchDeleteFiles(selectedFiles)}
+              disabled={
+                selectedFiles.length === 0 ||
+                isAnalyzing ||
+                deletingFileId === "batch"
+              }
+              className="gap-2"
+            >
+              {deletingFileId === "batch" ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  删除中...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4" />
+                  删除所选
+                </>
+              )}
+            </Button>
+
             <Button
               onClick={onAnalyze}
               disabled={selectedFiles.length === 0 || isAnalyzing}
@@ -103,7 +116,7 @@ export function FileList({
                 </>
               )}
             </Button>
-          </div>
+
         </div>
       </div>
 
@@ -141,14 +154,17 @@ export function FileList({
                 </TableRow>
               ) : files.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell
+                    colSpan={7}
+                    className="text-center py-8 text-muted-foreground"
+                  >
                     <p>暂无可分析的文件</p>
                     <p className="text-sm mt-1">请先上传会议纪要、合同等文件</p>
                   </TableCell>
                 </TableRow>
               ) : (
                 files.map((file) => (
-                  <FileItem 
+                  <FileItem
                     key={file.id}
                     file={file}
                     isSelected={selectedFiles.includes(file.id)}
@@ -167,4 +183,4 @@ export function FileList({
       </CardContent>
     </Card>
   );
-} 
+}

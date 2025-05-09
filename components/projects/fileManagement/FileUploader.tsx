@@ -117,7 +117,7 @@ export function FileUploader({ projectId, onUploadComplete }: FileUploaderProps)
   };
 
   return (
-    <div className="flex flex-col gap-3 px-2">
+    <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <Input
           type="file"
@@ -143,7 +143,7 @@ export function FileUploader({ projectId, onUploadComplete }: FileUploaderProps)
               ) : (
                 <>
                   <FileUp className="mr-2 h-4 w-4" />
-                  选择文件
+                  上传文件
                 </>
               )}
             </span>
