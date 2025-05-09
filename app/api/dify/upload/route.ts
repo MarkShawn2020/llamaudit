@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
+import { saveDifyFileToDatabase } from '@/lib/actions/dify-file-actions';
 
 /**
  * 代理转发文件上传请求到Dify API
@@ -75,12 +76,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 获取并返回Dify API的响应
+    // 获取Dify API的响应
     const responseData = await difyResponse.json();
-    logger.info('文件上传成功', {
+    logger.info('文件上传到Dify成功', {
       fileId: responseData.id,
       filename: responseData.name
     });
+    
+    try {
+      // 从请求中获取的user参数实际上是projectId/auditUnitId
+      const auditUnitId = user;
+      
+      // 将文件信息保存到数据库
+      await saveDifyFileToDatabase(auditUnitId, responseData);
+      logger.info('文件数据已保存到数据库', {
+        fileId: responseData.id,
+        filename: responseData.name,
+        auditUnitId
+      });
+    } catch (dbError) {
+      logger.error('保存文件到数据库失败，但文件已上传到Dify', {
+        error: dbError,
+        fileId: responseData.id
+      });
+      // 即使数据库保存失败，我们仍然返回Dify上传成功的结果
+      // 这样客户端至少可以获得Dify文件ID
+    }
     
     return NextResponse.json(responseData);
   } catch (error) {

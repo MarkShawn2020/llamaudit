@@ -41,7 +41,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
     clearSelection();
   };
 
-  console.log({files, groupedResults});
+  // console.log({files, groupedResults});
   
 
   return (
