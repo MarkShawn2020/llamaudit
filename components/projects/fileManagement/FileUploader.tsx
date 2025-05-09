@@ -31,7 +31,7 @@ export function FileUploader({ projectId, onUploadComplete }: FileUploaderProps)
     formData.append('file', file);
     formData.append('user', userId); // Dify API需要用户标识符
     
-    const response = await fetch('/api/dify/upload', {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_DIFY_API_URL}/api/dify/upload`, {
       method: 'POST',
       body: formData,
     });

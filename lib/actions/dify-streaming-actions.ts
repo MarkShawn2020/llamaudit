@@ -4,7 +4,7 @@ import { logger } from "@/lib/logger";
 import { getUser } from "@/lib/db/queries";
 
 // Dify API配置
-const DIFY_API_URL = process.env.DIFY_API_URL || "http://localhost/v1";
+const NEXT_PUBLIC_DIFY_API_URL = process.env.NEXT_PUBLIC_DIFY_API_URL || "http://localhost/v1";
 const DIFY_API_KEY = process.env.DIFY_API_KEY;
 
 // Dify SSE消息结构（客户端使用）

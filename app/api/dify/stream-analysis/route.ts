@@ -3,7 +3,7 @@ import { getUser } from "@/lib/db/queries";
 import { NextRequest } from "next/server";
 
 // Dify API配置
-const DIFY_API_URL = process.env.DIFY_API_URL || "http://localhost/v1";
+const NEXT_PUBLIC_DIFY_API_URL = process.env.NEXT_PUBLIC_DIFY_API_URL || "http://localhost/v1";
 const DIFY_API_KEY = process.env.DIFY_API_KEY;
 
 /**
@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
         })}\n\n`));
         
         // 发送流式请求到Dify API
-        const difyResponse = await fetch(`${DIFY_API_URL}/chat-messages`, {
+        const difyResponse = await fetch(`${NEXT_PUBLIC_DIFY_API_URL}/chat-messages`, {
           method: "POST",
           headers,
           body: JSON.stringify(requestBody),
@@ -261,7 +261,7 @@ export async function DELETE(request: NextRequest) {
     }
     
     // 发送取消请求到Dify
-    const response = await fetch(`${DIFY_API_URL}/chat-messages/stop-generating`, {
+    const response = await fetch(`${NEXT_PUBLIC_DIFY_API_URL}/chat-messages/stop-generating`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

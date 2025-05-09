@@ -5,7 +5,7 @@ import { getUser } from '@/lib/db/queries';
 import { AnalysisResult, GroupedResults } from '@/components/projects/types';
 
 // Dify API配置
-const DIFY_API_URL = process.env.DIFY_API_URL || 'http://localhost/v1';
+const NEXT_PUBLIC_DIFY_API_URL = process.env.NEXT_PUBLIC_DIFY_API_URL || 'http://localhost/v1';
 const DIFY_API_KEY = process.env.DIFY_API_KEY;
 
 // SSE事件类型
@@ -80,7 +80,7 @@ export async function analyzeDifyFiles(fileIds: string[]): Promise<GroupedResult
     };
 
     // 发送请求到Dify API
-    const response = await fetch(`${DIFY_API_URL}/chat-messages`, {
+    const response = await fetch(`${NEXT_PUBLIC_DIFY_API_URL}/chat-messages`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
