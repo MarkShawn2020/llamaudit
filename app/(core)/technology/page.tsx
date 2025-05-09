@@ -21,6 +21,59 @@ export default function TechnologyPage() {
           <span className="block text-primary text-2xl mt-2">智审大师背后的先进技术</span>
         </h1>
 
+
+
+        <section className="mb-16">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">系统架构</h2>
+          <div className="flex flex-col items-center mb-8">
+            <div className="w-full max-w-4xl shadow-lg rounded-lg overflow-hidden border border-gray-100">
+              <Image
+                src="/architecture.png"
+                alt="智审大师系统架构图"
+                width={1000}
+                height={700}
+                className="w-full h-auto"
+              />
+            </div>
+            <p className="text-sm text-gray-500 mt-2 italic">智审大师系统架构图</p>
+          </div>
+          
+          <div className="bg-gray-50 p-8 rounded-lg border border-gray-100 mt-8">
+            <div className="grid md:grid-cols-3 gap-6">
+              <div className="bg-white p-6 rounded-lg shadow-sm">
+                <h3 className="text-lg font-semibold mb-3 flex items-center">
+                  <Database className="h-5 w-5 text-primary mr-2" />
+                  数据层
+                </h3>
+                <p className="text-gray-600">
+                  采用现代化的数据库架构，高效存储和管理各类审计数据，包括文档元数据、提取的结构化信息和审计结果。
+                  支持高并发访问和数据安全备份。
+                </p>
+              </div>
+              <div className="bg-white p-6 rounded-lg shadow-sm">
+                <h3 className="text-lg font-semibold mb-3 flex items-center">
+                  <Cpu className="h-5 w-5 text-primary mr-2" />
+                  处理层
+                </h3>
+                <p className="text-gray-600">
+                  集成DeepSeek大模型推理引擎，借助DeepSeek-V3的混合专家架构和DeepSeek-R1的强化学习能力，
+                  实现高效文档解析、精准信息提取和智能问答等核心功能。处理层采用微服务架构，保证系统的扩展性和维护性。
+                </p>
+              </div>
+              <div className="bg-white p-6 rounded-lg shadow-sm">
+                <h3 className="text-lg font-semibold mb-3 flex items-center">
+                  <LucideShield className="h-5 w-5 text-primary mr-2" />
+                  安全层
+                </h3>
+                <p className="text-gray-600">
+                  实现严格的数据隔离和访问控制，确保审计信息的安全性。
+                  所有数据均在用户私有环境中处理，不会上传至公共云端，满足合规与保密要求。
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section className="mb-16">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">大模型技术集成</h2>
           <p className="text-gray-600 mb-6">
@@ -62,45 +115,7 @@ export default function TechnologyPage() {
             </div>
           </div>
         </section>
-
-        <section className="mb-16">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">系统架构</h2>
-          <div className="bg-gray-50 p-8 rounded-lg border border-gray-100">
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="bg-white p-6 rounded-lg shadow-sm">
-                <h3 className="text-lg font-semibold mb-3 flex items-center">
-                  <Database className="h-5 w-5 text-primary mr-2" />
-                  数据层
-                </h3>
-                <p className="text-gray-600">
-                  采用现代化的数据库架构，高效存储和管理各类审计数据，包括文档元数据、提取的结构化信息和审计结果。
-                  支持高并发访问和数据安全备份。
-                </p>
-              </div>
-              <div className="bg-white p-6 rounded-lg shadow-sm">
-                <h3 className="text-lg font-semibold mb-3 flex items-center">
-                  <Cpu className="h-5 w-5 text-primary mr-2" />
-                  处理层
-                </h3>
-                <p className="text-gray-600">
-                  集成DeepSeek大模型推理引擎，借助DeepSeek-V3的混合专家架构和DeepSeek-R1的强化学习能力，
-                  实现高效文档解析、精准信息提取和智能问答等核心功能。处理层采用微服务架构，保证系统的扩展性和维护性。
-                </p>
-              </div>
-              <div className="bg-white p-6 rounded-lg shadow-sm">
-                <h3 className="text-lg font-semibold mb-3 flex items-center">
-                  <LucideShield className="h-5 w-5 text-primary mr-2" />
-                  安全层
-                </h3>
-                <p className="text-gray-600">
-                  实现严格的数据隔离和访问控制，确保审计信息的安全性。
-                  所有数据均在用户私有环境中处理，不会上传至公共云端，满足合规与保密要求。
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
+        
         <section className="mb-16">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">技术特点</h2>
           <div className="grid md:grid-cols-2 gap-8">
