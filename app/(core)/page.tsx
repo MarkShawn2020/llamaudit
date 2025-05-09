@@ -12,7 +12,7 @@ export default function HomePage() {
             <div className="sm:text-center md:max-w-2xl md:mx-auto lg:col-span-6 lg:text-left">
               <h1 className="text-4xl font-bold text-gray-900 tracking-tight sm:text-5xl md:text-6xl">
                 智能审计平台
-                <span className="block text-primary">基于 DeepSeek 大模型</span>
+                <span className="block text-primary my-2">基于国产私有化大模型</span>
               </h1>
               <p className="mt-3 text-base text-gray-500 sm:mt-5 sm:text-xl lg:text-lg xl:text-xl">
                 利用DeepSeek-V3和DeepSeek-R1等先进大语言模型，自动提取会议纪要和合同关键信息，
