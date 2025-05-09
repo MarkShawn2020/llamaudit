@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { FileStatus } from '../types';
 import { streamAnalyzeDifyFiles, cancelDifyAnalysis, DifySSEMessage } from '@/lib/actions/dify-streaming-actions';
 import { logger } from '@/lib/logger';
-import { IKeyDecisionItem } from '@/types/sanzhongyida';
+import { IKeyDecisionItem } from '@/types/analysis';
 
 /**
  * 流式分析Hook，支持实时打字机效果的分析结果展示
