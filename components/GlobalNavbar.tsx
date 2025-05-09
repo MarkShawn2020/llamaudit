@@ -35,11 +35,12 @@ const navItems = [
   //   href: '/dashboard',
   //   icon: BarChartIcon
   // },
-  {
-    name: '设置',
-    href: '/settings',
-    icon: SettingsIcon
-  }
+  // todo: 设置页面
+  // {
+  //   name: '设置',
+  //   href: '/settings',
+  //   icon: SettingsIcon
+  // }
 ];
 
 // 管理员专用菜单项
