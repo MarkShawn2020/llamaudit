@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { FileStatus } from '../types';
 import { streamAnalyzeDifyFiles, cancelDifyAnalysis, DifySSEMessage } from '@/lib/actions/dify-streaming-actions';
 import { logger } from '@/lib/logger';
+import { IKeyDecisionItem } from '@/types/sanzhongyida';
 
 /**
  * 流式分析Hook，支持实时打字机效果的分析结果展示
@@ -181,11 +182,13 @@ export function useStreamingAnalysis(
         try {
           const jsonData = JSON.parse(jsonMatch[1]);
           logger.info('成功从标准JSON格式提取数据');
+          const meetings = jsonData["会议基本信息"];
+          const keyDecisionItems = (jsonData["三重一大具体事项"] ?? []) as IKeyDecisionItem[];
           return {
-            majorDecisions: jsonData["三重一大具体事项"]?.filter(item => item.categoryType === "majorDecision") || [],
-            personnelAppointments: jsonData["三重一大具体事项"]?.filter(item => item.categoryType === "personnelAppointment") || [],
-            majorProjects: jsonData["三重一大具体事项"]?.filter(item => item.categoryType === "majorProject") || [],
-            largeAmounts: jsonData["三重一大具体事项"]?.filter(item => item.categoryType === "largeAmount") || []
+            majorDecisions: keyDecisionItems.filter(item => item.categoryType === "majorDecision") || [],
+            personnelAppointments: keyDecisionItems.filter(item => item.categoryType === "personnelAppointment") || [],
+            majorProjects: keyDecisionItems.filter(item => item.categoryType === "majorProject") || [],
+            largeAmounts: keyDecisionItems.filter(item => item.categoryType === "largeAmount") || []
           };
         } catch (e) {
           logger.error('解析JSON格式数据时出错', { error: e });
