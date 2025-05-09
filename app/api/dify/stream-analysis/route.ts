@@ -78,10 +78,7 @@ export async function GET(request: NextRequest) {
       Authorization: `Bearer ${DIFY_API_KEY}`,
     };
     
-    logger.info("API路由: 准备发送Dify分析请求", {
-      user: user.id,
-      fileCount: fileIds.length,
-    });
+    logger.info("API路由: 准备发送Dify分析请求", requestBody);
     
     // 创建一个新的TransformStream来处理Dify响应
     const { readable, writable } = new TransformStream();
@@ -166,12 +163,11 @@ export async function GET(request: NextRequest) {
           buffer = lines.pop() || ""; // 保留最后一行（可能不完整）
           
           for (const line of lines) {
-logger.info("处理SSE消息", { line });
-
             if (line.trim() === "") continue;
             if (!line.startsWith("data:")) continue;
             
             const data = line.substring(5).trim();
+            logger.info("收到Dify原始消息", { data: data.substring(0, 100) + (data.length > 100 ? '...' : '') });
             
             try {
               // 处理特殊情况
@@ -184,17 +180,21 @@ logger.info("处理SSE消息", { line });
                 continue;
               }
               
-              // 处理JSON
-              const parsedData = JSON.parse(data);
+              // 直接转发Dify的原始消息，不做额外处理
+              // Dify的流式响应格式已经是SSE标准格式: "data: {...}\n\n"
+              writer.write(encoder.encode(`${line}\n\n`));
               
-              // 记录任务ID（如果有）
-              if (parsedData.task_id && !taskId) {
-                taskId = parsedData.task_id;
-                logger.info("获取到Dify任务ID", { taskId });
+              // 从Dify响应中提取task_id，用于处理取消请求
+              try {
+                const parsedData = JSON.parse(data);
+                if (parsedData.task_id && !taskId) {
+                  taskId = parsedData.task_id;
+                  logger.info("获取到Dify任务ID", { taskId });
+                }
+              } catch (parseError) {
+                // 忽略解析错误，不影响消息转发
+                logger.warn("解析任务ID出错", { parseError });
               }
-              
-              // 转发原始消息
-              writer.write(encoder.encode(`data: ${data}\n\n`));
             } catch (error) {
               logger.error("处理SSE消息时出错", { error, line });
               continue;
