@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { ProjectFile } from "@/lib/api/project-file-api";
 import { FileAnalysisTask } from "../hooks/useStreamingAnalysis";
 import {
@@ -69,6 +69,11 @@ export function FileList({
   const allFilesSelected = useMemo(() => {
     return files.length > 0 && selectedFiles.length === files.length;
   }, [files, selectedFiles]);
+  
+  // 将选择所有的事件处理函数缓存，避免重新创建
+  const handleSelectAll = useCallback(() => {
+    onSelectAllFiles();
+  }, [onSelectAllFiles]);
 
   return (
     <Card>
@@ -136,8 +141,9 @@ export function FileList({
               <TableRow>
                 <TableHead className="w-[50px]">
                   <Checkbox
+                    key="select-all-checkbox"
                     checked={allFilesSelected}
-                    onCheckedChange={onSelectAllFiles}
+                    onCheckedChange={handleSelectAll}
                     disabled={loading || isAnalyzing}
                   >
                     <CheckboxIndicator />

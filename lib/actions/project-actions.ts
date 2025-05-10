@@ -2,7 +2,7 @@
 
 import { getUser } from '@/lib/db/queries';
 import { db } from '@/lib/db/drizzle';
-import { auditUnits, files } from '@/lib/db/schema';
+import { auditUnits, files, users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import crypto from 'crypto';
@@ -18,10 +18,12 @@ export interface Project {
   email: string;
   description: string;
   createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
+  createdByName?: string;
   documentCount: number;
   taskCount: number;
   status: 'active' | 'completed' | 'on-hold';
-  updatedAt: string;
   files?: ProjectFile[];
 }
 
@@ -48,16 +50,37 @@ export async function getProjects(): Promise<Project[]> {
     // 获取所有项目（被审计单位）
     const projects = await db.query.auditUnits.findMany({
       orderBy: (auditUnits, { desc }) => [desc(auditUnits.createdAt)],
-      with: {
-        createdByUser: {
-          columns: {
-            name: true,
-          }
-        },
-        files: true
+      columns: {
+        id: true,
+        code: true,
+        name: true,
+        type: true,
+        address: true,
+        contactPerson: true,
+        phone: true,
+        email: true,
+        description: true,
+        createdAt: true,
+        updatedAt: true,
+        createdBy: true
+      }
+    });
+    
+    // 获取每个项目的文件数量
+    const projectFiles = await db.query.files.findMany({
+      columns: {
+        auditUnitId: true
       }
     });
 
+    // 计算每个项目的文件数量
+    const projectDocumentCounts = projectFiles.reduce<Record<string, number>>((acc, file) => {
+      if (file.auditUnitId) {
+        acc[file.auditUnitId] = (acc[file.auditUnitId] || 0) + 1;
+      }
+      return acc;
+    }, {});
+    
     // 格式化响应
     const formattedProjects = projects.map(project => ({
       id: project.id,
@@ -71,7 +94,9 @@ export async function getProjects(): Promise<Project[]> {
       description: project.description || '',
       createdAt: project.createdAt?.toISOString().split('T')[0] || '',
       updatedAt: project.updatedAt?.toISOString().split('T')[0] || '',
-      documentCount: (project.files as any[]).length,
+      createdBy: project.createdBy || '',
+      createdByName: '', // 后续可以增加分项查询创建者名称
+      documentCount: projectDocumentCounts[project.id] || 0,
       taskCount: 0, // 后续可从任务表中计算
       status: 'active' as const
     }));
@@ -98,15 +123,36 @@ export async function getProject(id: string): Promise<Project | null> {
     // 获取项目详情
     const project = await db.query.auditUnits.findFirst({
       where: eq(auditUnits.id, id),
+      columns: {
+        id: true,
+        code: true,
+        name: true,
+        type: true,
+        address: true,
+        contactPerson: true,
+        phone: true,
+        email: true,
+        description: true,
+        createdAt: true,
+        updatedAt: true,
+        createdBy: true
+      },
       with: {
-        createdBy: {
-          columns: {
-            name: true,
-          }
-        },
         files: true
       }
     });
+    
+    // 获取创建者信息 (如果需要)
+    let creatorName = '';
+    if (project?.createdBy) {
+      const creator = await db.query.users.findFirst({
+        where: eq(users.id, project.createdBy),
+        columns: {
+          name: true
+        }
+      });
+      creatorName = creator?.name || '';
+    }
 
     if (!project) {
       return null;
@@ -127,6 +173,8 @@ export async function getProject(id: string): Promise<Project | null> {
       description: project.description || '',
       createdAt: project.createdAt?.toISOString().split('T')[0] || '',
       updatedAt: project.updatedAt?.toISOString().split('T')[0] || '',
+      createdBy: project.createdBy || '',
+      createdByName: creatorName,
       documentCount: files.length || 0,
       taskCount: 0, // 后续可从任务表中计算
       status: 'active' as const,

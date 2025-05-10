@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useAnalysisResults, useProjectFiles, useStreamingAnalysis } from './hooks';
 import { FileList } from './fileManagement';
 import { AnalysisResults } from './analysisResults';
@@ -73,7 +73,10 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
   // 分析进行中（任意模式）
   const isAnalyzing = isStandardAnalyzing || isStreamAnalyzing;
 
-  // console.log({files, meetings});
+  // 计算展开的文件ID（使用useMemo避免无限渲染循环）
+  const memoizedExpandedFileIds = useMemo(() => {
+    return new Set(Array.from(fileTasks.keys()).filter(id => isFileExpanded(id)));
+  }, [fileTasks, isFileExpanded]);
   
 
   return (
@@ -88,7 +91,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
           isAnalyzing={isAnalyzing}
           deletingFileId={deleting}
           fileTasks={fileTasks}
-          expandedFileIds={new Set(Array.from(fileTasks.keys()).filter(id => isFileExpanded(id)))}
+          expandedFileIds={memoizedExpandedFileIds}
           onSelectFile={handleSelectFile}
           onSelectAllFiles={handleSelectAll}
           onAnalyze={onAnalyzeStart}

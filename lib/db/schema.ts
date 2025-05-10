@@ -268,3 +268,12 @@ export const llmAnalysisTasksRelations = relations(llmAnalysisTasks, ({ one }) =
 
 export type LlmAnalysisTask = typeof llmAnalysisTasks.$inferSelect;
 export type InsertLlmAnalysisTask = typeof llmAnalysisTasks.$inferInsert;
+
+// 被审计单位关系
+export const auditUnitsRelations = relations(auditUnits, ({ one, many }) => ({
+  createdBy: one(users, {
+    fields: [auditUnits.createdBy],
+    references: [users.id]
+  }),
+  files: many(files)
+}));

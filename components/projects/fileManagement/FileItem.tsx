@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { TableRow, TableCell } from '@/components/ui/table';
 import { Checkbox, CheckboxIndicator } from '@/components/ui/checkbox';
@@ -26,7 +26,7 @@ interface FileItemProps {
   onCancelAnalysis?: (fileId: string) => void;
 }
 
-export function FileItem({
+export const FileItem = memo(function FileItem({
   file,
   isSelected,
   isAnalyzing,
@@ -40,12 +40,17 @@ export function FileItem({
   onToggleExpand,
   onCancelAnalysis
 }: FileItemProps) {
-  const handleClick = (e: React.MouseEvent<HTMLTableRowElement>) => {
+  const handleClick = useCallback((e: React.MouseEvent<HTMLTableRowElement>) => {
     // 如果点击事件源自操作按钮区域，不触发行选择
     if (!(e.target as HTMLElement).closest('.action-buttons')) {
       onSelect(file.id, !isSelected);
     }
-  };
+  }, [file.id, isSelected, onSelect]);
+  
+  // 缓存复选框的变更处理函数
+  const handleCheckboxChange = useCallback((checked: boolean | 'indeterminate') => {
+    onSelect(file.id, checked === true);
+  }, [file.id, onSelect]);
 
   // 判断分析状态
   const isFileAnalyzing = isAnalyzing && (file.isAnalyzed === false);
@@ -61,8 +66,9 @@ export function FileItem({
       >
       <TableCell>
         <Checkbox
+          key={`file-checkbox-${file.id}`}
           checked={isSelected}
-          onCheckedChange={(checked) => onSelect(file.id, checked === true)}
+          onCheckedChange={handleCheckboxChange}
           disabled={isAnalyzing}
         >
           <CheckboxIndicator />
@@ -200,4 +206,4 @@ export function FileItem({
       )}
     </>
   );
-} 
+}); 
