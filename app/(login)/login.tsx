@@ -27,8 +27,6 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
     { error: '' },
   );
   
-  const { setUser } = useUser();
-  
   // Use an effect to refresh the page after successful authentication
   // This triggers a router refresh that updates all components including UserMenu
   useEffect(() => {
