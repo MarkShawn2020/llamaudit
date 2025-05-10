@@ -24,8 +24,8 @@ export function UserProvider({
   useEffect(() => {
     if (!initialUser) {
       // 如果没有初始用户，可以在此处添加获取用户的逻辑
-      setIsLoading(false);
-    }
+        setIsLoading(false);
+      }
   }, [initialUser]);
 
   return (
