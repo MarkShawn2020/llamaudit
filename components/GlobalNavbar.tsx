@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
+import { Logo } from './logo';
 
 const navItems = [
   {
@@ -118,7 +119,7 @@ export function GlobalNavbar() {
       <div className="container flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center">
           <Link href="/" className="flex items-center gap-2 mr-6">
-            <Image src="/nau-colors-logo.svg" alt="智审大师 Logo" width={36} height={36} />
+            <Logo/>
             <span className="font-bold text-xl">智审大师</span>
           </Link>
           
