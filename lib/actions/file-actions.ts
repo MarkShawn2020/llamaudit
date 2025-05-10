@@ -42,13 +42,13 @@ export async function getProjectFiles(projectId: string): Promise<FileResponse[]
     const filesList = await db.query.files.findMany({
       where: eq(files.auditUnitId, projectId),
       orderBy: (files, { desc }) => [desc(files.uploadDate)],
-      with: {
-        uploadedBy: {
-          columns: {
-            name: true,
-          }
-        }
-      }
+      // with: {
+      //   uploadedBy: {
+      //     columns: {
+      //       name: true,
+      //     }
+      //   }
+      // }
     });
 
     // 格式化响应
@@ -303,13 +303,13 @@ export async function updateFileAnalysisStatus(
         eq(files.id, fileId),
         eq(files.auditUnitId, projectId)
       ),
-      with: {
-        uploadedBy: {
-          columns: {
-            name: true,
-          }
-        }
-      }
+      // with: {
+      //   uploadedBy: {
+      //     columns: {
+      //       name: true,
+      //     }
+      //   }
+      // }
     });
 
     if (!updatedFile) {
@@ -349,13 +349,13 @@ export async function getFile(fileId: string): Promise<FileResponse | null> {
     // 获取文件信息
     const fileInfo = await db.query.files.findFirst({
       where: eq(files.id, fileId),
-      with: {
-        uploadedBy: {
-          columns: {
-            name: true,
-          }
-        }
-      }
+      // with: {
+      //   uploadedBy: {
+      //     columns: {
+      //       name: true,
+      //     }
+      //   }
+      // }
     });
 
     if (!fileInfo) {
