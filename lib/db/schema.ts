@@ -223,152 +223,48 @@ export type File = typeof files.$inferSelect;
 export type InsertFile = typeof files.$inferInsert;
 
 // Define relations for files
-export const filesRelations = relations(files, ({ one }) => ({
+export const filesRelations = relations(files, ({ one, many }) => ({
   category: one(fileCategories, {
     fields: [files.categoryId],
     references: [fileCategories.id]
   }),
-  uploader: one(users, {
-    fields: [files.userId],
-    references: [users.id],
-    relationName: 'userUploadedFiles'
-  }),
   auditUnit: one(auditUnits, {
     fields: [files.auditUnitId],
     references: [auditUnits.id]
-  })
-}));
-
-export type Meeting = typeof meetings.$inferSelect;
-export type InsertMeeting = typeof meetings.$inferInsert;
-
-export type KeyDecisionItem = typeof keyDecisionItems.$inferSelect;
-export type InsertKeyDecisionItem = typeof keyDecisionItems.$inferInsert;
-
-// 会议表 (对应IMeeting接口)
-export const meetings = pgTable('meetings', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  fileId: uuid('file_id').notNull().references(() => files.id, { onDelete: 'cascade' }),
-  
-  // 会议基本信息
-  meetingDate: timestamp('meeting_date', { withTimezone: true }),
-  documentNo: varchar('document_no', { length: 100 }),
-  meetingTopic: text('meeting_topic'),
-  conclusion: text('conclusion'),
-  summary: text('summary'),
-  documentName: text('document_name'),
-  isTripleOneMeeting: boolean('is_triple_one_meeting').default(false),
-  
-  // 处理状态
-  status: varchar('status', { length: 50 }).notNull().default('pending'),
-  errorMessage: text('error_message'),
-  startedAt: timestamp('started_at', { withTimezone: true }),
-  completedAt: timestamp('completed_at', { withTimezone: true }),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow()
-});
-
-// 关键决策项表 (对应IKeyDecisionItem接口)
-export const keyDecisionItems = pgTable('key_decision_items', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  meetingId: uuid('meeting_id').notNull().references(() => meetings.id, { onDelete: 'cascade' }),
-  
-  // 关键决策项信息
-  categoryType: varchar('category_type', { length: 50 }).notNull(),  // majorDecision, personnelAppointment, majorProject, largeAmount
-  details: text('details'),
-  amount: text('amount'),  // 存储带货币符号的文本金额
-  departments: text('departments'),  // 以逗号分隔的部门文本
-  personnel: text('personnel'),  // 以逗号分隔的人员文本
-  decisionBasis: text('decision_basis'),
-  originalText: text('original_text'),
-  
-  // 处理状态
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow()
-});
-
-// 注意：已移除旧的 analysisResults 表/视图，因为我们现在直接使用 meetings 和 keyDecisionItems 表
-// 相关代码已更新为使用新的数据结构
-
-// 审计单位规则表
-export const auditUnitRules = pgTable('audit_unit_rules', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  auditUnitId: uuid('audit_unit_id').notNull().references(() => auditUnits.id, { onDelete: 'cascade' }),
-  ruleType: varchar('rule_type', { length: 100 }).notNull(),
-  ruleName: varchar('rule_name', { length: 255 }).notNull(),
-  ruleDescription: text('rule_description'),
-  ruleConfig: jsonb('rule_config').notNull(),
-  isActive: boolean('is_active').default(true),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-  createdBy: uuid('created_by').references(() => users.id)
-});
-
-// 设置规则唯一约束
-export const auditUnitRulesUnique = sql`
-  ALTER TABLE ${auditUnitRules} ADD CONSTRAINT audit_unit_rules_unique UNIQUE(audit_unit_id, rule_name);
-`;
-
-// 合规检查结果表
-export const complianceResults = pgTable('compliance_results', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  auditUnitId: uuid('audit_unit_id').notNull().references(() => auditUnits.id, { onDelete: 'cascade' }),
-  fileId: uuid('file_id').notNull().references(() => files.id, { onDelete: 'cascade' }),
-  ruleId: uuid('rule_id').notNull().references(() => auditUnitRules.id),
-  isCompliant: boolean('is_compliant').notNull(),
-  issueDescription: text('issue_description'),
-  severity: varchar('severity', { length: 50 }).notNull().default('medium'),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow()
-});
-
-export const auditUnitsRelations = relations(auditUnits, ({ one, many }) => ({
-  createdByUser: one(users, {
-    fields: [auditUnits.createdBy],
-    references: [users.id],
-    relationName: 'userCreatedAuditUnits'
   }),
-  files: many(files),
-  rules: many(auditUnitRules)
-}));
-
-
-export const meetingsRelations = relations(meetings, ({ one, many }) => ({
-  file: one(files, {
-    fields: [meetings.fileId],
-    references: [files.id]
-  }),
-  keyDecisionItems: many(keyDecisionItems)
-}));
-
-export const keyDecisionItemsRelations = relations(keyDecisionItems, ({ one }) => ({
-  meeting: one(meetings, {
-    fields: [keyDecisionItems.meetingId],
-    references: [meetings.id]
-  })
-}));
-
-export const auditUnitRulesRelations = relations(auditUnitRules, ({ one, many }) => ({
-  auditUnit: one(auditUnits, {
-    fields: [auditUnitRules.auditUnitId],
-    references: [auditUnits.id]
-  }),
-  createdBy: one(users, {
-    fields: [auditUnitRules.createdBy],
+  uploadedBy: one(users, {
+    fields: [files.userId],
     references: [users.id]
   }),
-  complianceResults: many(complianceResults)
+  llmAnalysisTasks: many(llmAnalysisTasks, { relationName: 'fileLlmAnalysisTasks' }),
 }));
 
-export const complianceResultsRelations = relations(complianceResults, ({ one }) => ({
-  auditUnit: one(auditUnits, {
-    fields: [complianceResults.auditUnitId],
-    references: [auditUnits.id]
-  }),
-  file: one(files, {
-    fields: [complianceResults.fileId],
-    references: [files.id]
-  }),
-  rule: one(auditUnitRules, {
-    fields: [complianceResults.ruleId],
-    references: [auditUnitRules.id]
+// LLM 分析任务跟踪表
+export const llmAnalysisTasks = pgTable('llm_analysis_tasks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  taskId: varchar('task_id', { length: 100 }).notNull().unique(), // 外部API的任务ID
+  status: varchar('status', { length: 50 }).notNull(), // pending, processing, completed, failed, cancelled
+  fileIds: json('file_ids').notNull(), // 分析的文件ID数组
+  prompt: text('prompt'), // 用于分析的提示词
+  rawResponse: text('raw_response'), // 大模型的原始回复内容
+  responseFormat: varchar('response_format', { length: 20 }).default('markdown'), // 回复格式：markdown, json等
+  processingTime: real('processing_time'), // 处理时间(秒)
+  startedAt: timestamp('started_at').notNull().defaultNow(),
+  completedAt: timestamp('completed_at'),
+  error: text('error'), // 错误信息
+  modelName: varchar('model_name', { length: 100 }), // 使用的模型名称
+  fromFile: uuid('from_file').references(() => files.id),
+  metadata: jsonb('metadata'), // 其他元数据
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const llmAnalysisTasksRelations = relations(llmAnalysisTasks, ({ one }) => ({
+  fromFile: one(files, {
+    fields: [llmAnalysisTasks.fromFile],
+    references: [files.id],
   })
 }));
+
+export type LlmAnalysisTask = typeof llmAnalysisTasks.$inferSelect;
+export type InsertLlmAnalysisTask = typeof llmAnalysisTasks.$inferInsert;
