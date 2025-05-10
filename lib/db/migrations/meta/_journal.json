@@ -15,6 +15,13 @@
       "when": 1746837345694,
       "tag": "0001_tidy_umar",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1746840288198,
+      "tag": "0002_lean_moonstone",
+      "breakpoints": true
     }
   ]
 }
