@@ -391,12 +391,60 @@ export const files = pgTable('files', {
 export type File = typeof files.$inferSelect;
 export type InsertFile = typeof files.$inferInsert;
 
-// 三重一大分析结果表
-export const analysisResults = pgTable('analysis_results', {
+export type Meeting = typeof meetings.$inferSelect;
+export type InsertMeeting = typeof meetings.$inferInsert;
+
+export type KeyDecisionItem = typeof keyDecisionItems.$inferSelect;
+export type InsertKeyDecisionItem = typeof keyDecisionItems.$inferInsert;
+
+// 会议表 (对应IMeeting接口)
+export const meetings = pgTable('meetings', {
   id: uuid('id').primaryKey().defaultRandom(),
   fileId: uuid('file_id').notNull().references(() => files.id, { onDelete: 'cascade' }),
   
-  // 分析项目编号（一个文件可能有多个三重一大事项）
+  // 会议基本信息
+  meetingDate: timestamp('meeting_date', { withTimezone: true }),
+  documentNo: varchar('document_no', { length: 100 }),
+  meetingTopic: text('meeting_topic'),
+  conclusion: text('conclusion'),
+  summary: text('summary'),
+  documentName: text('document_name'),
+  isTripleOneMeeting: boolean('is_triple_one_meeting').default(false),
+  
+  // 处理状态
+  status: varchar('status', { length: 50 }).notNull().default('pending'),
+  errorMessage: text('error_message'),
+  startedAt: timestamp('started_at', { withTimezone: true }),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow()
+});
+
+// 关键决策项表 (对应IKeyDecisionItem接口)
+export const keyDecisionItems = pgTable('key_decision_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  meetingId: uuid('meeting_id').notNull().references(() => meetings.id, { onDelete: 'cascade' }),
+  
+  // 关键决策项信息
+  categoryType: varchar('category_type', { length: 50 }).notNull(),  // majorDecision, personnelAppointment, majorProject, largeAmount
+  details: text('details'),
+  amount: text('amount'),  // 存储带货币符号的文本金额
+  departments: text('departments'),  // 以逗号分隔的部门文本
+  personnel: text('personnel'),  // 以逗号分隔的人员文本
+  decisionBasis: text('decision_basis'),
+  originalText: text('original_text'),
+  
+  // 处理状态
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow()
+});
+
+// 保留旧结构的表名，但修改为视图以兼容旧的API
+export const analysisResults = pgTable('analysis_results_view', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  fileId: uuid('file_id').notNull(),
+  
+  // 分析项目编号
   itemIndex: integer('item_index').notNull().default(0),
   
   // 会议纪要信息
@@ -409,7 +457,7 @@ export const analysisResults = pgTable('analysis_results', {
   // 三重一大分类
   eventCategory: varchar('event_category', { length: 50 }),
   eventDetails: text('event_details'),
-  amountInvolved: decimal('amount_involved', { precision: 20, scale: 2 }),
+  amountInvolved: text('amount_involved'),  // 注意改为text类型来兼容带货币符号的金额
   
   // 相关人员与部门
   relatedDepartments: text('related_departments'),
@@ -418,7 +466,6 @@ export const analysisResults = pgTable('analysis_results', {
   
   // 原文与其他信息
   originalText: text('original_text'),
-  confidence: decimal('confidence', { precision: 5, scale: 2 }),
   status: varchar('status', { length: 50 }).notNull().default('pending'),
   errorMessage: text('error_message'),
   startedAt: timestamp('started_at', { withTimezone: true }),
@@ -426,11 +473,6 @@ export const analysisResults = pgTable('analysis_results', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow()
 });
-
-// 设置分析结果复合唯一约束（文件ID + 项目索引）
-export const analysisResultsUnique = sql`
-  ALTER TABLE ${analysisResults} ADD CONSTRAINT analysis_results_unique UNIQUE(file_id, item_index);
-`;
 
 // 审计单位规则表
 export const auditUnitRules = pgTable('audit_unit_rules', {
@@ -476,27 +518,19 @@ export const fileCategoriesRelations = relations(fileCategories, ({ many }) => (
   files: many(files)
 }));
 
-export const filesRelations = relations(files, ({ one, many }) => ({
-  auditUnit: one(auditUnits, {
-    fields: [files.auditUnitId],
-    references: [auditUnits.id]
+
+export const meetingsRelations = relations(meetings, ({ one, many }) => ({
+  file: one(files, {
+    fields: [meetings.fileId],
+    references: [files.id]
   }),
-  category: one(fileCategories, {
-    fields: [files.categoryId],
-    references: [fileCategories.id]
-  }),
-  uploadedBy: one(users, {
-    fields: [files.userId],
-    references: [users.id],
-    relationName: 'userUploadedFiles'
-  }),
-  analysisResults: many(analysisResults)
+  keyDecisionItems: many(keyDecisionItems)
 }));
 
-export const analysisResultsRelations = relations(analysisResults, ({ one }) => ({
-  file: one(files, {
-    fields: [analysisResults.fileId],
-    references: [files.id]
+export const keyDecisionItemsRelations = relations(keyDecisionItems, ({ one }) => ({
+  meeting: one(meetings, {
+    fields: [keyDecisionItems.meetingId],
+    references: [meetings.id]
   })
 }));
 
