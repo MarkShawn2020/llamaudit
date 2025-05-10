@@ -180,6 +180,11 @@ export const fileCategories = pgTable('file_categories', {
   description: text('description')
 });
 
+// Define relations for fileCategories
+export const fileCategoriesRelations = relations(fileCategories, ({ many }) => ({
+  files: many(files)
+}));
+
 // 被审计单位表
 export const auditUnits = pgTable('audit_units', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -216,6 +221,23 @@ export const files = pgTable('files', {
 
 export type File = typeof files.$inferSelect;
 export type InsertFile = typeof files.$inferInsert;
+
+// Define relations for files
+export const filesRelations = relations(files, ({ one }) => ({
+  category: one(fileCategories, {
+    fields: [files.categoryId],
+    references: [fileCategories.id]
+  }),
+  uploader: one(users, {
+    fields: [files.userId],
+    references: [users.id],
+    relationName: 'userUploadedFiles'
+  }),
+  auditUnit: one(auditUnits, {
+    fields: [files.auditUnitId],
+    references: [auditUnits.id]
+  })
+}));
 
 export type Meeting = typeof meetings.$inferSelect;
 export type InsertMeeting = typeof meetings.$inferInsert;
@@ -306,25 +328,6 @@ export const auditUnitsRelations = relations(auditUnits, ({ one, many }) => ({
   }),
   files: many(files),
   rules: many(auditUnitRules)
-}));
-
-export const filesRelations = relations(files, ({ one }) => ({
-  auditUnit: one(auditUnits, {
-    fields: [files.auditUnitId],
-    references: [auditUnits.id]
-  }),
-  uploadedBy: one(users, {
-    fields: [files.userId],
-    references: [users.id]
-  }),
-  category: one(fileCategories, {
-    fields: [files.categoryId],
-    references: [fileCategories.id]
-  })
-}));
-
-export const fileCategoriesRelations = relations(fileCategories, ({ many }) => ({
-  files: many(files)
 }));
 
 
