@@ -52,7 +52,7 @@ export default async function RootLayout({
             </div>
           </UserProvider>
         </ThemeProvider>
-        <CozeChat />
+        {/* <CozeChat /> */}
       </body>
     </html>
   );

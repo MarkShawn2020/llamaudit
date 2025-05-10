@@ -237,14 +237,15 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
   redirect('/projects');
 });
 
+
 export async function signOut() {
   const user = await getUser();
   
   // Check if user exists before logging activity
   if (user) {
     try {
+      // Get team information to log activity
       const userWithTeam = await getUserWithTeam(user.id);
-      // Only log if we have both user and team
       if (userWithTeam?.teamId) {
         await logActivity(userWithTeam.teamId, user.id, ActivityType.SIGN_OUT);
       }

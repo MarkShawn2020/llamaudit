@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect } from "react";
 import { User } from "@/lib/db/schema";
+import { usePathname, useRouter } from "next/navigation";
 
 interface UserContextType {
   user: User | null;
@@ -20,13 +21,27 @@ export function UserProvider({
 }) {
   const [user, setUser] = useState<User | null>(initialUser);
   const [isLoading, setIsLoading] = useState<boolean>(!initialUser);
-
+  const pathname = usePathname();
+  
+  // Listen for route changes to refresh user state after login/logout
   useEffect(() => {
-    if (!initialUser) {
-      // 如果没有初始用户，可以在此处添加获取用户的逻辑
-        setIsLoading(false);
+    // We'll focus on monitoring navigation changes to detect sign-in
+    // This helps refresh the UserMenu component after login
+    if (pathname === '/projects' || pathname === '/') {
+      // These are the routes that users are redirected to after login/logout
+      // Initialize loading state if we don't have a user yet
+      if (!user) {
+        setIsLoading(true);
       }
-  }, [initialUser]);
+      
+      // Force a router refresh to update the UI components
+      const refreshTimeout = setTimeout(() => {
+        setIsLoading(false);
+      }, 100);
+      
+      return () => clearTimeout(refreshTimeout);
+    }
+  }, [pathname, user]);
 
   return (
     <UserContext.Provider value={{ user, setUser, isLoading }}>
@@ -41,4 +56,4 @@ export function useUser() {
     throw new Error("useUser must be used within a UserProvider");
   }
   return context;
-} 
+}
