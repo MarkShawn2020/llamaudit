@@ -140,7 +140,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
         {/* 分析结果卡片（标准模式或流式分析完成后） */}
 
           <AnalysisResults
-            meetings={ extractMeetingsFromStreamingResult()!}
+            meetings={useMemo(() => extractMeetingsFromStreamingResult() || [], [streamingResult, isComplete])}
             loading={loadingResults}
           />
       </div>

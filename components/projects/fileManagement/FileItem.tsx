@@ -66,13 +66,10 @@ export const FileItem = memo(function FileItem({
       >
       <TableCell>
         <Checkbox
-          key={`file-checkbox-${file.id}`}
           checked={isSelected}
           onCheckedChange={handleCheckboxChange}
           disabled={isAnalyzing}
-        >
-          <CheckboxIndicator />
-        </Checkbox>
+        />
       </TableCell>
       <TableCell className="font-medium flex items-center gap-2">
         {getFileIcon(file.filename)}

@@ -141,13 +141,10 @@ export function FileList({
               <TableRow>
                 <TableHead className="w-[50px]">
                   <Checkbox
-                    key="select-all-checkbox"
                     checked={allFilesSelected}
                     onCheckedChange={handleSelectAll}
                     disabled={loading || isAnalyzing}
-                  >
-                    <CheckboxIndicator />
-                  </Checkbox>
+                  />
                 </TableHead>
                 <TableHead>文件名</TableHead>
                 <TableHead>类型</TableHead>
