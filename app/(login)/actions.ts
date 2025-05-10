@@ -4,6 +4,7 @@ import {
   validatedAction,
   validatedActionWithUser,
 } from '@/lib/auth/middleware';
+import { getSession } from '@/lib/auth/session';
 import { comparePasswords, hashPassword, setSession } from '@/lib/auth/session';
 import { db } from '@/lib/db';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
@@ -377,6 +378,24 @@ export const updateAccount = async (formData: FormData): Promise<ActionState> =>
     return { error: '更新失败' };
   }
 };
+
+/**
+ * Returns the current authenticated user data
+ * This action is used to synchronize client-side user state after login/registration
+ * @returns The authenticated user or null if not authenticated
+ */
+export async function getCurrentUser() {
+  try {
+    const session = await getSession();
+    if (!session) return null;
+    
+    const user = await getUser();
+    return user;
+  } catch (error) {
+    console.error('Error fetching current user:', error);
+    return null;
+  }
+}
 
 const removeTeamMemberSchema = z.object({
   memberId: z.number(),

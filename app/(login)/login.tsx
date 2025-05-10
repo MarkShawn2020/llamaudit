@@ -27,14 +27,20 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
     { error: '' },
   );
   
+  const { setUser } = useUser();
+  
   // Use an effect to refresh the page after successful authentication
   // This triggers a router refresh that updates all components including UserMenu
   useEffect(() => {
     // Only refresh if authentication was successful (no errors) and not pending
-    if (state && !state.error && !pending && mode === 'signin') {
+    if (state && !state.error && !pending) {
+      // Refresh both router and user state
       router.refresh();
+      
+      // For sign-in and sign-up, we automatically redirect to /projects
+      // so the router will navigate away. Let UserProvider handle the user state update
     }
-  }, [state, pending, mode, router]);
+  }, [state, pending, router]);
 
   return (
     <div className="min-h-[100dvh] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">

@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { User } from "@/lib/db/schema";
 import { usePathname, useRouter } from "next/navigation";
+import { getCurrentUser } from "@/app/(login)/actions";
 
 interface UserContextType {
   user: User | null;
@@ -29,19 +30,25 @@ export function UserProvider({
     // This helps refresh the UserMenu component after login
     if (pathname === '/projects' || pathname === '/') {
       // These are the routes that users are redirected to after login/logout
-      // Initialize loading state if we don't have a user yet
-      if (!user) {
-        setIsLoading(true);
-      }
+      setIsLoading(true);
       
-      // Force a router refresh to update the UI components
-      const refreshTimeout = setTimeout(() => {
-        setIsLoading(false);
-      }, 100);
+      // Fetch the latest user data from the server
+      const fetchCurrentUser = async () => {
+        try {
+          const latestUser = await getCurrentUser();
+          if (latestUser) {
+            setUser(latestUser);
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
       
-      return () => clearTimeout(refreshTimeout);
+      fetchCurrentUser();
     }
-  }, [pathname, user]);
+  }, [pathname]);
 
   return (
     <UserContext.Provider value={{ user, setUser, isLoading }}>
