@@ -99,7 +99,7 @@ export async function getProject(id: string): Promise<Project | null> {
     const project = await db.query.auditUnits.findFirst({
       where: eq(auditUnits.id, id),
       with: {
-        createdByUser: {
+        createdBy: {
           columns: {
             name: true,
           }
@@ -111,6 +111,8 @@ export async function getProject(id: string): Promise<Project | null> {
     if (!project) {
       return null;
     }
+
+    const files = project.files as any[];
 
     // 格式化响应，统一命名规范
     const formattedProject = {
@@ -125,22 +127,22 @@ export async function getProject(id: string): Promise<Project | null> {
       description: project.description || '',
       createdAt: project.createdAt?.toISOString().split('T')[0] || '',
       updatedAt: project.updatedAt?.toISOString().split('T')[0] || '',
-      documentCount: Array.isArray(project.files) ? (project.files as any[]).length : 0,
+      documentCount: files.length || 0,
       taskCount: 0, // 后续可从任务表中计算
       status: 'active' as const,
-      files: Array.isArray(project.files) ? (project.files as any[]).map((file: any) => ({
+      files: files.map((file: any) => ({
         id: file.id,
         filename: file.originalName,
         size: Number(file.fileSize),
         url: file.filePath,
         createdAt: file.uploadDate?.toISOString() || new Date().toISOString(),
         type: file.fileType
-      })) : []
+      }))
     };
 
     return formattedProject;
   } catch (error) {
-    console.error(`获取项目[${id}]详情失败:`, error);
+    console.error(`获取项目[${id}]详情失败1:`, error);
     throw error;
   }
 }

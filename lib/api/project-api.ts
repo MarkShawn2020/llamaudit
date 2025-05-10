@@ -35,7 +35,7 @@ export async function getProject(id: string): Promise<Project | null> {
   try {
     return await getProjectAction(id);
   } catch (error) {
-    console.error(`获取项目[${id}]详情失败:`, error);
+    console.error(`获取项目[${id}]详情失败2:`, error);
     toast.error('获取项目详情失败');
     throw error;
   }
