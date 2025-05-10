@@ -3,6 +3,7 @@
 import { logger } from '@/lib/logger';
 import { getUser } from '@/lib/db/queries';
 import { AnalysisResult, GroupedResults } from '@/components/projects/types';
+import { IMeeting, IKeyDecisionItem } from '@/types/analysis';
 
 // Dify API配置
 const NEXT_PUBLIC_DIFY_API_URL = process.env.NEXT_PUBLIC_DIFY_API_URL || 'http://localhost/v1';
@@ -154,6 +155,8 @@ export async function analyzeDifyFiles(fileIds: string[]): Promise<GroupedResult
 
 /**
  * 从数据库加载已有的分析结果
+ * 注意: 此函数将终续返回旧的 GroupedResults 类型，以便于迁移
+ * 新的实现应该直接使用 loadMeetings
  */
 export async function loadAnalysisResults(fileIds: string[]): Promise<GroupedResults> {
   try {
@@ -172,10 +175,9 @@ export async function loadAnalysisResults(fileIds: string[]): Promise<GroupedRes
       };
     }
 
-    logger.info('加载已有分析结果', { fileIds });
+    logger.info('使用兼容方式加载分析结果', { fileIds, deprecated: true });
     
-    // 这里应该实现从数据库加载已有分析结果的逻辑
-    // 当前返回空结果，待实现真实数据库查询
+    // 返回空结果 - 现在应该使用 loadMeetings 方法代替
     return {
       majorDecisions: [],
       personnelAppointments: [],
@@ -185,5 +187,32 @@ export async function loadAnalysisResults(fileIds: string[]): Promise<GroupedRes
   } catch (error) {
     logger.error('加载分析结果时发生错误', { error });
     throw new Error(`加载分析结果失败: ${error instanceof Error ? error.message : '未知错误'}`);
+  }
+}
+
+/**
+ * 从数据库加载会议和决策项数据
+ * 这是替代旧的 loadAnalysisResults 的新函数
+ */
+export async function loadMeetings(fileIds: string[]): Promise<IMeeting[]> {
+  try {
+    const user = await getUser();
+    if (!user) {
+      logger.error('未授权访问');
+      throw new Error('未授权访问');
+    }
+
+    if (fileIds.length === 0) {
+      return [];
+    }
+
+    logger.info('加载会议和决策项数据', { fileIds });
+    
+    // 这里应该实现从 meetings 和 keyDecisionItems 表加载数据的逻辑
+    // 当前返回空结果，待实现真实数据库查询
+    return [];
+  } catch (error) {
+    logger.error('加载会议数据时发生错误', { error });
+    throw new Error(`加载会议数据失败: ${error instanceof Error ? error.message : '未知错误'}`);
   }
 }

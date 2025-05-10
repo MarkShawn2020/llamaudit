@@ -439,40 +439,8 @@ export const keyDecisionItems = pgTable('key_decision_items', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow()
 });
 
-// 保留旧结构的表名，但修改为视图以兼容旧的API
-export const analysisResults = pgTable('analysis_results_view', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  fileId: uuid('file_id').notNull(),
-  
-  // 分析项目编号
-  itemIndex: integer('item_index').notNull().default(0),
-  
-  // 会议纪要信息
-  meetingTime: timestamp('meeting_time', { withTimezone: true }),
-  meetingNumber: varchar('meeting_number', { length: 100 }),
-  meetingTopic: text('meeting_topic'),
-  meetingConclusion: text('meeting_conclusion'),
-  contentSummary: text('content_summary'),
-  
-  // 三重一大分类
-  eventCategory: varchar('event_category', { length: 50 }),
-  eventDetails: text('event_details'),
-  amountInvolved: text('amount_involved'),  // 注意改为text类型来兼容带货币符号的金额
-  
-  // 相关人员与部门
-  relatedDepartments: text('related_departments'),
-  relatedPersonnel: text('related_personnel'),
-  decisionBasis: text('decision_basis'),
-  
-  // 原文与其他信息
-  originalText: text('original_text'),
-  status: varchar('status', { length: 50 }).notNull().default('pending'),
-  errorMessage: text('error_message'),
-  startedAt: timestamp('started_at', { withTimezone: true }),
-  completedAt: timestamp('completed_at', { withTimezone: true }),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow()
-});
+// 注意：已移除旧的 analysisResults 表/视图，因为我们现在直接使用 meetings 和 keyDecisionItems 表
+// 相关代码已更新为使用新的数据结构
 
 // 审计单位规则表
 export const auditUnitRules = pgTable('audit_unit_rules', {
