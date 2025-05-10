@@ -10,6 +10,18 @@ import { IKeyDecisionItem, IMeeting } from '@/types/analysis';
  * 流式分析Hook，支持实时打字机效果的分析结果展示
  * @param updateFilesStatus 更新文件状态的回调函数
  */
+// 定义可能的JSON解析结果类型
+type ParsedJsonData = {
+  meetingData?: IMeeting[];
+  structuredData?: {
+    majorDecisions?: IKeyDecisionItem[];
+    personnelAppointments?: IKeyDecisionItem[];
+    majorProjects?: IKeyDecisionItem[];
+    largeAmounts?: IKeyDecisionItem[];
+  };
+  rawData?: any; // 原始JSON对象，用于不符合上述类型的其他JSON结构
+};
+
 export function useStreamingAnalysis(
   updateFilesStatus: (fileIds: string[], status: FileStatus) => void
 ) {
@@ -17,9 +29,16 @@ export function useStreamingAnalysis(
   const [streamingResult, setStreamingResult] = useState('');
   const [isComplete, setIsComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 用于存储流式解析的JSON数据
+  const [streamingJsonData, setStreamingJsonData] = useState<ParsedJsonData | null>(null);
   const taskIdRef = useRef<string>('');
   // EventSource连接引用
   const eventSourceRef = useRef<EventSource | null>(null);
+  // 用于存储正在构建中的JSON字符串
+  const jsonBufferRef = useRef<{
+    inJsonBlock: boolean;
+    buffer: string;
+  }>({ inJsonBlock: false, buffer: '' });
 
   // 关闭流式连接
   const closeEventSource = useCallback(() => {
@@ -81,6 +100,63 @@ export function useStreamingAnalysis(
     };
   }, [isAnalyzing, closeEventSource]);
 
+  // 尝试从文本中提取完整的JSON对象
+  const tryParseJson = useCallback((text: string) => {
+    try {
+      // 检查是否有JSON代码块
+      const jsonBlockMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jsonBlockMatch && jsonBlockMatch[1]) {
+        const jsonText = jsonBlockMatch[1].trim();
+        // 解析JSON数据
+        const jsonData = JSON.parse(jsonText);
+        let parsedData: ParsedJsonData = {};
+
+        // 检查是否包含会议数据
+        if (jsonData["会议数据"] && Array.isArray(jsonData["会议数据"])) {
+          parsedData.meetingData = jsonData["会议数据"] as IMeeting[];
+        }
+        // 检查是否包含basicInfo和tripleOneMajorItems
+        else if (jsonData["basicInfo"]) {
+          const meetingInfo = jsonData["basicInfo"];
+          const keyDecisionItems = (jsonData["tripleOneMajorItems"] || []) as IKeyDecisionItem[];
+
+          // 处理会议数据
+          if (Array.isArray(meetingInfo)) {
+            parsedData.meetingData = meetingInfo.map((meeting: any) => ({
+              ...meeting,
+              keyDecisionItems: keyDecisionItems.filter(item => 
+                item.originalText.includes(meeting.documentName)
+              )
+            }));
+          } else {
+            parsedData.meetingData = [{
+              ...meetingInfo,
+              keyDecisionItems
+            }];
+          }
+
+          // 分类三重一大事项
+          parsedData.structuredData = {
+            majorDecisions: keyDecisionItems.filter(item => item.categoryType === "majorDecision") || [],
+            personnelAppointments: keyDecisionItems.filter(item => item.categoryType === "personnelAppointment") || [],
+            majorProjects: keyDecisionItems.filter(item => item.categoryType === "majorProject") || [],
+            largeAmounts: keyDecisionItems.filter(item => item.categoryType === "largeAmount") || []
+          };
+        } else {
+          // 对于其他格式的JSON，直接保存原始数据
+          parsedData.rawData = jsonData;
+        }
+
+        logger.info('成功解析流式JSON数据', { parsedData });
+        return parsedData;
+      }
+      return null;
+    } catch (error) {
+      logger.error('解析流式JSON数据时出错', { error, text });
+      return null;
+    }
+  }, []);
+
   // 处理从服务端收到的SSE消息
   const handleMessage = useCallback((event: MessageEvent) => {
     try {
@@ -110,12 +186,53 @@ export function useStreamingAnalysis(
       
       // 处理正常消息
       if (message.answer) {
-        setStreamingResult(prev => prev + message.answer);
+        const newChunk = message.answer;
+        const newStreamingResult = streamingResult + newChunk;
+        setStreamingResult(newStreamingResult);
+
+        // 处理JSON块
+        const jsonBuffer = jsonBufferRef.current;
+        
+        // 检查新块是否包含JSON代码块的开始或结束标记
+        if (newChunk.includes('```json') && !jsonBuffer.inJsonBlock) {
+          jsonBuffer.inJsonBlock = true;
+          const startIndex = newChunk.indexOf('```json') + '```json'.length;
+          jsonBuffer.buffer = newChunk.substring(startIndex);
+        } else if (newChunk.includes('```') && jsonBuffer.inJsonBlock) {
+          jsonBuffer.inJsonBlock = false;
+          const endIndex = newChunk.indexOf('```');
+          jsonBuffer.buffer += newChunk.substring(0, endIndex);
+          
+          // 尝试解析完整的JSON数据
+          try {
+            const parsedData = tryParseJson('```json\n' + jsonBuffer.buffer + '\n```');
+            if (parsedData) {
+              setStreamingJsonData(parsedData);
+            }
+          } catch (e) {
+            // 解析失败，这可能是因为JSON不完整或格式错误
+            logger.error('解析JSON缓冲区失败', { error: e });
+          }
+          
+          // 重置缓冲区
+          jsonBuffer.buffer = '';
+        } else if (jsonBuffer.inJsonBlock) {
+          // 我们在JSON块中，继续累积数据
+          jsonBuffer.buffer += newChunk;
+        }
+
+        // 尝试在整个流中查找完整的JSON
+        if (!jsonBuffer.inJsonBlock) {
+          const parsedData = tryParseJson(newStreamingResult);
+          if (parsedData) {
+            setStreamingJsonData(parsedData);
+          }
+        }
       }
     } catch (error) {
       logger.error('解析SSE消息出错', { error });
     }
-  }, [closeEventSource]);
+  }, [closeEventSource, streamingResult, tryParseJson]);
 
   // 开始流式分析
   const startStreamingAnalysis = useCallback(async (fileIds: string[]) => {
@@ -182,8 +299,8 @@ export function useStreamingAnalysis(
         try {
           const jsonData = JSON.parse(jsonMatch[1]);
           logger.info('成功从标准JSON格式提取数据');
-          const meetings = jsonData["会议基本信息"];
-          const keyDecisionItems = (jsonData["三重一大具体事项"] ?? []) as IKeyDecisionItem[];
+          const meetings = jsonData["basicInfo"];
+          const keyDecisionItems = (jsonData["tripleOneMajorItems"] ?? []) as IKeyDecisionItem[];
           return {
             majorDecisions: keyDecisionItems.filter(item => item.categoryType === "majorDecision") || [],
             personnelAppointments: keyDecisionItems.filter(item => item.categoryType === "personnelAppointment") || [],
@@ -214,15 +331,10 @@ export function useStreamingAnalysis(
           const jsonData = JSON.parse(jsonMatch[1]);
           logger.info('成功从流式结果中提取会议数据');
           
-          // 如果直接返回了会议数组 
-          if (Array.isArray(jsonData["会议数据"])) {
-            return jsonData["会议数据"] as IMeeting[];
-          }
-          
-          // 如果有分开的会议基本信息和三重一大事项列表，需要组装
-          if (jsonData["会议基本信息"] && jsonData["三重一大具体事项"]) {
-            const meetingInfo = jsonData["会议基本信息"];
-            const keyDecisionItems = (jsonData["三重一大具体事项"] || []) as IKeyDecisionItem[];
+          // 如果有分开的basicInfo和三重一大事项列表，需要组装
+          if (jsonData["basicInfo"] && jsonData["tripleOneMajorItems"]) {
+            const meetingInfo = jsonData["basicInfo"];
+            const keyDecisionItems = (jsonData["tripleOneMajorItems"] || []) as IKeyDecisionItem[];
             
             if (Array.isArray(meetingInfo)) {
               // 返回了多个会议
@@ -266,6 +378,7 @@ export function useStreamingAnalysis(
     startStreamingAnalysis,
     cancelAnalysis,
     extractStructuredResults,
-    extractMeetingsFromStreamingResult
+    extractMeetingsFromStreamingResult,
+    streamingJsonData // 提供实时解析的JSON数据
   };
 }

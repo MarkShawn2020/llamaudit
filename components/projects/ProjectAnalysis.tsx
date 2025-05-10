@@ -169,12 +169,11 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
         )}
 
         {/* 分析结果卡片（标准模式或流式分析完成后） */}
-        {(analysisMode === 'standard' || isComplete) && (
+
           <AnalysisResults
-            meetings={analysisMode === 'standard' ? meetings : extractMeetingsFromStreamingResult() || meetings}
+            meetings={ extractMeetingsFromStreamingResult()!}
             loading={loadingResults}
           />
-        )}
       </div>
     </div>
   );
