@@ -11,8 +11,6 @@ export type AnalysisStatus = 'pending' | 'processing' | 'completed' | 'error';
 // 从数据库schema中导出分析结果类型
 export type AnalysisResult = InferSelectModel<typeof analysisResults>;
 
-// 三重一大分类类型 - 与README一致
-export type MajorEventCategory = '重大决策' | '重要干部任免' | '重大项目' | '大额资金'; 
 
 // 分组结果类型 - 依照三重一大分类
 export interface GroupedResults {
