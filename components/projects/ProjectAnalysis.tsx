@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { logger } from '@/lib/logger';
 
 // 文档状态枚举
 type DocumentStatus = 
@@ -187,12 +188,14 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
   
   // 加载项目文档列表
   const loadDocuments = useCallback(async () => {
+    logger.info("load documents..", {projectId})
     try {
       setIsLoading(true);
       const response = await fetch(`/api/projects/${projectId}/documents`);
       
       if (!response.ok) {
-        throw new Error('加载文档失败');
+        logger.warn("failed to load documents")
+        return;
       }
       
       const data = await response.json();
@@ -210,12 +213,12 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
     } finally {
       setIsLoading(false);
     }
-  }, [projectId, toast]);
+  }, [projectId]);
   
   // 初始加载
   useEffect(() => {
     loadDocuments();
-  }, [loadDocuments]);
+  }, []);
   
   // 触发文件选择对话框
   const handleUploadClick = () => {
