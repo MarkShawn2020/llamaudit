@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
         })}\n\n`));
         
         // 发送流式请求到Dify API
-        const difyResponse = await fetch(`${NEXT_PUBLIC_DIFY_API_URL}/chat-messages`, {
+        const difyResponse = await fetch(`${process.env.NEXT_PUBLIC_DIFY_API_URL}/chat-messages`, {
           method: "POST",
           headers,
           body: JSON.stringify(requestBody),
@@ -167,7 +167,7 @@ export async function GET(request: NextRequest) {
             if (!line.startsWith("data:")) continue;
             
             const data = line.substring(5).trim();
-            logger.info("收到Dify原始消息", { data: data.substring(0, 100) + (data.length > 100 ? '...' : '') });
+            logger.info("From DIFY: ", JSON.parse(data));
             
             try {
               // 处理特殊情况
@@ -261,7 +261,7 @@ export async function DELETE(request: NextRequest) {
     }
     
     // 发送取消请求到Dify
-    const response = await fetch(`${NEXT_PUBLIC_DIFY_API_URL}/chat-messages/stop-generating`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_DIFY_API_URL}/chat-messages/stop-generating`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

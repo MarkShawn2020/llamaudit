@@ -55,6 +55,7 @@ export function useProjectFiles(projectId: string) {
 
   // 处理查看文件
   const handleViewFile = useCallback((file: ProjectFile) => {
+    logger.info("handle view file: ", file)
     if (file.url) {
       window.open(file.url, "_blank");
     }
@@ -62,6 +63,7 @@ export function useProjectFiles(projectId: string) {
 
   // 处理下载文件
   const handleDownloadFile = useCallback((file: ProjectFile) => {
+    logger.info("handle download file: ", file)
     if (file.url) {
       window.open(file.url, "_blank");
     }
