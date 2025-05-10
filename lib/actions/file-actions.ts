@@ -59,7 +59,7 @@ export async function getProjectFiles(projectId: string): Promise<FileResponse[]
       type: file.fileType,
       url: file.filePath,
       createdAt: file.uploadDate?.toISOString() || new Date().toISOString(),
-      uploadedBy: file.uploadedBy?.name || '未知用户',
+      // uploadedBy: file.uploadedBy?.name || '未知用户',
       isAnalyzed: !!file.isAnalyzed
     }));
   } catch (error) {
@@ -327,7 +327,7 @@ export async function updateFileAnalysisStatus(
       type: updatedFile.fileType,
       url: updatedFile.filePath,
       createdAt: updatedFile.uploadDate?.toISOString() || new Date().toISOString(),
-      uploadedBy: updatedFile.uploadedBy?.name || '未知用户',
+      // uploadedBy: updatedFile.uploadedBy?.name || '未知用户',
       isAnalyzed: !!updatedFile.isAnalyzed
     };
   } catch (error) {
@@ -370,7 +370,7 @@ export async function getFile(fileId: string): Promise<FileResponse | null> {
       type: fileInfo.fileType,
       url: fileInfo.filePath,
       createdAt: fileInfo.uploadDate?.toISOString() || new Date().toISOString(),
-      uploadedBy: fileInfo.uploadedBy?.name || '未知用户',
+      // uploadedBy: fileInfo.uploadedBy?.name || '未知用户',
       isAnalyzed: !!fileInfo.isAnalyzed
     };
   } catch (error) {

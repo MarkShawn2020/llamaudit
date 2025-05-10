@@ -1,21 +1,7 @@
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { IMeeting, IKeyDecisionItem } from '@/types/analysis';
 
-
-/**
- * 文件分析结果分组接口
- */
-export interface FileAnalysisGroup {
-  fileId: string;
-  fileName: string;
-  fileUrl?: string;
-  fileSize?: number;
-  fileType?: string;
-  uploadDate?: string;
-  status: 'pending' | 'processing' | 'completed' | 'error';
-  error?: string;
-  results: MeetingAnalysisResult[];
-}
 
 /**
  * 导出格式类型
@@ -32,32 +18,63 @@ function getExportFileName(format: ExportFormat): string {
   return `三重一大分析结果_${date}.${format}`;
 }
 
+
 /**
- * 将三重一大分析结果转换为表格数据
- * @param groups 按文件分组的分析结果
+ * 将新版会议和决策项数据转换为表格数据
+ * @param meetings 会议列表
  * @returns 表格数据
  */
-function convertToTableData(groups: FileAnalysisGroup[]): Record<string, any>[] {
+function convertMeetingsToTableData(meetings: IMeeting[]): Record<string, any>[] {
   const rows: Record<string, any>[] = [];
 
-  groups.forEach(group => {
-    if (group.results.length === 0) return;
-
-    group.results.forEach((result, index) => {
+  meetings.forEach(meeting => {
+    if (!meeting.keyDecisionItems || meeting.keyDecisionItems.length === 0) {
+      // 如果会议没有决策项，则至少添加一行会议基本信息
       rows.push({
-        '文件名': group.fileName,
-        '文件上传日期': group.uploadDate || '-',
-        '会议时间': result.meetingTime || '-',
-        '文号': result.meetingNumber || '-',
-        '会议议题': result.meetingTopic || '-',
-        '会议结论': result.meetingConclusion || '-',
-        '内容摘要': result.contentSummary || '-',
-        '事项类别': result.eventCategory || '-',
-        '事项详情': result.eventDetails || '-',
-        '涉及金额': result.amountInvolved || '-',
-        '相关部门': result.relatedDepartments || '-',
-        '相关人员': result.relatedPersonnel || '-',
-        '决策依据': result.decisionBasis || '-'
+        '会议日期': meeting.meetingDate || '-',
+        '文号': meeting.documentNo || '-',
+        '会议议题': meeting.meetingTopic || '-',
+        '会议结论': meeting.conclusion || '-',
+        '内容摘要': meeting.summary || '-',
+        '文件名称': meeting.documentName || '-',
+        '三重一大会议': meeting.isTripleOneMeeting ? '是' : '否',
+        '事项类别': '-',
+        '事项详情': '-',
+        '涉及金额': '-',
+        '相关部门': '-',
+        '相关人员': '-',
+        '决策依据': '-',
+        '原文内容': '-'
+      });
+      return;
+    }
+
+    // 如果有决策项，为每个决策项创建一行
+    meeting.keyDecisionItems.forEach((item, index) => {
+      // 根据类型定义中文类别名称
+      let categoryName = '其他';
+      switch (item.categoryType) {
+        case 'majorDecision': categoryName = '重大决策'; break;
+        case 'personnelAppointment': categoryName = '重要干部任免'; break;
+        case 'majorProject': categoryName = '重大项目'; break;
+        case 'largeAmount': categoryName = '大额资金'; break;
+      }
+
+      rows.push({
+        '会议日期': meeting.meetingDate || '-',
+        '文号': meeting.documentNo || '-',
+        '会议议题': meeting.meetingTopic || '-',
+        '会议结论': meeting.conclusion || '-',
+        '内容摘要': meeting.summary || '-',
+        '文件名称': meeting.documentName || '-',
+        '三重一大会议': meeting.isTripleOneMeeting ? '是' : '否',
+        '事项类别': categoryName,
+        '事项详情': item.details || '-',
+        '涉及金额': item.amount || '-',
+        '相关部门': item.departments ? item.departments.join(', ') : '-',
+        '相关人员': item.personnel ? item.personnel.join(', ') : '-',
+        '决策依据': item.decisionBasis || '-',
+        '原文内容': item.originalText || '-'
       });
     });
   });
@@ -104,12 +121,12 @@ function exportXLSX(data: Record<string, any>[]): void {
 }
 
 /**
- * 导出三重一大分析结果
- * @param groups 按文件分组的分析结果
+ * 导出会议及决策项数据 (新版格式)
+ * @param meetings 会议列表
  * @param format 导出格式
  */
-export function exportAnalysisResults(groups: FileAnalysisGroup[], format: ExportFormat): void {
-  const tableData = convertToTableData(groups);
+export function exportMeetings(meetings: IMeeting[], format: ExportFormat): void {
+  const tableData = convertMeetingsToTableData(meetings);
   
   if (tableData.length === 0) {
     console.warn('没有可导出的数据');
