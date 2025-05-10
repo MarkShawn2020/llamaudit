@@ -482,6 +482,17 @@ export const auditUnitsRelations = relations(auditUnits, ({ one, many }) => ({
   rules: many(auditUnitRules)
 }));
 
+export const filesRelations = relations(files, ({ one }) => ({
+  auditUnit: one(auditUnits, {
+    fields: [files.auditUnitId],
+    references: [auditUnits.id]
+  }),
+  uploadedBy: one(users, {
+    fields: [files.userId],
+    references: [users.id]
+  })
+}));
+
 export const fileCategoriesRelations = relations(fileCategories, ({ many }) => ({
   files: many(files)
 }));
