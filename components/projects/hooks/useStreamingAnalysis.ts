@@ -205,7 +205,6 @@ export function useStreamingAnalysis(
   
   // 从流式结果提取会议数据 (新格式 - IMeeting[]格式)
   const extractMeetingsFromStreamingResult = useCallback((): IMeeting[] | null => {
-    if (!isComplete || !streamingResult) return null;
     
     try {
       // 直接查找JSON格式

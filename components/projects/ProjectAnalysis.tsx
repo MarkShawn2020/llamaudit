@@ -13,7 +13,7 @@ import { IMeeting, IKeyDecisionItem } from '@/types/analysis';
 
 export default function ProjectAnalysis({ projectId }: { projectId: string }) {
   // 当前活动的分析模式："standard"（标准模式）或 "streaming"（流式模式）
-  const [analysisMode, setAnalysisMode] = useState<'standard' | 'streaming'>('standard');
+  const [analysisMode, setAnalysisMode] = useState<'standard' | 'streaming'>('streaming');
 
   // 文件管理相关逻辑
   const {
@@ -94,35 +94,35 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
         />
 
         {/* 分析模式选择 */}
-        {selectedFiles.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle>分析模式</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Tabs 
-                value={analysisMode} 
-                onValueChange={(v) => setAnalysisMode(v as 'standard' | 'streaming')}
-                className="w-full"
-              >
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="standard">标准模式</TabsTrigger>
-                  <TabsTrigger value="streaming">流式模式 (实时输出)</TabsTrigger>
-                </TabsList>
-                <TabsContent value="standard" className="mt-4">
-                  <p className="text-sm text-muted-foreground">
-                    标准模式将在分析完成后一次性展示所有结果，适合快速查看格式化的分析总结。
-                  </p>
-                </TabsContent>
-                <TabsContent value="streaming" className="mt-4">
-                  <p className="text-sm text-muted-foreground">
-                    流式模式支持实时查看分析过程，以打字机效果显示分析结果，适合跟踪分析进度和理解分析思路。
-                  </p>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        )}
+        {/*{selectedFiles.length > 0 && (*/}
+        {/*  <Card>*/}
+        {/*    <CardHeader className="pb-3">*/}
+        {/*      <CardTitle>分析模式</CardTitle>*/}
+        {/*    </CardHeader>*/}
+        {/*    <CardContent>*/}
+        {/*      <Tabs */}
+        {/*        value={analysisMode} */}
+        {/*        onValueChange={(v) => setAnalysisMode(v as 'standard' | 'streaming')}*/}
+        {/*        className="w-full"*/}
+        {/*      >*/}
+        {/*        <TabsList className="grid w-full grid-cols-2">*/}
+        {/*          <TabsTrigger value="standard">标准模式</TabsTrigger>*/}
+        {/*          <TabsTrigger value="streaming">流式模式 (实时输出)</TabsTrigger>*/}
+        {/*        </TabsList>*/}
+        {/*        <TabsContent value="standard" className="mt-4">*/}
+        {/*          <p className="text-sm text-muted-foreground">*/}
+        {/*            标准模式将在分析完成后一次性展示所有结果，适合快速查看格式化的分析总结。*/}
+        {/*          </p>*/}
+        {/*        </TabsContent>*/}
+        {/*        <TabsContent value="streaming" className="mt-4">*/}
+        {/*          <p className="text-sm text-muted-foreground">*/}
+        {/*            流式模式支持实时查看分析过程，以打字机效果显示分析结果，适合跟踪分析进度和理解分析思路。*/}
+        {/*          </p>*/}
+        {/*        </TabsContent>*/}
+        {/*      </Tabs>*/}
+        {/*    </CardContent>*/}
+        {/*  </Card>*/}
+        {/*)}*/}
         
         {/* 流式分析结果显示区域 */}
         {analysisMode === 'streaming' && (streamingResult || isStreamAnalyzing) && (
