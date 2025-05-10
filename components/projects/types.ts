@@ -1,17 +1,12 @@
 // 使用数据库模式定义类型
-import { meetings, keyDecisionItems } from '@/lib/db/schema';
-import type { InferSelectModel } from 'drizzle-orm';
-import { IMeeting, IKeyDecisionItem } from '@/types/analysis';
+
+import { IMeeting } from '@/types/analysis';
 
 // 文件状态类型
 export type FileStatus = 'pending' | 'analyzing' | 'analyzed' | 'error';
 
 // 分析结果状态类型
 export type AnalysisStatus = 'pending' | 'processing' | 'completed' | 'error';
-
-// 从数据库schema中导出会议和决策项类型
-export type MeetingRecord = InferSelectModel<typeof meetings>;
-export type KeyDecisionItemRecord = InferSelectModel<typeof keyDecisionItems>;
 
 // 已废弃，使用新的 IMeeting 和 IKeyDecisionItem 接口
 // 此处仅利用定义一个兼容类型，方便迁移期间使用

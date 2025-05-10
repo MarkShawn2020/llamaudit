@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { ProjectFile } from "@/lib/api/project-file-api";
+import { FileAnalysisTask } from "../hooks/useStreamingAnalysis";
 import {
   Card,
   CardContent,
@@ -30,6 +31,8 @@ interface FileListProps {
   loading: boolean;
   isAnalyzing: boolean;
   deletingFileId: string | null;
+  fileTasks?: Map<string, FileAnalysisTask>;
+  expandedFileIds?: Set<string>;
   onSelectFile: (fileId: string, checked: boolean) => void;
   onSelectAllFiles: () => void;
   onAnalyze: () => void;
@@ -38,6 +41,8 @@ interface FileListProps {
   onViewFile: (file: ProjectFile) => void;
   onDownloadFile: (file: ProjectFile) => void;
   onUploadComplete: (newFiles: ProjectFile[]) => void;
+  onToggleExpand?: (fileId: string) => void;
+  onCancelFileAnalysis?: (fileId: string) => void;
 }
 
 export function FileList({
@@ -47,6 +52,8 @@ export function FileList({
   loading,
   isAnalyzing,
   deletingFileId,
+  fileTasks,
+  expandedFileIds,
   onSelectFile,
   onSelectAllFiles,
   onAnalyze,
@@ -55,6 +62,8 @@ export function FileList({
   onViewFile,
   onDownloadFile,
   onUploadComplete,
+  onToggleExpand,
+  onCancelFileAnalysis,
 }: FileListProps) {
   // 判断是否所有文件都已被选中
   const allFilesSelected = useMemo(() => {
@@ -170,10 +179,14 @@ export function FileList({
                     isSelected={selectedFiles.includes(file.id)}
                     isAnalyzing={isAnalyzing}
                     isDeletingFile={deletingFileId === file.id}
+                    analysisTask={fileTasks?.get(file.id)}
+                    isExpanded={expandedFileIds?.has(file.id)}
                     onSelect={onSelectFile}
                     onView={onViewFile}
                     onDownload={onDownloadFile}
                     onDelete={onDeleteFile}
+                    onToggleExpand={onToggleExpand}
+                    onCancelAnalysis={onCancelFileAnalysis}
                   />
                 ))
               )}

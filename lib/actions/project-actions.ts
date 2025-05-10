@@ -71,7 +71,7 @@ export async function getProjects(): Promise<Project[]> {
       description: project.description || '',
       createdAt: project.createdAt?.toISOString().split('T')[0] || '',
       updatedAt: project.updatedAt?.toISOString().split('T')[0] || '',
-      documentCount: project.files?.length || 0,
+      documentCount: (project.files as any[]).length,
       taskCount: 0, // 后续可从任务表中计算
       status: 'active' as const
     }));
@@ -125,17 +125,17 @@ export async function getProject(id: string): Promise<Project | null> {
       description: project.description || '',
       createdAt: project.createdAt?.toISOString().split('T')[0] || '',
       updatedAt: project.updatedAt?.toISOString().split('T')[0] || '',
-      documentCount: project.files?.length || 0,
+      documentCount: Array.isArray(project.files) ? (project.files as any[]).length : 0,
       taskCount: 0, // 后续可从任务表中计算
       status: 'active' as const,
-      files: project.files?.map(file => ({
+      files: Array.isArray(project.files) ? (project.files as any[]).map((file: any) => ({
         id: file.id,
         filename: file.originalName,
         size: Number(file.fileSize),
         url: file.filePath,
         createdAt: file.uploadDate?.toISOString() || new Date().toISOString(),
         type: file.fileType
-      }))
+      })) : []
     };
 
     return formattedProject;

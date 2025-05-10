@@ -52,7 +52,11 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
     error,
     startStreamingAnalysis,
     cancelAnalysis,
-    extractMeetingsFromStreamingResult
+    extractMeetingsFromStreamingResult,
+    // 新增的文件级分析功能
+    fileTasks,
+    toggleFileExpanded,
+    isFileExpanded
   } = useStreamingAnalysis(updateFilesAnalysisStatus);
 
   // 处理开始分析按钮点击
@@ -83,6 +87,8 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
           loading={loadingFiles}
           isAnalyzing={isAnalyzing}
           deletingFileId={deleting}
+          fileTasks={fileTasks}
+          expandedFileIds={new Set(Array.from(fileTasks.keys()).filter(id => isFileExpanded(id)))}
           onSelectFile={handleSelectFile}
           onSelectAllFiles={handleSelectAll}
           onAnalyze={onAnalyzeStart}
@@ -91,6 +97,8 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
           onViewFile={handleViewFile}
           onDownloadFile={handleDownloadFile}
           onUploadComplete={handleFilesUploaded}
+          onToggleExpand={toggleFileExpanded}
+          onCancelFileAnalysis={(fileId) => cancelAnalysis(fileId)}
         />
 
         {/* 分析模式选择 */}
@@ -124,49 +132,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
         {/*  </Card>*/}
         {/*)}*/}
         
-        {/* 流式分析结果显示区域 */}
-        {analysisMode === 'streaming' && (streamingResult || isStreamAnalyzing) && (
-          <Card>
-            <CardHeader className="pb-3 flex flex-row items-center justify-between">
-              <CardTitle>分析进度</CardTitle>
-              {isStreamAnalyzing && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={cancelAnalysis}
-                  className="text-red-500"
-                >
-                  <XCircle className="h-4 w-4 mr-2" />
-                  取消分析
-                </Button>
-              )}
-            </CardHeader>
-            <CardContent>
-              <div className="relative rounded-md border p-4 mt-2">
-                {isStreamAnalyzing && (
-                  <div className="absolute top-2 right-2">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  </div>
-                )}
-                <div className="prose prose-sm max-w-none dark:prose-invert">
-                  {streamingResult ? (
-                    <Markdown>{streamingResult}</Markdown>
-                  ) : (
-                    <p className="text-muted-foreground text-sm">
-                      {isStreamAnalyzing ? '正在启动分析...' : '等待开始分析...'}
-                    </p>
-                  )}
-                  {error && (
-                    <div className="mt-4 p-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded text-sm">
-                      <p className="font-medium">分析错误</p>
-                      <p>{error}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* 流式分析结果现在直接在文件列表中显示 */}
 
         {/* 分析结果卡片（标准模式或流式分析完成后） */}
 
