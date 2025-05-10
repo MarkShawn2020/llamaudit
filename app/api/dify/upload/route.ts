@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     difyFormData.append('user', user);
 
     // 转发请求到Dify API
-    const difyResponse = await fetch('http://localhost/v1/files/upload', {
+    const difyResponse = await fetch(`${process.env.NEXT_PUBLIC_DIFY_API_URL}/files/upload`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`

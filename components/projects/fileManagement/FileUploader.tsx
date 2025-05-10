@@ -31,7 +31,7 @@ export function FileUploader({ projectId, onUploadComplete }: FileUploaderProps)
     formData.append('file', file);
     formData.append('user', userId); // Dify API需要用户标识符
     
-    const response = await fetch(`${process.env.NEXT_PUBLIC_DIFY_API_URL}/api/dify/upload`, {
+    const response = await fetch(`/api/dify/upload`, {
       method: 'POST',
       body: formData,
     });
@@ -151,7 +151,7 @@ export function FileUploader({ projectId, onUploadComplete }: FileUploaderProps)
         </label>
       </div>
 
-      {uploadError && (
+      {/* {uploadError && (
         <div className="text-sm text-red-500 bg-red-50 p-2 rounded-md border border-red-200 flex items-start gap-2">
           <div className="h-4 w-4 mt-0.5 flex-shrink-0">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -174,7 +174,7 @@ export function FileUploader({ projectId, onUploadComplete }: FileUploaderProps)
             </div>
           </div>
         </div>
-      )}
+      )} */}
     </div>
   );
 } 

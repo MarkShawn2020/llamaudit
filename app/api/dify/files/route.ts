@@ -40,40 +40,7 @@ export async function GET(request: NextRequest) {
       status: 'file_reference_only',
       message: '此文件已上传到Dify，但只能在Dify聊天环境中使用。'
     });
-    
-    /* 
-    以下是一个可能的实现，如果Dify提供了文件获取API：
-    
-    const response = await fetch(`http://localhost/v1/files/${fileId}`, {
-      headers: {
-        'Authorization': `Bearer ${apiKey}`
-      }
-    });
-
-    if (!response.ok) {
-      logger.error('获取文件失败', {
-        status: response.status,
-        fileId
-      });
-      
-      return NextResponse.json(
-        { error: `获取文件失败: ${response.status}` },
-        { status: response.status }
-      );
-    }
-
-    // 获取文件内容和类型
-    const contentType = response.headers.get('content-type') || 'application/octet-stream';
-    const buffer = await response.arrayBuffer();
-    
-    // 返回文件内容
-    return new NextResponse(buffer, {
-      headers: {
-        'Content-Type': contentType,
-        'Content-Disposition': `inline; filename="${fileId}"`
-      }
-    });
-    */
+  
     
   } catch (error) {
     logger.error('处理文件请求失败', { error });

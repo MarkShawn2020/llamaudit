@@ -81,7 +81,7 @@ export async function analyzeDifyFiles(fileIds: string[]): Promise<GroupedResult
     };
 
     // 发送请求到Dify API
-    const response = await fetch(`${NEXT_PUBLIC_DIFY_API_URL}/chat-messages`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_DIFY_API_URL}/chat-messages`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
