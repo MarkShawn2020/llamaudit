@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useActionState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,16 +10,31 @@ import { CircleIcon, Loader2 } from 'lucide-react';
 import { signIn, signUp } from './actions';
 import { ActionState } from '@/lib/auth/middleware';
 import { Logo } from '@/components/logo';
+import { useUser } from '@/components/user-provider';
 
 export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const redirect = searchParams.get('redirect');
   const priceId = searchParams.get('priceId');
   const inviteId = searchParams.get('inviteId');
+  
+  // Create a wrapper for the server action
+  const actionWrapper = mode === 'signin' ? signIn : signUp;
+  
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
-    mode === 'signin' ? signIn : signUp,
+    actionWrapper,
     { error: '' },
   );
+  
+  // Use an effect to refresh the page after successful authentication
+  // This triggers a router refresh that updates all components including UserMenu
+  useEffect(() => {
+    // Only refresh if authentication was successful (no errors) and not pending
+    if (state && !state.error && !pending && mode === 'signin') {
+      router.refresh();
+    }
+  }, [state, pending, mode, router]);
 
   return (
     <div className="min-h-[100dvh] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
