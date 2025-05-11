@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useActionState, useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -11,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { logger } from '@/lib/logger';
+import { getFilesByProjectId } from '@/lib/db/documents';
 
 // 文档状态枚举
 type DocumentStatus = 
@@ -185,21 +186,15 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
   const [expandedDocId, setExpandedDocId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const [filesState, getFilesAction] = useActionState(getFilesByProjectId, {projectId})
   
   // 加载项目文档列表
   const loadDocuments = useCallback(async () => {
     logger.info("load documents..", {projectId})
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/projects/${projectId}/documents`);
-      
-      if (!response.ok) {
-        logger.warn("failed to load documents")
-        return;
-      }
-      
-      const data = await response.json();
-      setDocuments(data.documents.map((doc: any) => ({
+      const data = await getFilesAction()
+      setDocuments(data.map((doc: any) => ({
         ...doc,
         status: doc.isAnalyzed ? 'analyzed' : 'uploaded'
       })));
