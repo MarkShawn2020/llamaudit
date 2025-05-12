@@ -194,35 +194,41 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
     try {
       setIsLoading(true);
       // 使用startTransition包裹action调用
-      startTransition(async () => {
-        try {
-          const data = await getFilesAction();
-          // 添加空值检查
-          if (data && Array.isArray(data)) {
-            setDocuments(data.map((doc: any) => ({
-              ...doc,
-              status: doc.isAnalyzed ? 'analyzed' : 'uploaded'
-            })));
-          } else {
-            console.warn('文档数据返回格式不正确:', data);
-            setDocuments([]);
-          }
-        } catch (error) {
-          console.error('加载文档列表失败:', error);
-          toast({
-            title: '加载失败',
-            description: '无法加载项目文档，请稍后重试',
-            variant: 'destructive'
-          });
-        } finally {
-          setIsLoading(false);
-        }
+      startTransition(() => {
+        // 只触发action，不使用返回值
+        getFilesAction();
       });
     } catch (error) {
       console.error('启动transition失败:', error);
       setIsLoading(false);
     }
-  }, [projectId, getFilesAction, toast]);
+  }, [projectId, getFilesAction]);
+  
+  // 监听filesState变化，处理数据
+  useEffect(() => {
+    if (filesState) {
+      try {
+        if (Array.isArray(filesState)) {
+          setDocuments(filesState.map((doc: any) => ({
+            ...doc,
+            status: doc.isAnalyzed ? 'analyzed' : 'uploaded'
+          })));
+        } else {
+          console.warn('文档数据返回格式不正确:', filesState);
+          setDocuments([]);
+        }
+      } catch (error) {
+        console.error('处理文档数据失败:', error);
+        toast({
+          title: '加载失败',
+          description: '无法加载项目文档，请稍后重试',
+          variant: 'destructive'
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  }, [filesState, toast]);
 
   
   // 初始加载
