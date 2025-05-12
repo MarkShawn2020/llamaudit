@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Building, FileText, BarChart3, TrashIcon, PencilIcon, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Building, FileText, BarChart3, TrashIcon, PencilIcon, AlertTriangle, Download } from 'lucide-react';
 import Link from 'next/link';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 import ProjectInfo from './ProjectInfo';
 import ProjectAnalysis from './ProjectAnalysis';
 import { Project as BaseProject, getProject, deleteProject } from '@/lib/api/project-api';
@@ -129,6 +131,49 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
   const handleProjectUpdate = (updated: Partial<Project>) => {
     if (!project) return;
     setProject({ ...project, ...updated });
+  };
+
+  // 导出三重一大事项数据函数
+  const exportTripleOneMajorItems = (items: TripleOneMajorItem[]) => {
+    if (!items || items.length === 0) {
+      toast.error('没有可导出的数据');
+      return;
+    }
+
+    try {
+      // 格式化导出数据
+      const exportData = items.map(item => ({
+        '类型': item.categoryType === 'majorProject' ? '重大项目' :
+               item.categoryType === 'majorFund' ? '大额资金' :
+               item.categoryType === 'majorDecision' ? '重大决策' : item.categoryType,
+        '事项内容': item.details,
+        '金额': item.amount,
+        '责任部门': item.departments,
+        '相关人员': item.personnel,
+        '决策依据': item.decisionBasis,
+        '来源文件': item.sourceFile || '未知'
+      }));
+
+      // 创建工作簿
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      
+      // 添加工作表到工作簿
+      XLSX.utils.book_append_sheet(wb, ws, '三重一大事项');
+      
+      // 生成Excel文件并下载
+      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+      
+      // 使用当前日期作为文件名的一部分
+      const fileName = `${project?.name || '项目'}_三重一大事项_${new Date().toISOString().split('T')[0]}.xlsx`;
+      saveAs(blob, fileName);
+      
+      toast.success('导出成功');
+    } catch (error) {
+      console.error('导出数据失败:', error);
+      toast.error('导出数据失败，请重试');
+    }
   };
 
   const handleDeleteProject = async () => {
@@ -256,9 +301,20 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
       {tripleOneMajorItems.length > 0 && (
         <Card className="mb-6">
           <CardHeader className="pb-2">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
-              <CardTitle className="text-lg">三重一大事项分析</CardTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                <CardTitle className="text-lg">三重一大事项分析</CardTitle>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-1" 
+                onClick={() => exportTripleOneMajorItems(tripleOneMajorItems)}
+              >
+                <Download className="h-4 w-4" />
+                导出数据
+              </Button>
             </div>
             <CardDescription>
               从项目文档中提取的重大决策、项目安排、资金使用等事项
