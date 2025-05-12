@@ -144,8 +144,21 @@ function DocumentCard({
           <div className="border rounded-md p-3 bg-gray-50 mt-2">
             <ScrollArea className="h-[200px]">
               <Markdown 
-                className="prose prose-sm max-w-none" 
                 remarkPlugins={[remarkGfm]}
+                components={{
+                  // 使用components属性代替className
+                  p: ({node, ...props}) => <p className="prose prose-sm max-w-none" {...props} />,
+                  // 其他元素也可以在这里定义
+                  ul: ({node, ...props}) => <ul className="prose prose-sm max-w-none" {...props} />,
+                  ol: ({node, ...props}) => <ol className="prose prose-sm max-w-none" {...props} />,
+                  li: ({node, ...props}) => <li className="prose prose-sm" {...props} />,
+                  h1: ({node, ...props}) => <h1 className="prose prose-sm" {...props} />,
+                  h2: ({node, ...props}) => <h2 className="prose prose-sm" {...props} />,
+                  h3: ({node, ...props}) => <h3 className="prose prose-sm" {...props} />,
+                  blockquote: ({node, ...props}) => <blockquote className="prose prose-sm" {...props} />,
+                  code: ({node, ...props}) => <code className="prose prose-sm" {...props} />,
+                  pre: ({node, ...props}) => <pre className="prose prose-sm" {...props} />
+                }}
               >
                 {document.analysisResult}
               </Markdown>
