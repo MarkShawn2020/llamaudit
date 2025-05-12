@@ -4,7 +4,7 @@ import { useActionState, useCallback, useEffect, useRef, useState, startTransiti
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Upload, File, Trash2, AlertCircle, CheckCircle, Clock, RefreshCw } from 'lucide-react';
+import { Upload, FileIcon, Trash2, AlertCircle, CheckCircle, Clock, RefreshCw } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -12,9 +12,11 @@ import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { logger } from '@/lib/logger';
 import { getFilesByProjectId } from '@/lib/db/documents';
+import { File as DBFile } from '@/lib/db/schema';
+import { ProjectFile } from '@/lib/api/project-api';
 
-// 文档状态枚举
-type DocumentStatus = 
+// 文件状态枚举
+type FileStatus = 
   | 'uploading' // 正在上传
   | 'upload_failed' // 上传失败
   | 'uploaded' // 已上传
@@ -22,20 +24,20 @@ type DocumentStatus =
   | 'analysis_failed' // 分析失败
   | 'analyzed'; // 已分析
 
-// 文档类型定义
-interface Document {
+// 扩展文件类型以适配UI需求
+interface UIFile {
   id: string;
   originalName: string;
   fileSize: number;
   fileType: string;
   filePath: string;
-  uploadDate: string;
-  status: DocumentStatus;
+  status: FileStatus;
   userId: string;
-  isAnalyzed: boolean;
+  isAnalyzed?: boolean;
   progress?: number; // 上传进度 0-100
   analysisResult?: string; // 分析结果
   error?: string; // 错误信息
+  uploadDate: string;
 }
 
 // 分析事件类型
@@ -73,7 +75,7 @@ function getFileIconColor(fileType: string): string {
 /**
  * 文档状态徽章组件
  */
-function DocumentStatusBadge({ status }: { status: DocumentStatus }) {
+function FileStatusBadge({ status }: { status: FileStatus }) {
   switch (status) {
     case 'uploading':
       return <Badge variant="secondary" className="bg-blue-100 text-blue-800"><Clock className="h-3 w-3 mr-1" /> 上传中</Badge>;
@@ -95,51 +97,51 @@ function DocumentStatusBadge({ status }: { status: DocumentStatus }) {
 /**
  * 单个文档卡片组件
  */
-function DocumentCard({ 
-  document, 
+function FileCard({ 
+  file, 
   onAnalyze, 
   onRemove,
   expanded
 }: { 
-  document: Document; 
-  onAnalyze: (doc: Document) => void; 
-  onRemove: (doc: Document) => void;
+  file: UIFile; 
+  onAnalyze: (file: UIFile) => void; 
+  onRemove: (file: UIFile) => void;
   expanded: boolean;
 }) {
-  const canAnalyze = document.status === 'uploaded' || document.status === 'analysis_failed';
-  const isExpanded = expanded || document.status === 'analyzing' || document.status === 'analyzed';
+  const canAnalyze = file.status === 'uploaded' || file.status === 'analysis_failed';
+  const isExpanded = expanded || file.status === 'analyzing' || file.status === 'analyzed';
   
   return (
     <Card className="mb-4 overflow-hidden">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-2">
-            <File className={`h-6 w-6 ${getFileIconColor(document.fileType)}`} />
+            <FileIcon className={`h-6 w-6 ${getFileIconColor(file.fileType)}`} />
             <div>
-              <CardTitle className="text-sm font-medium">{document.originalName}</CardTitle>
+              <CardTitle className="text-sm font-medium">{file.originalName}</CardTitle>
               <CardDescription className="text-xs">
-                {formatFileSize(document.fileSize)} • {new Date(document.uploadDate).toLocaleString()}
+                {formatFileSize(file.fileSize)} • {new Date(file.uploadDate).toLocaleString()}
               </CardDescription>
             </div>
           </div>
-          <DocumentStatusBadge status={document.status} />
+          <FileStatusBadge status={file.status} />
         </div>
       </CardHeader>
       
-      {document.status === 'uploading' && (
+      {file.status === 'uploading' && (
         <CardContent className="pb-2">
-          <Progress value={document.progress || 0} className="h-2" />
-          <p className="text-xs text-muted-foreground mt-1 text-right">{document.progress}%</p>
+          <Progress value={file.progress || 0} className="h-2" />
+          <p className="text-xs text-muted-foreground mt-1 text-right">{file.progress}%</p>
         </CardContent>
       )}
       
-      {document.error && (
+      {file.error && (
         <CardContent className="py-2">
-          <p className="text-xs text-red-500 italic">{document.error}</p>
+          <p className="text-xs text-red-500 italic">{file.error}</p>
         </CardContent>
       )}
       
-      {isExpanded && document.analysisResult && (
+      {isExpanded && file.analysisResult && (
         <CardContent className="pt-0 pb-2">
           <div className="border rounded-md p-3 bg-gray-50 mt-2">
             <ScrollArea className="h-[200px]">
@@ -160,7 +162,7 @@ function DocumentCard({
                   pre: ({node, ...props}) => <pre className="prose prose-sm" {...props} />
                 }}
               >
-                {document.analysisResult}
+                {file.analysisResult}
               </Markdown>
             </ScrollArea>
           </div>
@@ -171,8 +173,8 @@ function DocumentCard({
         <Button 
           variant="ghost" 
           size="sm" 
-          onClick={() => onRemove(document)}
-          disabled={document.status === 'uploading' || document.status === 'analyzing'}
+          onClick={() => onRemove(file)}
+          disabled={file.status === 'uploading' || file.status === 'analyzing'}
         >
           <Trash2 className="h-4 w-4 mr-1" />
           删除
@@ -182,7 +184,7 @@ function DocumentCard({
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={() => onAnalyze(document)}
+            onClick={() => onAnalyze(file)}
           >
             <RefreshCw className="h-4 w-4 mr-1" />
             分析
@@ -193,16 +195,26 @@ function DocumentCard({
   );
 }
 
-export default function ProjectAnalysis({ projectId }: { projectId: string }) {
-  const [documents, setDocuments] = useState<Document[]>([]);
+export default function ProjectAnalysis({ projectId, initialFiles = [] }: { projectId: string, initialFiles?: ProjectFile[] }) {
+  const [files, setFiles] = useState<UIFile[]>(() => initialFiles.map(file => ({
+    id: file.id,
+    originalName: file.filename,
+    fileSize: file.size,
+    fileType: file.type,
+    filePath: file.url,
+    uploadDate: file.createdAt,
+    status: 'uploaded' as FileStatus,
+    userId: '',
+    isAnalyzed: false
+  })));
   const [isLoading, setIsLoading] = useState(true);
-  const [expandedDocId, setExpandedDocId] = useState<string | null>(null);
+  const [expandedFileId, setExpandedFileId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const [filesState, getFilesAction] = useActionState(getFilesByProjectId, {projectId})
   
   // 加载项目文档列表
-  const loadDocuments = useCallback(() => {
+  const loadFiles = useCallback(() => {
     logger.info("load documents..", {projectId})
     try {
       setIsLoading(true);
@@ -217,21 +229,21 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
     }
   }, [projectId, getFilesAction]);
   
-  // 监听filesState变化，处理数据
+  // 监听filesState变化，处理数据 - 只在初始文件为空时加载
   useEffect(() => {
-    if (filesState) {
+    if (filesState && initialFiles.length === 0) {
       try {
         if (Array.isArray(filesState)) {
-          setDocuments(filesState.map((doc: any) => ({
-            ...doc,
-            status: doc.isAnalyzed ? 'analyzed' : 'uploaded'
+          setFiles(filesState.map((file: any) => ({
+            ...file,
+            status: file.isAnalyzed ? 'analyzed' : 'uploaded'
           })));
         } else {
-          console.warn('文档数据返回格式不正确:', filesState);
-          setDocuments([]);
+          console.warn('文件数据返回格式不正确:', filesState);
+          setFiles([]);
         }
       } catch (error) {
-        console.error('处理文档数据失败:', error);
+        console.error('处理文件数据失败:', error);
         toast({
           title: '加载失败',
           description: '无法加载项目文档，请稍后重试',
@@ -241,13 +253,18 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
         setIsLoading(false);
       }
     }
-  }, [filesState]);
+  }, [filesState, initialFiles.length]);
 
   
-  // 初始加载
+  // 初始加载 - 只在没有初始文件时才从服务器加载
   useEffect(() => {
-    loadDocuments();
-  }, []);
+    // 如果已有初始文件数据，则不需要再加载
+    if (initialFiles.length === 0) {
+      loadFiles();
+    } else {
+      setIsLoading(false); // 直接设置加载完成
+    }
+  }, [initialFiles.length, loadFiles]);
   
   // 触发文件选择对话框
   const handleUploadClick = () => {
@@ -272,8 +289,8 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
   
   // 上传单个文件
   const uploadFile = async (file: File) => {
-    // 创建临时文档对象
-    const tempDoc: Document = {
+    // 创建临时文件对象
+    const tempFile: UIFile = {
       id: `temp-${Date.now()}-${file.name}`,
       originalName: file.name,
       fileSize: file.size,
@@ -286,8 +303,8 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
       progress: 0
     };
     
-    // 添加到文档列表
-    setDocuments(prev => [...prev, tempDoc]);
+    // 添加到文件列表
+    setFiles(prev => [...prev, tempFile]);
     
     try {
       // 创建FormData
@@ -297,10 +314,10 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
       
       // 模拟上传进度
       const progressInterval = setInterval(() => {
-        setDocuments(prev => prev.map(doc => 
-          doc.id === tempDoc.id && doc.status === 'uploading' 
-            ? { ...doc, progress: Math.min((doc.progress || 0) + 10, 90) }
-            : doc
+        setFiles(prev => prev.map(file => 
+          file.id === tempFile.id && file.status === 'uploading' 
+            ? { ...file, progress: Math.min((file.progress || 0) + 10, 90) }
+            : file
         ));
       }, 300);
       
@@ -320,17 +337,17 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
       const data = await response.json();
       
       // 更新文档状态为已上传
-      setDocuments(prev => prev.map(doc => 
-        doc.id === tempDoc.id 
+      setFiles(prev => prev.map(file => 
+        file.id === tempFile.id 
           ? { 
-              ...doc, 
+              ...file, 
               id: data.id,
               status: 'uploaded',
               progress: 100,
               filePath: data.filePath || '',
               userId: data.userId || ''
             }
-          : doc
+          : file
       ));
       
       toast({
@@ -340,11 +357,11 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
     } catch (error) {
       console.error('文件上传失败:', error);
       
-      // 更新文档状态为上传失败
-      setDocuments(prev => prev.map(doc => 
-        doc.id === tempDoc.id 
-          ? { ...doc, status: 'upload_failed', error: error instanceof Error ? error.message : '上传失败' }
-          : doc
+      // 更新文件状态为上传失败
+      setFiles(prev => prev.map(file => 
+        file.id === tempFile.id 
+          ? { ...file, status: 'upload_failed', error: error instanceof Error ? error.message : '上传失败' }
+          : file
       ));
       
       toast({
@@ -355,26 +372,26 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
     }
   };
   
-  // 删除文档
-  const handleRemoveDocument = async (doc: Document) => {
+  // 删除文件
+  const handleRemoveFile = async (file: UIFile) => {
     try {
-      const response = await fetch(`/api/projects/${projectId}/documents/${doc.id}`, {
+      const response = await fetch(`/api/projects/${projectId}/documents/${file.id}`, {
         method: 'DELETE'
       });
       
       if (!response.ok) {
-        throw new Error('删除文档失败');
+        throw new Error('删除文件失败');
       }
       
-      // 从列表中移除文档
-      setDocuments(prev => prev.filter(d => d.id !== doc.id));
+      // 从列表中移除文件
+      setFiles(prev => prev.filter(f => f.id !== file.id));
       
       toast({
         title: '删除成功',
-        description: `文件 ${doc.originalName} 已成功删除`
+        description: `文件 ${file.originalName} 已成功删除`
       });
     } catch (error) {
-      console.error('删除文档失败:', error);
+      console.error('删除文件失败:', error);
       toast({
         title: '删除失败',
         description: `无法删除文件: ${error instanceof Error ? error.message : '未知错误'}`,
@@ -383,16 +400,16 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
     }
   };
   
-  // 文档分析
-  const handleAnalyzeDocument = async (doc: Document) => {
+  // 分析文件
+  const handleAnalyzeFile = async (file: UIFile) => {
     try {
-      // 更新文档状态为分析中
-      setDocuments(prev => prev.map(d => 
-        d.id === doc.id ? { ...d, status: 'analyzing', analysisResult: '' } : d
+      // 更新文件状态为分析中
+      setFiles(prev => prev.map(f => 
+        f.id === file.id ? { ...f, status: 'analyzing', analysisResult: '' } : f
       ));
       
       // 创建EventSource进行流式分析
-      const fileIds = JSON.stringify([doc.id]);
+      const fileIds = JSON.stringify([file.id]);
       const eventSource = new EventSource(`/api/dify/stream-analysis?fileIds=${encodeURIComponent(fileIds)}`);
       
       // 分析结果
@@ -412,56 +429,56 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
             combinedResult += data.answer;
             
             // 更新分析结果
-            setDocuments(prev => prev.map(d => 
-              d.id === doc.id ? { ...d, analysisResult: combinedResult } : d
+            setFiles(prev => prev.map(f => 
+              f.id === file.id ? { ...f, analysisResult: combinedResult } : f
             ));
           }
           
           // 分析完成
           if (data.event === 'done') {
-            // 更新文档状态为已分析
-            setDocuments(prev => prev.map(d => 
-              d.id === doc.id ? { ...d, status: 'analyzed', isAnalyzed: true } : d
+            // 更新文件状态为已分析
+            setFiles(prev => prev.map(f => 
+              f.id === file.id ? { ...f, status: 'analyzed', isAnalyzed: true } : f
             ));
             
             // 关闭连接
             eventSource.close();
             
             // 保存分析结果到数据库
-            saveAnalysisResult(doc.id, combinedResult);
+            saveAnalysisResult(file.id, combinedResult);
           }
         } catch (error) {
           console.error('处理分析事件失败:', error);
-          handleAnalysisError(doc.id, error, eventSource);
+          handleAnalysisError(file.id, error, eventSource);
         }
       };
       
       // 处理错误
       eventSource.onerror = (error) => {
         console.error('分析事件源错误:', error);
-        handleAnalysisError(doc.id, error, eventSource);
+        handleAnalysisError(file.id, error, eventSource);
       };
       
     } catch (error) {
       console.error('启动分析失败:', error);
-      handleAnalysisError(doc.id, error);
+      handleAnalysisError(file.id, error);
     }
   };
   
   // 处理分析错误
-  const handleAnalysisError = (docId: string, error: any, eventSource?: EventSource) => {
+  const handleAnalysisError = (fileId: string, error: any, eventSource?: EventSource) => {
     // 关闭EventSource
     if (eventSource) {
       eventSource.close();
     }
     
-    // 更新文档状态为分析失败
-    setDocuments(prev => prev.map(d => 
-      d.id === docId ? { 
-        ...d, 
+    // 更新文件状态为分析失败
+    setFiles(prev => prev.map(f => 
+      f.id === fileId ? { 
+        ...f, 
         status: 'analysis_failed', 
         error: error instanceof Error ? error.message : '分析过程中出现错误'
-      } : d
+      } : f
     ));
     
     toast({
@@ -472,9 +489,9 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
   };
   
   // 保存分析结果
-  const saveAnalysisResult = async (docId: string, result: string) => {
+  const saveAnalysisResult = async (fileId: string, result: string) => {
     try {
-      const response = await fetch(`/api/projects/${projectId}/documents/${docId}/analysis`, {
+      const response = await fetch(`/api/projects/${projectId}/documents/${fileId}/analysis`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -514,26 +531,26 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
         <div className="h-40 flex items-center justify-center">
           <div className="flex flex-col items-center">
             <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
-            <p className="mt-2 text-sm text-muted-foreground">加载文档列表...</p>
+            <p className="mt-2 text-sm text-muted-foreground">加载文件列表...</p>
           </div>
         </div>
-      ) : documents.length === 0 ? (
+      ) : files.length === 0 ? (
         <div className="h-40 border rounded-lg flex items-center justify-center text-muted-foreground">
           <div className="text-center">
             <Upload className="h-8 w-8 mx-auto mb-2" />
-            <p>尚未上传任何文档</p>
-            <p className="text-xs mt-1">点击上传按钮添加文档进行分析</p>
+            <p>尚未上传任何文件</p>
+            <p className="text-xs mt-1">点击上传按钮添加文件进行分析</p>
           </div>
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
-          {documents.map(doc => (
-            <DocumentCard
-              key={doc.id}
-              document={doc}
-              onAnalyze={handleAnalyzeDocument}
-              onRemove={handleRemoveDocument}
-              expanded={expandedDocId === doc.id}
+          {files.map(file => (
+            <FileCard
+              key={file.id}
+              file={file}
+              onAnalyze={handleAnalyzeFile}
+              onRemove={handleRemoveFile}
+              expanded={expandedFileId === file.id}
             />
           ))}
         </div>

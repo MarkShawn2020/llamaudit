@@ -7,7 +7,12 @@ import { ArrowLeft, Building, FileText, BarChart3, TrashIcon, PencilIcon } from 
 import Link from 'next/link';
 import ProjectInfo from './ProjectInfo';
 import ProjectAnalysis from './ProjectAnalysis';
-import { Project, getProject, deleteProject } from '@/lib/api/project-api';
+import { Project as BaseProject, getProject, deleteProject } from '@/lib/api/project-api';
+
+// 扩展Project类型，兼容新旧字段名
+interface Project extends BaseProject {
+  fileCount?: number; // 兼容新命名
+}
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import {
@@ -172,8 +177,8 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
             <div>{project.type}</div>
           </div>
           <div>
-            <div className="text-sm font-medium text-muted-foreground">文档数量</div>
-            <div>{project.documentCount}</div>
+            <div className="text-sm font-medium text-muted-foreground">文件数量</div>
+            <div>{project.fileCount || project.documentCount}</div>
           </div>
           <div>
             <div className="text-sm font-medium text-muted-foreground">分析任务</div>
@@ -183,7 +188,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
       </Card>
 
 
-      <ProjectAnalysis projectId={projectId} />
+      <ProjectAnalysis projectId={projectId} initialFiles={project.files || []} />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
