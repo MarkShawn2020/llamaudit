@@ -14,7 +14,7 @@ import { logger } from '@/lib/logger';
 import { getFilesByProjectId } from '@/lib/db/documents';
 import { File as DBFile } from '@/lib/db/schema';
 import { ProjectFile } from '@/lib/api/project-api';
-import { saveFileAnalysisResult } from '@/lib/actions/file-actions';
+import { saveFileAnalysisResult, deleteProjectFile } from '@/lib/actions/file-actions';
 
 // 文件状态枚举
 type FileStatus = 
@@ -381,21 +381,20 @@ export default function ProjectAnalysis({ projectId, initialFiles = [] }: { proj
   // 删除文件
   const handleRemoveFile = async (file: UIFile) => {
     try {
-      const response = await fetch(`/api/projects/${projectId}/documents/${file.id}`, {
-        method: 'DELETE'
-      });
+      // 使用server action删除文件
+      const result = await deleteProjectFile(projectId, file.id);
       
-      if (!response.ok) {
+      if (result.success) {
+        // 从列表中移除文件
+        setFiles(prev => prev.filter(f => f.id !== file.id));
+        
+        toast({
+          title: '删除成功',
+          description: `文件 ${file.originalName} 已成功删除`
+        });
+      } else {
         throw new Error('删除文件失败');
       }
-      
-      // 从列表中移除文件
-      setFiles(prev => prev.filter(f => f.id !== file.id));
-      
-      toast({
-        title: '删除成功',
-        description: `文件 ${file.originalName} 已成功删除`
-      });
     } catch (error) {
       console.error('删除文件失败:', error);
       toast({
