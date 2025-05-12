@@ -223,7 +223,7 @@ export default function ProjectAnalysis({
   const [expandedFileId, setExpandedFileId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const [filesState, getFilesAction] = useActionState(getFilesByProjectId, {projectId})
+  const [filesState, getFilesAction] = useActionState(getFilesByProjectId, [])
   
   // 加载项目文档列表
   const loadFiles = useCallback(() => {
@@ -233,7 +233,9 @@ export default function ProjectAnalysis({
       // 使用startTransition包裹action调用
       startTransition(() => {
         // 只触发action，不使用返回值
-        getFilesAction();
+        const formData = new FormData();
+        formData.append('projectId', projectId);
+        getFilesAction(formData);
       });
     } catch (error) {
       console.error('启动transition失败:', error);
