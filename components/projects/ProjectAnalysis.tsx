@@ -14,6 +14,7 @@ import { logger } from '@/lib/logger';
 import { getFilesByProjectId } from '@/lib/db/documents';
 import { File as DBFile } from '@/lib/db/schema';
 import { ProjectFile } from '@/lib/api/project-api';
+import { saveFileAnalysisResult } from '@/lib/actions/file-actions';
 
 // 文件状态枚举
 type FileStatus = 
@@ -491,19 +492,15 @@ export default function ProjectAnalysis({ projectId, initialFiles = [] }: { proj
   // 保存分析结果
   const saveAnalysisResult = async (fileId: string, result: string) => {
     try {
-      const response = await fetch(`/api/projects/${projectId}/documents/${fileId}/analysis`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ result })
-      });
-      
-      if (!response.ok) {
-        console.error('保存分析结果失败');
-      }
+      // 使用server action保存分析结果
+      await saveFileAnalysisResult(fileId, result);
     } catch (error) {
       console.error('保存分析结果请求失败:', error);
+      toast({
+        title: '保存失败',
+        description: '无法保存分析结果，请稍后重试',
+        variant: 'destructive'
+      });
     }
   };
   

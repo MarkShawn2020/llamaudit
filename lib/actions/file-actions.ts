@@ -339,6 +339,66 @@ export async function updateFileAnalysisStatus(
 /**
  * 获取单个文件信息
  */
+/**
+ * 保存文件分析结果
+ */
+export async function saveFileAnalysisResult(
+  fileId: string,
+  result: string
+): Promise<FileResponse> {
+  try {
+    const user = await getUser();
+    if (!user) {
+      throw new Error('未授权访问');
+    }
+
+    // 获取文件信息
+    const fileInfo = await db.query.files.findFirst({
+      where: eq(files.id, fileId),
+    });
+
+    if (!fileInfo) {
+      throw new Error('文件不存在');
+    }
+
+    // 更新文件分析状态和结果
+    await db.update(files)
+      .set({ 
+        isAnalyzed: true,
+        metadata: result
+      })
+      .where(eq(files.id, fileId));
+
+    // 获取更新后的文件
+    const updatedFile = await db.query.files.findFirst({
+      where: eq(files.id, fileId)
+    });
+
+    if (!updatedFile) {
+      throw new Error('文件更新失败');
+    }
+
+    // 刷新项目页面的缓存
+    if (updatedFile.auditUnitId) {
+      revalidatePath(`/projects/${updatedFile.auditUnitId}`);
+    }
+
+    // 格式化响应
+    return {
+      id: updatedFile.id,
+      filename: updatedFile.originalName,
+      size: Number(updatedFile.fileSize),
+      type: updatedFile.fileType,
+      url: updatedFile.filePath,
+      createdAt: updatedFile.uploadDate?.toISOString() || new Date().toISOString(),
+      isAnalyzed: !!updatedFile.isAnalyzed
+    };
+  } catch (error) {
+    console.error('保存文件分析结果失败:', error);
+    throw error;
+  }
+}
+
 export async function getFile(fileId: string): Promise<FileResponse | null> {
   try {
     const user = await getUser();
