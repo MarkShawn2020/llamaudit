@@ -34,6 +34,8 @@ export interface ProjectFile {
   url: string;
   createdAt: string;
   type: string;
+  isAnalyzed?: boolean;
+  metadata?: string;
 }
 
 /**
@@ -184,7 +186,9 @@ export async function getProject(id: string): Promise<Project | null> {
         size: Number(file.fileSize),
         url: file.filePath,
         createdAt: file.uploadDate?.toISOString() || new Date().toISOString(),
-        type: file.fileType
+        type: file.fileType,
+        isAnalyzed: !!file.isAnalyzed,
+        metadata: file.metadata || ''
       }))
     };
 

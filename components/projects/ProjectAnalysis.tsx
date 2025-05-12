@@ -204,9 +204,12 @@ export default function ProjectAnalysis({ projectId, initialFiles = [] }: { proj
     fileType: file.type,
     filePath: file.url,
     uploadDate: file.createdAt,
-    status: 'uploaded' as FileStatus,
+    // 根据isAnalyzed状态设置正确的状态
+    status: file.isAnalyzed ? 'analyzed' : 'uploaded' as FileStatus,
     userId: '',
-    isAnalyzed: false
+    isAnalyzed: file.isAnalyzed || false,
+    // 从元数据中加载分析结果，如果有的话
+    analysisResult: file.metadata || ''
   })));
   const [isLoading, setIsLoading] = useState(true);
   const [expandedFileId, setExpandedFileId] = useState<string | null>(null);
@@ -237,7 +240,9 @@ export default function ProjectAnalysis({ projectId, initialFiles = [] }: { proj
         if (Array.isArray(filesState)) {
           setFiles(filesState.map((file: any) => ({
             ...file,
-            status: file.isAnalyzed ? 'analyzed' : 'uploaded'
+            status: file.isAnalyzed ? 'analyzed' : 'uploaded',
+            // 确保分析结果数据存在，使用metadata字段作为分析结果
+            analysisResult: file.metadata || file.analysisResult || ''
           })));
         } else {
           console.warn('文件数据返回格式不正确:', filesState);
