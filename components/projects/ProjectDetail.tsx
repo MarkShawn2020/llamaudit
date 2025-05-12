@@ -41,6 +41,8 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [showProjectInfo, setShowProjectInfo] = useState(false);
+  // 添加独立的文件计数状态，初始值为项目的文件数量
+  const [fileCount, setFileCount] = useState<number>(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -61,6 +63,9 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
       }
 
       setProject(data);
+      // 初始化文件计数 - 优先使用实际文件数组长度
+      const count = data.files?.length || 0;
+      setFileCount(count);
     } catch (error) {
       console.error('加载项目详情失败:', error);
       setError('加载项目详情失败');
@@ -178,7 +183,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
           </div>
           <div>
             <div className="text-sm font-medium text-muted-foreground">文件数量</div>
-            <div>{project.fileCount || project.documentCount}</div>
+            <div>{fileCount}</div>
           </div>
           <div>
             <div className="text-sm font-medium text-muted-foreground">分析任务</div>
@@ -188,7 +193,14 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
       </Card>
 
 
-      <ProjectAnalysis projectId={projectId} initialFiles={project.files || []} />
+      <ProjectAnalysis 
+        projectId={projectId} 
+        initialFiles={project.files || []} 
+        onFileChange={(files) => {
+          // 当文件列表变化时更新文件计数
+          setFileCount(files.length);
+        }}
+      />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>

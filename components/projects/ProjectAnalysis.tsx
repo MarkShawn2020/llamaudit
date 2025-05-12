@@ -196,7 +196,15 @@ function FileCard({
   );
 }
 
-export default function ProjectAnalysis({ projectId, initialFiles = [] }: { projectId: string, initialFiles?: ProjectFile[] }) {
+export default function ProjectAnalysis({ 
+  projectId, 
+  initialFiles = [],
+  onFileChange
+}: { 
+  projectId: string, 
+  initialFiles?: ProjectFile[],
+  onFileChange?: (files: UIFile[]) => void 
+}) {
   const [files, setFiles] = useState<UIFile[]>(() => initialFiles.map(file => ({
     id: file.id,
     originalName: file.filename,
@@ -310,7 +318,16 @@ export default function ProjectAnalysis({ projectId, initialFiles = [] }: { proj
     };
     
     // 添加到文件列表
-    setFiles(prev => [...prev, tempFile]);
+    const updatedFiles = [
+      tempFile,
+      ...files
+    ];
+    setFiles(updatedFiles);
+    
+    // 通知父组件文件数量变化
+    if (onFileChange) {
+      onFileChange(updatedFiles);
+    }
     
     try {
       // 创建FormData
@@ -386,7 +403,13 @@ export default function ProjectAnalysis({ projectId, initialFiles = [] }: { proj
       
       if (result.success) {
         // 从列表中移除文件
-        setFiles(prev => prev.filter(f => f.id !== file.id));
+        const updatedFiles = files.filter(f => f.id !== file.id);
+        setFiles(updatedFiles);
+        
+        // 通知父组件文件数量变化
+        if (onFileChange) {
+          onFileChange(updatedFiles);
+        }
         
         toast({
           title: '删除成功',
