@@ -228,7 +228,7 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
         setIsLoading(false);
       }
     }
-  }, [filesState, toast]);
+  }, [filesState]);
 
   
   // 初始加载
