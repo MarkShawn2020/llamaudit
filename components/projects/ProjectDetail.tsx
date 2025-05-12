@@ -3,15 +3,28 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Building, FileText, BarChart3, TrashIcon, PencilIcon } from 'lucide-react';
+import { ArrowLeft, Building, FileText, BarChart3, TrashIcon, PencilIcon, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import ProjectInfo from './ProjectInfo';
 import ProjectAnalysis from './ProjectAnalysis';
 import { Project as BaseProject, getProject, deleteProject } from '@/lib/api/project-api';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 // 扩展Project类型，兼容新旧字段名
+interface TripleOneMajorItem {
+  categoryType: string;
+  details: string;
+  amount: string;
+  departments: string;
+  personnel: string;
+  decisionBasis: string;
+  originalText: string;
+  sourceFile?: string; // 添加来源文件名
+}
+
 interface Project extends BaseProject {
   fileCount?: number; // 兼容新命名
+  tripleOneMajorItems?: TripleOneMajorItem[];
 }
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -33,6 +46,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { logger } from '@/lib/logger';
 
 export default function ProjectDetail({ projectId }: { projectId: string }) {
   const [project, setProject] = useState<Project | null>(null);
@@ -43,7 +57,11 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
   const [showProjectInfo, setShowProjectInfo] = useState(false);
   // 添加独立的文件计数状态，初始值为项目的文件数量
   const [fileCount, setFileCount] = useState<number>(0);
+  // 添加提取的三重一大事项
+  const [tripleOneMajorItems, setTripleOneMajorItems] = useState<TripleOneMajorItem[]>([]);
   const router = useRouter();
+
+  logger.info('ProjectDetail', { projectId, project });
 
   useEffect(() => {
     // 加载项目详情
@@ -66,6 +84,39 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
       // 初始化文件计数 - 优先使用实际文件数组长度
       const count = data.files?.length || 0;
       setFileCount(count);
+      
+      // 解析所有文件的元数据，提取三重一大事项
+      if (data.files && data.files.length > 0) {
+        const allTripleOneItems: TripleOneMajorItem[] = [];
+        
+        data.files.forEach(file => {
+          if (file.isAnalyzed && file.metadata) {
+            try {
+              // 从metadata字符串中提取JSON部分
+              const metadataStr = file.metadata;
+              const jsonMatch = metadataStr.match(/```json\n([\s\S]*)\n```/);
+              
+              if (jsonMatch && jsonMatch[1]) {
+                const metadata = JSON.parse(jsonMatch[1]);
+                
+                if (metadata.tripleOneMajorItems && metadata.tripleOneMajorItems.length > 0) {
+                  // 添加来源文件信息
+                  const itemsWithSource = metadata.tripleOneMajorItems.map((item: TripleOneMajorItem) => ({
+                    ...item,
+                    sourceFile: file.filename
+                  }));
+                  
+                  allTripleOneItems.push(...itemsWithSource);
+                }
+              }
+            } catch (e) {
+              console.error('解析文件元数据失败:', file.filename, e);
+            }
+          }
+        });
+        
+        setTripleOneMajorItems(allTripleOneItems);
+      }
     } catch (error) {
       console.error('加载项目详情失败:', error);
       setError('加载项目详情失败');
@@ -201,6 +252,55 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
           setFileCount(files.length);
         }}
       />
+
+      {tripleOneMajorItems.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              <CardTitle className="text-lg">三重一大事项分析</CardTitle>
+            </div>
+            <CardDescription>
+              从项目文档中提取的重大决策、项目安排、资金使用等事项
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>类型</TableHead>
+                  <TableHead>事项内容</TableHead>
+                  <TableHead>金额</TableHead>
+                  <TableHead>责任部门</TableHead>
+                  <TableHead>相关人员</TableHead>
+                  <TableHead>决策依据</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tripleOneMajorItems.map((item, index) => (
+                  <TableRow key={index}>
+                    <TableCell className="font-medium">
+                      {item.categoryType === 'majorProject' ? '重大项目' :
+                       item.categoryType === 'majorFund' ? '大额资金' :
+                       item.categoryType === 'majorDecision' ? '重大决策' : item.categoryType}
+                    </TableCell>
+                    <TableCell>{item.details}</TableCell>
+                    <TableCell>{item.amount}</TableCell>
+                    <TableCell>{item.departments}</TableCell>
+                    <TableCell className="max-w-[200px] truncate" title={item.personnel}>
+                      {item.personnel}
+                    </TableCell>
+                    <TableCell>{item.decisionBasis}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <div className="mt-4 text-sm text-muted-foreground">
+              总计发现 {tripleOneMajorItems.length} 项三重一大事项
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
