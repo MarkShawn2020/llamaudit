@@ -31,6 +31,7 @@ export function GlobalNavbar() {
           <Link href="/" className="flex items-center gap-2 mr-6">
             <Logo/>
             <span className="font-bold text-xl">智审大师</span>
+            <span className="ml-2 text-xs px-1.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20 font-medium">0.2.0(α)</span>
           </Link>
           
           <nav className="hidden md:flex items-center space-x-4 lg:space-x-6 ml-6">
