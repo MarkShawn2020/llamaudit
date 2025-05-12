@@ -44,12 +44,22 @@ export function validatedActionWithUser<S extends z.ZodType<any, any>, T>(
       throw new Error('User is not authenticated');
     }
 
-    const result = schema.safeParse(Object.fromEntries(formData));
-    if (!result.success) {
-      return { error: result.error.errors[0].message } as T;
+    // 确保formData存在且可迭代
+    if (!formData) {
+      return { error: '表单数据未提供或无效' } as T;
     }
+    
+    try {
+      const result = schema.safeParse(Object.fromEntries(formData));
+      if (!result.success) {
+        return { error: result.error.errors[0].message } as T;
+      }
 
-    return action(result.data, formData, user);
+      return action(result.data, formData, user);
+    } catch (error) {
+      console.error('处理表单数据时出错:', error);
+      return { error: '处理表单数据时出错' } as T;
+    }
   };
 }
 

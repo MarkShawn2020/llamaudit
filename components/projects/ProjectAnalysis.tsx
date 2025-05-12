@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useCallback, useEffect, useRef, useState } from 'react';
+import { useActionState, useCallback, useEffect, useRef, useState, startTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -189,26 +189,41 @@ export default function ProjectAnalysis({ projectId }: { projectId: string }) {
   const [filesState, getFilesAction] = useActionState(getFilesByProjectId, {projectId})
   
   // 加载项目文档列表
-  const loadDocuments = useCallback(async () => {
+  const loadDocuments = useCallback(() => {
     logger.info("load documents..", {projectId})
     try {
       setIsLoading(true);
-      const data = await getFilesAction()
-      setDocuments(data.map((doc: any) => ({
-        ...doc,
-        status: doc.isAnalyzed ? 'analyzed' : 'uploaded'
-      })));
-    } catch (error) {
-      console.error('加载文档列表失败:', error);
-      toast({
-        title: '加载失败',
-        description: '无法加载项目文档，请稍后重试',
-        variant: 'destructive'
+      // 使用startTransition包裹action调用
+      startTransition(async () => {
+        try {
+          const data = await getFilesAction();
+          // 添加空值检查
+          if (data && Array.isArray(data)) {
+            setDocuments(data.map((doc: any) => ({
+              ...doc,
+              status: doc.isAnalyzed ? 'analyzed' : 'uploaded'
+            })));
+          } else {
+            console.warn('文档数据返回格式不正确:', data);
+            setDocuments([]);
+          }
+        } catch (error) {
+          console.error('加载文档列表失败:', error);
+          toast({
+            title: '加载失败',
+            description: '无法加载项目文档，请稍后重试',
+            variant: 'destructive'
+          });
+        } finally {
+          setIsLoading(false);
+        }
       });
-    } finally {
+    } catch (error) {
+      console.error('启动transition失败:', error);
       setIsLoading(false);
     }
-  }, [projectId]);
+  }, [projectId, getFilesAction, toast]);
+
   
   // 初始加载
   useEffect(() => {
