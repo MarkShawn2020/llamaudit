@@ -124,6 +124,7 @@ export function TIOBComp(props: {
               <TableHead>责任部门</TableHead>
               <TableHead>相关人员</TableHead>
               <TableHead>决策依据</TableHead>
+              <TableHead>原文件名</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -148,6 +149,7 @@ export function TIOBComp(props: {
                   {item.personnel}
                 </TableCell>
                 <TableCell>{item.decisionBasis}</TableCell>
+                <TableCell>{item.sourceFile || "未知"}</TableCell>
               </TableRow>
             ))}
           </TableBody>
