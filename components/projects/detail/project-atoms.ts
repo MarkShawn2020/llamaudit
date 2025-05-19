@@ -29,7 +29,7 @@ export const tiobItemsAtom = atom((get) => {
   const tiobItems = [];
 
   for (const file of files) {
-    if (file.isAnalyzed && file.analysisResult) {
+    if (file.analysisResult) {
       try {
         // Extract JSON from markdown code blocks (handles both complete and streaming SSE results)
         const jsonMatch = file.analysisResult.match(/```json\n([\s\S]*?)(?:\n```|$)/);
