@@ -273,97 +273,26 @@ export default function ProjectAnalysis({
     // 确保有文件需要分析
     if (!filesToAnalyze || filesToAnalyze.length === 0) return;
     
+    logger.info(`批量分析 ${filesToAnalyze.length} 个文件`, {
+      projectId,
+      fileIds: filesToAnalyze.map(f => f.id)
+    });
+    
     try {
-      // 更新所有选择的文件状态为分析中
-      setFiles(prev => prev.map(f => 
-        filesToAnalyze.some(selected => selected.id === f.id) 
-          ? { ...f, status: 'analyzing', analysisResult: '' } 
-          : f
-      ));
+      // 使用Promise.all并行处理所有文件的分析
+      const analysisPromises = filesToAnalyze.map(file => handleAnalyzeFile(file));
       
-      // 准备文件ID清单
-      const fileIds = filesToAnalyze.map(file => file.id);
-      const fileIdsJson = JSON.stringify(fileIds);
+      // 等待所有分析完成
+      await Promise.all(analysisPromises);
       
-      // 创建EventSource进行流式分析
-      const eventSource = new EventSource(`/api/dify/stream-analysis?fileIds=${encodeURIComponent(fileIdsJson)}`);
-      
-      // 分析结果 - 使用Map按文件ID存储
-      const resultsMap = new Map<string, string>();
-      
-      // 处理事件
-      eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data) as AnalysisEvent;
-          
-          if (data.event === 'error') {
-            throw new Error(data.message || '批量分析失败');
-          }
-          
-          // 处理分析数据 - 假设响应中包含fileId和对应结果
-          if (data.data?.fileId && data.data?.result) {
-            const { fileId, result } = data.data;
-            const currentResult = resultsMap.get(fileId) || '';
-            resultsMap.set(fileId, currentResult + result);
-            
-            // 更新特定文件的分析结果
-            setFiles(prev => prev.map(f => 
-              f.id === fileId ? { ...f, analysisResult: resultsMap.get(fileId) || '' } : f
-            ));
-          } else if (data.answer) {
-            // 处理整体分析结果
-            // 如果无法区分是哪个文件的结果，则应用到所有文件
-            filesToAnalyze.forEach(file => {
-              const currentResult = resultsMap.get(file.id) || '';
-              resultsMap.set(file.id, currentResult + data.answer!);
-              
-              // 更新分析结果
-              setFiles(prev => prev.map(f => 
-                f.id === file.id ? { ...f, analysisResult: resultsMap.get(file.id) } : f
-              ));
-            });
-          }
-          
-          // 分析完成
-          if (data.event === 'done') {
-            // 更新所有文件状态为已分析
-            setFiles(prev => prev.map(f => 
-              filesToAnalyze.some(selected => selected.id === f.id) 
-                ? { ...f, status: 'analyzed', isAnalyzed: true } 
-                : f
-            ));
-            
-            // 关闭连接
-            eventSource.close();
-            
-            // 保存所有文件的分析结果
-            filesToAnalyze.forEach(file => {
-              const result = resultsMap.get(file.id);
-              if (result) {
-                saveAnalysisResult(file.id, result);
-              }
-            });
-            
-            toast({
-              title: '分析完成',
-              description: `已完成${filesToAnalyze.length}个文件的分析`
-            });
-          }
-        } catch (error) {
-          console.error('处理批量分析事件失败:', error);
-          handleAnalysisError(filesToAnalyze.map(f => f.id), error, eventSource);
-        }
-      };
-      
-      // 处理错误
-      eventSource.onerror = (error) => {
-        console.error('批量分析事件源错误:', error);
-        handleAnalysisError(filesToAnalyze.map(f => f.id), error, eventSource);
-      };
-      
+      // 所有文件分析完成后的通知
+      toast({
+        title: '批量分析完成',
+        description: `已完成 ${filesToAnalyze.length} 个文件的分析`
+      });
     } catch (error) {
-      console.error('启动批量分析失败:', error);
-      handleAnalysisError(filesToAnalyze.map(f => f.id), error);
+      // 错误已在handleAnalyzeFile中处理，这里只需记录总体错误
+      logger.error('批量分析总体异常', { error: error instanceof Error ? error.message : '未知错误' });
     }
   };
   
