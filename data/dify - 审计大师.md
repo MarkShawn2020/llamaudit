@@ -20,8 +20,6 @@
    - meetingDate
    - documentNo
    - meetingTopic
-   - conclusion
-   - summary
    - documentName
    - isTiopMeeting
 
@@ -97,8 +95,6 @@ A公司董事会会议纪要
     "meetingDate": "2025-03-15",
     "documentNo": "A-2025-003",
     "meetingTopic": "战略重组计划审议",
-    "conclusion": "批准研发部门整合计划；拨款350万元用于重组费用；计划于2025年4月1日开始实施；人力资源部和财务部负责协调过渡工作",
-    "summary": "董事会审议并讨论了公司的战略重组计划。经过充分讨论，董事会一致批准了将北方分部和南方分部的研发部门合并的计划，预计整合成本为350万元。",
     "documentName": "A公司董事会会议纪要",
     "isTiopMeeting": true
   },
@@ -162,8 +158,6 @@ A公司董事会会议纪要
     "meetingDate": "2025-02-08",
     "documentNo": "SOE-HR-2025-042",
     "meetingTopic": "关键岗位任命",
-    "conclusion": "任命黄小明为首席技术官；提拔张丽丽为国际业务总监；将徐成调任数字化转型办公室负责人",
-    "summary": "人事委员会召开会议，讨论并批准了几个关键岗位的任命。在审核候选人资历和绩效记录后，委员会对首席技术官、国际业务总监和数字化转型办公室负责人做出了任命决定。",
     "documentName": "国有企业人事委员会会议纪要",
     "isTiopMeeting": true
   },
@@ -244,8 +238,6 @@ A公司董事会会议纪要
     "meetingDate": "2025-04-23",
     "documentNo": "IIC-2025-007",
     "meetingTopic": "东南区域数据中心建设",
-    "conclusion": "项目获批，附带条件：预算限制7800万元；分三阶段执行并设置阶段性审查；要求月度报告；工程部门负责实施，财务部门监督",
-    "summary": "委员会审议并批准了在东南区域建设新数据中心的提案，预估预算为7800万元，建设周期为18个月。该项目将支持公司在该地区的数字化扩展。",
     "documentName": "基础设施投资委员会会议",
     "isTiopMeeting": true
   },
@@ -305,8 +297,6 @@ A公司董事会会议纪要
     "meetingDate": "2025-05-05",
     "documentNo": "未提及",
     "meetingTopic": "部门周例会",
-    "conclusion": "分配给团队成员的各种行动项目",
-    "summary": "常规部门会议，涵盖团队更新、项目状态、即将到来的截止日期和其他事项。未讨论重大决策、任命、项目或大额资金分配。",
     "documentName": "部门周例会",
     "isTiopMeeting": false
   },
@@ -321,3 +311,4 @@ A公司董事会会议纪要
 ## 特别注意
 - 最终的输出应该是一个标准、严格的 json 文件
 - 这个 json 使用 ```json{内容}``` code block 表示
+- 不需要解释，只要输出 json 结构体即可
