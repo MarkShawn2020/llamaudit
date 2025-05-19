@@ -12,6 +12,8 @@ import {getFilesByProjectId} from '@/lib/db/documents';
 import {logger} from '@/lib/logger';
 import {RefreshCw, Upload} from 'lucide-react';
 import {startTransition, useActionState, useCallback, useEffect, useRef, useState} from 'react';
+import {useAtom} from 'jotai'
+import {projectFilesAtom, projectFileToUIFile} from '@/components/projects/detail/project-atoms';
 
 export default function ProjectAnalysis({
   projectId, 
@@ -19,28 +21,23 @@ export default function ProjectAnalysis({
   onFileChange
 }: { 
   projectId: string, 
-  initialFiles?: ProjectFile[],
+  initialFiles?: UIFile[],  // Changed from ProjectFile[] to UIFile[]
   onFileChange?: (files: UIFile[]) => void 
 }) {
-  const [files, setFiles] = useState<UIFile[]>(() => initialFiles.map(file => ({
-    id: file.id,
-    originalName: file.filename,
-    fileSize: file.size,
-    fileType: file.type,
-    filePath: file.url,
-    uploadDate: file.createdAt,
-    // 根据isAnalyzed状态设置正确的状态
-    status: file.isAnalyzed ? 'analyzed' : 'uploaded' as FileStatus,
-    userId: '',
-    isAnalyzed: file.isAnalyzed || false,
-    // 从元数据中加载分析结果，如果有的话
-    analysisResult: file.metadata || ''
-  })));
+  // Use Jotai atom instead of local state
+  const [files, setFiles] = useAtom(projectFilesAtom);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedFileId, setExpandedFileId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const [filesState, getFilesAction] = useActionState(getFilesByProjectId, [])
+  
+  // 初始化 Jotai atom 状态
+  useEffect(() => {
+    if (initialFiles.length > 0) {
+      setFiles(initialFiles);
+    }
+  }, [initialFiles, setFiles]);
   
   // 加载项目文档列表
   const loadFiles = useCallback(() => {
@@ -65,12 +62,13 @@ export default function ProjectAnalysis({
     if (filesState && initialFiles.length === 0) {
       try {
         if (Array.isArray(filesState)) {
-          setFiles(filesState.map((file: any) => ({
+          const uiFiles = filesState.map((file: any) => ({
             ...file,
             status: file.isAnalyzed ? 'analyzed' : 'uploaded',
             // 确保分析结果数据存在，使用metadata字段作为分析结果
             analysisResult: file.metadata || file.analysisResult || ''
-          })));
+          }));
+          setFiles(uiFiles);
         } else {
           console.warn('文件数据返回格式不正确:', filesState);
           setFiles([]);
@@ -86,9 +84,8 @@ export default function ProjectAnalysis({
         setIsLoading(false);
       }
     }
-  }, [filesState, initialFiles.length]);
+  }, [filesState, initialFiles.length, setFiles]);
 
-  
   // 初始加载 - 只在没有初始文件时才从服务器加载
   useEffect(() => {
     // 如果已有初始文件数据，则不需要再加载

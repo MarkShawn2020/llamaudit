@@ -30,10 +30,11 @@ import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {useEffect, useState} from 'react';
 import {toast} from 'sonner';
+import {useAtom} from 'jotai';
+import {projectFilesAtom, tiobItemsAtom} from '@/components/projects/detail/project-atoms';
 
 interface Project extends BaseProject {
     fileCount?: number; // 兼容新命名
-    tiobItems?: TIOBInterface[];
 }
 
 export default function ProjectDetail({projectId}: { projectId: string }) {
@@ -43,13 +44,14 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [showProjectInfo, setShowProjectInfo] = useState(false);
-    // 添加独立的文件计数状态，初始值为项目的文件数量
-    const [fileCount, setFileCount] = useState<number>(0);
-    // 添加提取的三重一大事项
-    // const [tiobItems, setTiobItems] = useState<TIOBInterface[]>([]);
+    // 使用Jotai原子化状态
+    const [files] = useAtom(projectFilesAtom);
+    const [tiobItems] = useAtom(tiobItemsAtom);
+    // 文件计数基于原子状态
+    const fileCount = files.length;
     const router = useRouter();
 
-    logger.info('ProjectDetail', {projectId, project});
+    // logger.info('ProjectDetail', {projectId, project});
 
     useEffect(() => {
         // 加载项目详情
@@ -69,9 +71,7 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
             }
 
             setProject(data);
-            // 初始化文件计数 - 优先使用实际文件数组长度
-            const count = data.files?.length || 0;
-            setFileCount(count);
+            // 文件计数现在基于Jotai原子状态，不需要在此设置
 
         } catch (error) {
             console.error('加载项目详情失败:', error);
@@ -82,56 +82,17 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
         }
     };
 
-    // 从文件中提取三重一大事项
-    const extractTiobItems = (files: any[]): TIOBInterface[] => {
-        const allTiobItems: TIOBInterface[] = [];
-
-        files.forEach(file => {
-            if (file.isAnalyzed && file.metadata) {
-                try {
-                    // 从metadata字符串中提取JSON部分
-                    const metadataStr = file.metadata;
-                    const jsonMatch = metadataStr.match(/```json\n([\s\S]*)\n```/);
-                    // logger.info("jsonMatch: ", jsonMatch);
-
-                    if (jsonMatch && jsonMatch[1]) {
-                        const metadata = JSON.parse(jsonMatch[1]);
-                        logger.info("metadata: ", metadata);
-
-                        if (metadata.tiobItems && metadata.tiobItems.length > 0) {
-                            // 添加来源文件信息
-                            const itemsWithSource = metadata.tiobItems.map((item: TIOBInterface) => ({
-                                ...item, sourceFile: file.filename || file.originalName
-                            }));
-
-                            allTiobItems.push(...itemsWithSource);
-                        }
-                    }
-                } catch (e) {
-                    console.error('解析文件元数据失败:', file.filename || file.originalName, e);
-                }
-            }
-        });
-
-        return allTiobItems;
-    };
-
-    // 处理文件变化，更新文件计数和三重一大事项
-    const handleFilesChange = (files: any[]) => {
-        // 更新文件计数
-        setFileCount(files.length);
-
-        // 更新项目对象中的文件数
-        if (project) {
-            setProject({...project, fileCount: files.length});
+    // 更新项目对象中的文件数 - 使用Jotai状态
+    useEffect(() => {
+        if (project && fileCount !== project.fileCount) {
+            setProject({...project, fileCount});
         }
-    };
+    }, [fileCount, project]);
 
     const handleProjectUpdate = (updated: Partial<Project>) => {
         if (!project) return;
         setProject({...project, ...updated});
     };
-
 
     const handleDeleteProject = async () => {
         if (!project) return;
@@ -155,10 +116,7 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
         }
     };
 
-    const tiobItems = extractTiobItems(project?.files ?? [])
-
-    logger.info("project detail: ", {project, tiobItems});
-
+    // logger.info("project detail: ", {project, files, tiobItems});
 
     if (loading) {
         return (<div className="container mx-auto py-6">
@@ -235,9 +193,9 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
             </CardContent>
         </Card>
 
-        <ProjectAnalysis projectId={projectId} initialFiles={project.files} onFileChange={handleFilesChange}/>
+        <ProjectAnalysis projectId={projectId} initialFiles={files}/>
 
-        <TIOBComp project={{name: project.name}} tiobItems={tiobItems}/>
+        <TIOBComp project={{name: project.name}} />
 
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
             <AlertDialogContent>

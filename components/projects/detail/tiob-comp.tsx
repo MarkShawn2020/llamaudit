@@ -18,6 +18,8 @@ import { saveAs } from "file-saver";
 import { AlertTriangle, Download } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import { useAtom } from "jotai";
+import { tiobItemsAtom } from "@/components/projects/detail/project-atoms";
 
 // 扩展Project类型，兼容新旧字段名
 export interface TIOBInterface {
@@ -35,8 +37,10 @@ export function TIOBComp(props: {
   project: {
     name: string;
   } | null;
-  tiobItems: TIOBInterface[];
 }) {
+  // 使用Jotai原子化状态替换props传递
+  const [tiobItems] = useAtom(tiobItemsAtom);
+
   // 导出三重一大事项数据函数
   const exportTiobItems = (items: TIOBInterface[]) => {
     if (!items || items.length === 0) {
@@ -101,7 +105,7 @@ export function TIOBComp(props: {
             variant="outline"
             size="sm"
             className="gap-1"
-            onClick={() => exportTiobItems(props.tiobItems)}
+            onClick={() => exportTiobItems(tiobItems)}
           >
             <Download className="h-4 w-4" />
             导出数据
@@ -124,7 +128,7 @@ export function TIOBComp(props: {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {props.tiobItems.map((item: any, index: any) => (
+            {tiobItems.map((item: any, index: any) => (
               <TableRow key={index}>
                 <TableCell className="font-medium">
                   {item.categoryType === "majorProject"
@@ -150,7 +154,7 @@ export function TIOBComp(props: {
           </TableBody>
         </Table>
         <div className="mt-4 text-sm text-muted-foreground">
-          总计发现 {props.tiobItems.length} 项三重一大事项
+          总计发现 {tiobItems.length} 项三重一大事项
         </div>
       </CardContent>
     </Card>
