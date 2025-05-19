@@ -228,10 +228,10 @@ useEffect(() => {
         if (jsonData["会议数据"] && Array.isArray(jsonData["会议数据"])) {
           parsedData.meetingData = jsonData["会议数据"] as IMeeting[];
         }
-        // 检查是否包含basicInfo和tripleOneMajorItems
+        // 检查是否包含basicInfo和tiobItems
         else if (jsonData["basicInfo"]) {
           const meetingInfo = jsonData["basicInfo"];
-          const keyDecisionItems = (jsonData["tripleOneMajorItems"] || []) as IKeyDecisionItem[];
+          const keyDecisionItems = (jsonData["tiobItems"] || []) as IKeyDecisionItem[];
 
           // 处理会议数据
           if (Array.isArray(meetingInfo)) {
@@ -552,9 +552,9 @@ const startStreamingAnalysis = useCallback(async (fileIds: string[]) => {
           logger.info('成功从流式结果中提取会议数据');
           
           // 如果有分开的basicInfo和三重一大事项列表，需要组装
-          if (jsonData["basicInfo"] && jsonData["tripleOneMajorItems"]) {
+          if (jsonData["basicInfo"] && jsonData["tiobItems"]) {
             const meetingInfo = jsonData["basicInfo"];
-            const keyDecisionItems = (jsonData["tripleOneMajorItems"] || []) as IKeyDecisionItem[];
+            const keyDecisionItems = (jsonData["tiobItems"] || []) as IKeyDecisionItem[];
             
             if (Array.isArray(meetingInfo)) {
               // 返回了多个会议

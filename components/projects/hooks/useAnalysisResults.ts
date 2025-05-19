@@ -70,7 +70,7 @@ export function useAnalysisResults(fileIds: string[], updateFilesStatus: (fileId
                             conclusion: `通过${categoryNameMappings[category]}事项`,
                             summary: `讨论并批准${categoryNameMappings[category]}事项`,
                             documentName: `${categoryNameMappings[category]}纪要`,
-                            isTripleOneMeeting: true,
+                            isTiobMeeting: true,
                             keyDecisionItems: items.map((item: AnalysisResult) => ({
                                 categoryType: categoryTypeMappings[category] || 'other',
                                 details: item.eventDetails || '',
