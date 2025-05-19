@@ -21,7 +21,6 @@ import * as XLSX from "xlsx";
 import { useAtom } from "jotai";
 import { tiobItemsAtom } from "@/components/projects/detail/project-atoms";
 
-// 扩展Project类型，兼容新旧字段名
 export interface TIOBInterface {
   categoryType: string;
   details: string;

@@ -20,8 +20,6 @@
    - meetingDate
    - documentNo
    - meetingTopic
-   - documentName
-   - istiobMeeting
 
 2. 三重一大具体事项:
    - categoryType: majorDecision/personnelAppointment/majorProject/largeAmount
@@ -95,8 +93,6 @@ A公司董事会会议纪要
     "meetingDate": "2025-03-15",
     "documentNo": "A-2025-003",
     "meetingTopic": "战略重组计划审议",
-    "documentName": "A公司董事会会议纪要",
-    "istiobMeeting": true
   },
   "tiobItems": [
     {
@@ -158,8 +154,6 @@ A公司董事会会议纪要
     "meetingDate": "2025-02-08",
     "documentNo": "SOE-HR-2025-042",
     "meetingTopic": "关键岗位任命",
-    "documentName": "国有企业人事委员会会议纪要",
-    "istiobMeeting": true
   },
   "tiobItems": [
     {
@@ -238,8 +232,6 @@ A公司董事会会议纪要
     "meetingDate": "2025-04-23",
     "documentNo": "IIC-2025-007",
     "meetingTopic": "东南区域数据中心建设",
-    "documentName": "基础设施投资委员会会议",
-    "istiobMeeting": true
   },
   "tiobItems": [
     {
@@ -297,8 +289,6 @@ A公司董事会会议纪要
     "meetingDate": "2025-05-05",
     "documentNo": "未提及",
     "meetingTopic": "部门周例会",
-    "documentName": "部门周例会",
-    "istiobMeeting": false
   },
   "tiobItems": []
 }
