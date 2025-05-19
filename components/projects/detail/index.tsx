@@ -48,7 +48,7 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
     // 添加独立的文件计数状态，初始值为项目的文件数量
     const [fileCount, setFileCount] = useState<number>(0);
     // 添加提取的三重一大事项
-    const [tripleOneMajorItems, setTripleOneMajorItems] = useState<TIOBInterface[]>([]);
+    const [tiobItems, setTiobItems] = useState<TIOBInterface[]>([]);
     const router = useRouter();
 
     logger.info('ProjectDetail', {projectId, project});
@@ -77,7 +77,7 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
 
             // 解析所有文件的元数据，提取三重一大事项
             if (data.files && data.files.length > 0) {
-                const allTripleOneItems: TIOBInterface[] = [];
+                const allTiobItems: TIOBInterface[] = [];
 
                 data.files.forEach(file => {
                     if (file.isAnalyzed && file.metadata) {
@@ -95,7 +95,7 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
                                         ...item, sourceFile: file.filename
                                     }));
 
-                                    allTripleOneItems.push(...itemsWithSource);
+                                    allTiobItems.push(...itemsWithSource);
                                 }
                             }
                         } catch (e) {
@@ -104,7 +104,7 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
                     }
                 });
 
-                setTripleOneMajorItems(allTripleOneItems);
+                setTiobItems(allTiobItems);
             }
         } catch (error) {
             console.error('加载项目详情失败:', error);
@@ -278,8 +278,8 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
             }}
         />
 
-        <TIOBComp onClick={() => exportTripleOneMajorItems(tripleOneMajorItems)}
-                  tripleOneMajorItems={tripleOneMajorItems}/>
+        <TIOBComp onClick={() => exportTripleOneMajorItems(tiobItems)}
+                  tripleOneMajorItems={tiobItems}/>
 
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
             <AlertDialogContent>
