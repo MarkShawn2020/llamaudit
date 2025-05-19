@@ -1,6 +1,6 @@
 import { getUser } from '@/lib/db/queries';
 import { redirect } from 'next/navigation';
-import ProjectDetail from '@/components/projects/ProjectDetail';
+import ProjectDetail from '@/components/projects/detail';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

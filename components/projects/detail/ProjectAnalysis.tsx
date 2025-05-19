@@ -1,6 +1,6 @@
 'use client';
 
-import {FileCard} from "@/components/projects/file-card";
+import {FileCard} from "@/components/projects/detail/file-card";
 import {AnalysisEvent} from "@/components/projects/utils/analysis-event";
 import {FileStatus} from "@/components/projects/utils/file-status";
 import {UIFile} from "@/components/projects/utils/ui-file";
