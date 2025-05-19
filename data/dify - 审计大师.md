@@ -21,7 +21,7 @@
    - documentNo
    - meetingTopic
    - documentName
-   - isTiopMeeting
+   - istiobMeeting
 
 2. 三重一大具体事项:
    - categoryType: majorDecision/personnelAppointment/majorProject/largeAmount
@@ -96,9 +96,9 @@ A公司董事会会议纪要
     "documentNo": "A-2025-003",
     "meetingTopic": "战略重组计划审议",
     "documentName": "A公司董事会会议纪要",
-    "isTiopMeeting": true
+    "istiobMeeting": true
   },
-  "tiopItems": [
+  "tiobItems": [
     {
       "categoryType": "majorDecision",
       "details": "将北方分部和南方分部的研发部门合并",
@@ -159,9 +159,9 @@ A公司董事会会议纪要
     "documentNo": "SOE-HR-2025-042",
     "meetingTopic": "关键岗位任命",
     "documentName": "国有企业人事委员会会议纪要",
-    "isTiopMeeting": true
+    "istiobMeeting": true
   },
-  "tiopItems": [
+  "tiobItems": [
     {
       "categoryType": "personnelAppointment",
       "details": "任命新任首席技术官",
@@ -239,9 +239,9 @@ A公司董事会会议纪要
     "documentNo": "IIC-2025-007",
     "meetingTopic": "东南区域数据中心建设",
     "documentName": "基础设施投资委员会会议",
-    "isTiopMeeting": true
+    "istiobMeeting": true
   },
-  "tiopItems": [
+  "tiobItems": [
     {
       "categoryType": "majorProject",
       "details": "在东南区域建设新数据中心",
@@ -298,9 +298,9 @@ A公司董事会会议纪要
     "documentNo": "未提及",
     "meetingTopic": "部门周例会",
     "documentName": "部门周例会",
-    "isTiopMeeting": false
+    "istiobMeeting": false
   },
-  "tiopItems": []
+  "tiobItems": []
 }
 ```
 

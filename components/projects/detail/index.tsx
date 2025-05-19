@@ -92,9 +92,11 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
                     // 从metadata字符串中提取JSON部分
                     const metadataStr = file.metadata;
                     const jsonMatch = metadataStr.match(/```json\n([\s\S]*)\n```/);
+                    // logger.info("jsonMatch: ", jsonMatch);
 
                     if (jsonMatch && jsonMatch[1]) {
                         const metadata = JSON.parse(jsonMatch[1]);
+                        logger.info("metadata: ", metadata);
 
                         if (metadata.tiobItems && metadata.tiobItems.length > 0) {
                             // 添加来源文件信息
@@ -154,6 +156,8 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
     };
 
     const tiobItems = extractTiobItems(project?.files ?? [])
+
+    logger.info("project detail: ", {project, tiobItems});
 
 
     if (loading) {
