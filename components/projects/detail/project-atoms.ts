@@ -1,7 +1,6 @@
 import { atom } from "jotai";
 import { UIFile } from "@/components/projects/utils/ui-file";
 import { ProjectFile } from '@/lib/api/project-api';
-import { extractJsonFromMarkdown } from '@/lib/utils/streaming-json-parser';
 
 // Atom to store the project files
 export const projectFilesAtom = atom<UIFile[]>([]);
@@ -30,20 +29,21 @@ export const tiobItemsAtom = atom((get) => {
   for (const file of files) {
     if (file.isAnalyzed && file.analysisResult) {
       try {
-        // Use our streaming JSON parser utility
-        // It works for both complete and streaming data
+        // Extract JSON from markdown code blocks (handles both complete and streaming SSE results)
+        const jsonMatch = file.analysisResult.match(/```json\n([\s\S]*?)(?:\n```|$)/);
         
-        // Extract metadata from the analysis result
-        const metadata = extractJsonFromMarkdown(file.analysisResult);
-        
-        if (metadata && metadata.tiobItems && metadata.tiobItems.length > 0) {
-          // Add source file information to each tiob item
-          const itemsWithSource = metadata.tiobItems.map((item: any) => ({
-            ...item,
-            sourceFile: file.originalName
-          }));
+        if (jsonMatch && jsonMatch[1]) {
+          const metadata = JSON.parse(jsonMatch[1]);
+          
+          if (metadata.tiobItems && metadata.tiobItems.length > 0) {
+            // Add source file information
+            const itemsWithSource = metadata.tiobItems.map((item: any) => ({
+              ...item,
+              sourceFile: file.originalName
+            }));
 
-          tiobItems.push(...itemsWithSource);
+            tiobItems.push(...itemsWithSource);
+          }
         }
       } catch (e) {
         console.error('Failed to parse file metadata:', file.originalName, e);
