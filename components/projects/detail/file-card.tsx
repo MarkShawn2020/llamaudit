@@ -24,7 +24,7 @@ export function FileCard({
     onRemove: (file: UIFile) => void;
     expanded: boolean;
 }) {
-    const canAnalyze = file.status === 'uploaded' || file.status === 'analysis_failed';
+    const canAnalyze = file.status === 'uploaded' || file.status === 'analysis_failed' || file.status === 'analyzed';
     const isExpanded = expanded || file.status === 'analyzing' || file.status === 'analyzed';
 
     return (
@@ -104,7 +104,7 @@ export function FileCard({
                         onClick={() => onAnalyze(file)}
                     >
                         <RefreshCw className="h-4 w-4 mr-1"/>
-                        分析
+                        {file.status === 'analyzed' ? '重新分析' : '分析'}
                     </Button>
                 )}
             </CardFooter>
