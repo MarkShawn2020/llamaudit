@@ -1,7 +1,7 @@
 'use client';
 
+import {FileStatus} from "@/components/projects/utils/file-status";
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { FileStatus } from '../types';
 import { streamAnalyzeDifyFiles, cancelDifyAnalysis, DifySSEMessage } from '@/lib/actions/dify-streaming-actions';
 import { logger } from '@/lib/logger';
 import { IKeyDecisionItem, IMeeting } from '@/types/analysis';
@@ -137,7 +137,7 @@ export function useStreamingAnalysis(
         // 关闭连接
         closeEventSource(fileId);
         // 更新文件状态
-        updateFilesStatus([fileId], 'error');
+        updateFilesStatus([fileId], 'analysis_failed');
       }
     } else {
       // 取消所有分析
@@ -179,7 +179,7 @@ export function useStreamingAnalysis(
       closeEventSource();
       // 更新所有文件状态
       const fileIds = Array.from(fileTasks.keys());
-      updateFilesStatus(fileIds, 'error');
+      updateFilesStatus(fileIds, 'analysis_failed');
     }
     
     // 重置全局分析状态
@@ -311,7 +311,7 @@ useEffect(() => {
             }
             
             // 更新文件状态
-            updateFilesStatus([fileId], 'error');
+            updateFilesStatus([fileId], 'analysis_failed');
             shouldUpdateGlobalState = true;
           } 
           else if (message.event === 'done') {
@@ -511,7 +511,7 @@ const startStreamingAnalysis = useCallback(async (fileIds: string[]) => {
             return newTasks;
           });
           
-          updateFilesStatus([fileId], 'error');
+          updateFilesStatus([fileId], 'analysis_failed');
         };
         
         logger.info('文件SSE连接已建立', { fileId });
@@ -529,14 +529,14 @@ const startStreamingAnalysis = useCallback(async (fileIds: string[]) => {
           return newTasks;
         });
         
-        updateFilesStatus([fileId], 'error');
+        updateFilesStatus([fileId], 'analysis_failed');
       }
     }
   } catch (error) {
     logger.error('启动批量流式分析时出错', { error });
     setError(error instanceof Error ? error.message : '启动分析失败');
     setIsAnalyzing(false);
-    updateFilesStatus(fileIds, 'error');
+    updateFilesStatus(fileIds, 'analysis_failed');
   }
 }, [updateFilesStatus, createMessageHandler, setExpandedFileIds]);
   
