@@ -51,6 +51,8 @@ export function TIOBComp(props: {
     try {
       // 格式化导出数据
       const exportData = items.map((item) => ({
+        来源文件: item.sourceFile || "未知",
+        日期: item.meetingDate || "",
         类型:
           item.categoryType === "majorProject"
             ? "重大项目"
@@ -59,13 +61,11 @@ export function TIOBComp(props: {
             : item.categoryType === "majorDecision"
             ? "重大决策"
             : item.categoryType,
-        日期: item.meetingDate || "",
         事项内容: item.details,
         金额: item.amount,
         责任部门: item.departments,
         相关人员: item.personnel,
         决策依据: item.decisionBasis,
-        来源文件: item.sourceFile || "未知",
       }));
 
       // 创建工作簿
@@ -120,29 +120,35 @@ export function TIOBComp(props: {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>类型</TableHead>
+              <TableHead>原文件名</TableHead>
               <TableHead>日期</TableHead>
+              <TableHead>类型</TableHead>
               <TableHead>事项内容</TableHead>
               <TableHead>金额</TableHead>
               <TableHead>责任部门</TableHead>
               <TableHead>相关人员</TableHead>
               <TableHead>决策依据</TableHead>
-              <TableHead>原文件名</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {tiobItems.map((item: any, index: any) => (
               <TableRow key={index}>
-                <TableCell className="font-medium">
-                  {item.categoryType === "majorProject"
-                    ? "重大项目"
-                    : item.categoryType === "majorFund"
-                    ? "大额资金"
-                    : item.categoryType === "majorDecision"
-                    ? "重大决策"
-                    : item.categoryType}
-                </TableCell>
+                <TableCell>{item.sourceFile || "未知"}</TableCell>
                 <TableCell>{item.meetingDate || ""}</TableCell>
+                <TableCell className="font-medium">
+                  {
+                    item.categoryType === "majorDecision"
+                    ? "重大决策"
+                    :
+                    item.categoryType === "personnelAppointment"
+                    ? "重要干部任免"
+                    :
+                  item.categoryType === "majorProject"
+                    ? "重大项目"
+                    : item.categoryType === "largeAmount"
+                    ? "大额资金"
+                    :  item.categoryType}
+                </TableCell>
                 <TableCell>{item.details}</TableCell>
                 <TableCell>{item.amount}</TableCell>
                 <TableCell>{item.departments}</TableCell>
@@ -153,7 +159,6 @@ export function TIOBComp(props: {
                   {item.personnel}
                 </TableCell>
                 <TableCell>{item.decisionBasis}</TableCell>
-                <TableCell>{item.sourceFile || "未知"}</TableCell>
               </TableRow>
             ))}
           </TableBody>
