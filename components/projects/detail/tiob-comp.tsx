@@ -30,6 +30,7 @@ export interface TIOBInterface {
   decisionBasis: string;
   originalText: string;
   sourceFile?: string; // 添加来源文件名
+  meetingDate?: string; // 添加会议日期
 }
 
 export function TIOBComp(props: {
@@ -58,6 +59,7 @@ export function TIOBComp(props: {
             : item.categoryType === "majorDecision"
             ? "重大决策"
             : item.categoryType,
+        日期: item.meetingDate || "",
         事项内容: item.details,
         金额: item.amount,
         责任部门: item.departments,
@@ -119,6 +121,7 @@ export function TIOBComp(props: {
           <TableHeader>
             <TableRow>
               <TableHead>类型</TableHead>
+              <TableHead>日期</TableHead>
               <TableHead>事项内容</TableHead>
               <TableHead>金额</TableHead>
               <TableHead>责任部门</TableHead>
@@ -139,6 +142,7 @@ export function TIOBComp(props: {
                     ? "重大决策"
                     : item.categoryType}
                 </TableCell>
+                <TableCell>{item.meetingDate || ""}</TableCell>
                 <TableCell>{item.details}</TableCell>
                 <TableCell>{item.amount}</TableCell>
                 <TableCell>{item.departments}</TableCell>

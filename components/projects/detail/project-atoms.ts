@@ -2,6 +2,7 @@ import { atom } from "jotai";
 import { UIFile } from "@/components/projects/utils/ui-file";
 import { ProjectFile } from '@/lib/api/project-api';
 import { jsonrepair } from 'jsonrepair';
+import { TIOBInterface } from "./tiob-comp";
 
 // Atom to store the project files
 export const projectFilesAtom = atom<UIFile[]>([]);
@@ -41,10 +42,14 @@ export const tiobItemsAtom = atom((get) => {
           const metadata = JSON.parse(repairedJson);
           
           if (metadata.tiobItems && metadata.tiobItems.length > 0) {
-            // Add source file information
+            // 获取会议日期
+            const meetingDate = metadata.basicInfo?.meetingDate || '';
+            
+            // Add source file information and meeting date
             const itemsWithSource = metadata.tiobItems.map((item: any) => ({
               ...item,
-              sourceFile: file.originalName
+              sourceFile: file.originalName,
+              meetingDate: meetingDate
             }));
 
             tiobItems.push(...itemsWithSource);
