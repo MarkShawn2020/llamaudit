@@ -8,6 +8,7 @@ import {ShieldAlertIcon} from 'lucide-react';
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {Logo} from './logo';
+import packageJson from '@/package.json';
 
 // 管理员专用菜单项
 const adminNavItems = [
@@ -23,6 +24,7 @@ export function GlobalNavbar() {
   const pathname = usePathname();
   const isAdmin = user?.role === 'admin';
 
+  const version = packageJson.version;
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm  max-w-7xl mx-auto w-full border-0 border-b border-gray-200">
@@ -31,7 +33,7 @@ export function GlobalNavbar() {
           <Link href="/" className="flex items-center gap-2 mr-6">
             <Logo/>
             <span className="font-bold text-xl">智审大师</span>
-            <span className="ml-2 text-xs px-1.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20 font-medium">0.2.0(α)</span>
+            <span className="ml-2 text-xs px-1.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20 font-medium">{version}(α)</span>
           </Link>
           
           <nav className="hidden md:flex items-center space-x-4 lg:space-x-6 ml-6">

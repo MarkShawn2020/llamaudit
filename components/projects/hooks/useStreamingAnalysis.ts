@@ -1,7 +1,7 @@
 'use client';
 
+import {FileStatus} from "@/components/projects/utils/file-status";
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { FileStatus } from '../types';
 import { streamAnalyzeDifyFiles, cancelDifyAnalysis, DifySSEMessage } from '@/lib/actions/dify-streaming-actions';
 import { logger } from '@/lib/logger';
 import { IKeyDecisionItem, IMeeting } from '@/types/analysis';
@@ -137,7 +137,7 @@ export function useStreamingAnalysis(
         // 关闭连接
         closeEventSource(fileId);
         // 更新文件状态
-        updateFilesStatus([fileId], 'error');
+        updateFilesStatus([fileId], 'analysis_failed');
       }
     } else {
       // 取消所有分析
@@ -179,7 +179,7 @@ export function useStreamingAnalysis(
       closeEventSource();
       // 更新所有文件状态
       const fileIds = Array.from(fileTasks.keys());
-      updateFilesStatus(fileIds, 'error');
+      updateFilesStatus(fileIds, 'analysis_failed');
     }
     
     // 重置全局分析状态
@@ -228,10 +228,10 @@ useEffect(() => {
         if (jsonData["会议数据"] && Array.isArray(jsonData["会议数据"])) {
           parsedData.meetingData = jsonData["会议数据"] as IMeeting[];
         }
-        // 检查是否包含basicInfo和tripleOneMajorItems
+        // 检查是否包含basicInfo和tiobItems
         else if (jsonData["basicInfo"]) {
           const meetingInfo = jsonData["basicInfo"];
-          const keyDecisionItems = (jsonData["tripleOneMajorItems"] || []) as IKeyDecisionItem[];
+          const keyDecisionItems = (jsonData["tiobItems"] || []) as IKeyDecisionItem[];
 
           // 处理会议数据
           if (Array.isArray(meetingInfo)) {
@@ -311,7 +311,7 @@ useEffect(() => {
             }
             
             // 更新文件状态
-            updateFilesStatus([fileId], 'error');
+            updateFilesStatus([fileId], 'analysis_failed');
             shouldUpdateGlobalState = true;
           } 
           else if (message.event === 'done') {
@@ -511,7 +511,7 @@ const startStreamingAnalysis = useCallback(async (fileIds: string[]) => {
             return newTasks;
           });
           
-          updateFilesStatus([fileId], 'error');
+          updateFilesStatus([fileId], 'analysis_failed');
         };
         
         logger.info('文件SSE连接已建立', { fileId });
@@ -529,14 +529,14 @@ const startStreamingAnalysis = useCallback(async (fileIds: string[]) => {
           return newTasks;
         });
         
-        updateFilesStatus([fileId], 'error');
+        updateFilesStatus([fileId], 'analysis_failed');
       }
     }
   } catch (error) {
     logger.error('启动批量流式分析时出错', { error });
     setError(error instanceof Error ? error.message : '启动分析失败');
     setIsAnalyzing(false);
-    updateFilesStatus(fileIds, 'error');
+    updateFilesStatus(fileIds, 'analysis_failed');
   }
 }, [updateFilesStatus, createMessageHandler, setExpandedFileIds]);
   
@@ -552,9 +552,9 @@ const startStreamingAnalysis = useCallback(async (fileIds: string[]) => {
           logger.info('成功从流式结果中提取会议数据');
           
           // 如果有分开的basicInfo和三重一大事项列表，需要组装
-          if (jsonData["basicInfo"] && jsonData["tripleOneMajorItems"]) {
+          if (jsonData["basicInfo"] && jsonData["tiobItems"]) {
             const meetingInfo = jsonData["basicInfo"];
-            const keyDecisionItems = (jsonData["tripleOneMajorItems"] || []) as IKeyDecisionItem[];
+            const keyDecisionItems = (jsonData["tiobItems"] || []) as IKeyDecisionItem[];
             
             if (Array.isArray(meetingInfo)) {
               // 返回了多个会议

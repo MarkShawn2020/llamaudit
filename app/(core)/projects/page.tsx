@@ -1,6 +1,6 @@
 import { getUser } from '@/lib/db/queries';
 import { redirect } from 'next/navigation';
-import ProjectsList from '@/components/projects/ProjectsList';
+import ProjectsList from '@/components/projects/list/ProjectsList';
 
 export const metadata = {
   title: '项目管理 - Llamaudit',

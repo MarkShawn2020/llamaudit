@@ -15,6 +15,6 @@ export interface IMeeting {
     conclusion: string;
     summary: string;
     documentName: string;
-    isTripleOneMeeting: boolean;
+    isTiobMeeting: boolean;
     keyDecisionItems: IKeyDecisionItem[];
 }
