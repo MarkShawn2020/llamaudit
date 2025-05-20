@@ -2,9 +2,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Table,
@@ -15,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { saveAs } from "file-saver";
-import { AlertTriangle, Download } from "lucide-react";
+import { Download } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { useAtom } from "jotai";
@@ -95,47 +92,41 @@ export function TIOBComp(props: {
   };
 
   return (
-    <Card className="mb-6">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
-            <CardTitle className="text-lg">三重一大事项分析</CardTitle>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1"
-            onClick={() => exportTiobItems(tiobItems)}
-          >
-            <Download className="h-4 w-4" />
-            导出数据
-          </Button>
-        </div>
-        <CardDescription>
-          从项目文档中提取的重大决策、项目安排、资金使用等事项
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Table>
+    <div className="flex flex-col space-y-4 w-full">
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1"
+          onClick={() => exportTiobItems(tiobItems)}
+        >
+          <Download className="h-4 w-4" />
+          导出数据
+        </Button>
+      </div>
+
+      <div className="overflow-x-auto">
+        <Table className="w-full">
           <TableHeader>
             <TableRow>
-              <TableHead>原文件名</TableHead>
-              <TableHead>日期</TableHead>
-              <TableHead>类型</TableHead>
-              <TableHead>事项内容</TableHead>
-              <TableHead>金额</TableHead>
-              <TableHead>责任部门</TableHead>
-              <TableHead>相关人员</TableHead>
-              <TableHead>决策依据</TableHead>
+              <TableHead className="whitespace-nowrap">原文件名</TableHead>
+              <TableHead className="whitespace-nowrap">日期</TableHead>
+              <TableHead className="whitespace-nowrap">类型</TableHead>
+              <TableHead className="min-w-[200px]">事项内容</TableHead>
+              <TableHead className="whitespace-nowrap">金额</TableHead>
+              <TableHead className="whitespace-nowrap">责任部门</TableHead>
+              <TableHead className="whitespace-nowrap">相关人员</TableHead>
+              <TableHead className="min-w-[200px]">决策依据</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {tiobItems.map((item: any, index: any) => (
               <TableRow key={index}>
-                <TableCell>{item.sourceFile || "未知"}</TableCell>
-                <TableCell>{item.meetingDate || ""}</TableCell>
-                <TableCell className="font-medium">
+                <TableCell className="max-w-[150px] truncate" title={item.sourceFile || "未知"}>
+                  {item.sourceFile || "未知"}
+                </TableCell>
+                <TableCell className="whitespace-nowrap">{item.meetingDate || ""}</TableCell>
+                <TableCell className="font-medium whitespace-nowrap">
                   {
                     item.categoryType === "majorDecision"
                     ? "重大决策"
@@ -149,24 +140,26 @@ export function TIOBComp(props: {
                     ? "大额资金"
                     :  item.categoryType}
                 </TableCell>
-                <TableCell>{item.details}</TableCell>
-                <TableCell>{item.amount}</TableCell>
-                <TableCell>{item.departments}</TableCell>
+                <TableCell className="max-w-[250px]">{item.details}</TableCell>
+                <TableCell className="whitespace-nowrap">{item.amount}</TableCell>
+                <TableCell className="max-w-[150px] truncate" title={item.departments}>
+                  {item.departments}
+                </TableCell>
                 <TableCell
-                  className="max-w-[200px] truncate"
+                  className="max-w-[150px] truncate"
                   title={item.personnel}
                 >
                   {item.personnel}
                 </TableCell>
-                <TableCell>{item.decisionBasis}</TableCell>
+                <TableCell className="max-w-[250px]">{item.decisionBasis}</TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
-        <div className="mt-4 text-sm text-muted-foreground">
-          总计发现 {tiobItems.length} 项三重一大事项
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+      <div className="text-sm text-muted-foreground">
+        总计发现 {tiobItems.length} 项三重一大事项
+      </div>
+    </div>
   );
 }

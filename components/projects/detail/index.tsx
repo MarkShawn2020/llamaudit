@@ -195,8 +195,7 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
 
         <ProjectAnalysis projectId={projectId} initialFiles={files}/>
 
-        <TIOBComp project={{name: project.name}} />
-
+        {/* 删除项目 */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
             <AlertDialogContent>
                 <AlertDialogHeader>

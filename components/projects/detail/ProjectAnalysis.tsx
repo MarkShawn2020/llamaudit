@@ -10,10 +10,19 @@ import {deleteProjectFile, saveFileAnalysisResult} from '@/lib/actions/file-acti
 import {ProjectFile} from '@/lib/api/project-api';
 import {getFilesByProjectId} from '@/lib/db/documents';
 import {logger} from '@/lib/logger';
-import {RefreshCw, Upload} from 'lucide-react';
+import {RefreshCw, Upload, BarChart2} from 'lucide-react';
 import {startTransition, useActionState, useCallback, useEffect, useRef, useState} from 'react';
 import {useAtom} from 'jotai'
-import {projectFilesAtom, projectFileToUIFile} from '@/components/projects/detail/project-atoms';
+import {projectFilesAtom, projectFileToUIFile, tiobItemsAtom} from '@/components/projects/detail/project-atoms';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {TIOBComp} from "@/components/projects/detail/tiob-comp";
 
 export default function ProjectAnalysis({
   projectId, 
@@ -31,6 +40,7 @@ export default function ProjectAnalysis({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const [filesState, getFilesAction] = useActionState(getFilesByProjectId, [])
+  const [tiobDialogOpen, setTiobDialogOpen] = useState(false);
   
   // 初始化 Jotai atom 状态
   useEffect(() => {
@@ -404,6 +414,26 @@ export default function ProjectAnalysis({
         <h3 className="text-lg font-medium">项目文档分析</h3>
         
         <div className="flex space-x-2">
+          <Dialog open={tiobDialogOpen} onOpenChange={setTiobDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <BarChart2 className="h-4 w-4 mr-2" />
+                三重一大事项
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="!max-w-[90vw] overflow-hidden">
+              <DialogHeader>
+                <DialogTitle>三重一大事项分析</DialogTitle>
+                <DialogDescription>
+                  从项目文档中提取的重大决策、项目安排、资金使用等事项
+                </DialogDescription>
+              </DialogHeader>
+              <div className="overflow-auto max-h-[80vh]">
+                <TIOBComp project={{name: projectId}} />
+              </div>
+            </DialogContent>
+          </Dialog>
+          
           <Button 
             variant="outline" 
             onClick={() => {
