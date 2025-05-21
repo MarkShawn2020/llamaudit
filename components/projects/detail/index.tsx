@@ -31,7 +31,10 @@ import {useRouter} from 'next/navigation';
 import {useEffect, useState} from 'react';
 import {toast} from 'sonner';
 import {useAtom} from 'jotai';
-import {projectFilesAtom, tiobItemsAtom} from '@/components/projects/detail/project-atoms';
+import {
+  projectFilesAtomFamily, 
+  projectTiobItemsAtomFamily
+} from '@/components/projects/detail/project-atoms';
 
 interface Project extends BaseProject {
     fileCount?: number; // 兼容新命名
@@ -44,9 +47,9 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [showProjectInfo, setShowProjectInfo] = useState(false);
-    // 使用Jotai原子化状态
-    const [files] = useAtom(projectFilesAtom);
-    const [tiobItems] = useAtom(tiobItemsAtom);
+    // 使用项目特定的原子化状态
+    const [files] = useAtom(projectFilesAtomFamily(projectId));
+    const [tiobItems] = useAtom(projectTiobItemsAtomFamily(projectId));
     // 文件计数基于原子状态
     const fileCount = files.length;
     const router = useRouter();

@@ -13,7 +13,13 @@ import {logger} from '@/lib/logger';
 import {RefreshCw, Upload, BarChart2} from 'lucide-react';
 import {startTransition, useActionState, useCallback, useEffect, useRef, useState} from 'react';
 import {useAtom} from 'jotai'
-import {projectFilesAtom, projectFileToUIFile, tiobItemsAtom} from '@/components/projects/detail/project-atoms';
+import {
+  projectFilesAtom, 
+  projectFilesAtomFamily, 
+  projectFileToUIFile, 
+  tiobItemsAtom,
+  projectTiobItemsAtomFamily
+} from '@/components/projects/detail/project-atoms';
 import {
   Dialog,
   DialogContent,
@@ -33,8 +39,8 @@ export default function ProjectAnalysis({
   initialFiles?: UIFile[],  // Changed from ProjectFile[] to UIFile[]
   onFileChange?: (files: UIFile[]) => void 
 }) {
-  // Use Jotai atom instead of local state
-  const [files, setFiles] = useAtom(projectFilesAtom);
+  // Use project-specific atom instead of global atom
+  const [files, setFiles] = useAtom(projectFilesAtomFamily(projectId));
   const [isLoading, setIsLoading] = useState(true);
   const [expandedFileId, setExpandedFileId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);

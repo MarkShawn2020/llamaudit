@@ -16,7 +16,7 @@ import { Download } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { useAtom } from "jotai";
-import { tiobItemsAtom } from "@/components/projects/detail/project-atoms";
+import { tiobItemsAtom, projectTiobItemsAtomFamily } from "@/components/projects/detail/project-atoms";
 
 export interface TIOBInterface {
   categoryType: string;
@@ -35,8 +35,12 @@ export function TIOBComp(props: {
     name: string;
   } | null;
 }) {
-  // 使用Jotai原子化状态替换props传递
-  const [tiobItems] = useAtom(tiobItemsAtom);
+  // 使用项目特定的原子化状态
+  const [tiobItems] = useAtom(
+    props.project?.name 
+      ? projectTiobItemsAtomFamily(props.project.name)
+      : tiobItemsAtom // 如果没有项目ID，则使用全局原子状态作为备选
+  );
 
   // 导出三重一大事项数据函数
   const exportTiobItems = (items: TIOBInterface[]) => {
