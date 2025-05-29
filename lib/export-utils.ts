@@ -8,6 +8,18 @@ import { IMeeting, IKeyDecisionItem } from '@/types/analysis';
  */
 export type ExportFormat = 'csv' | 'xlsx';
 
+export type ItemCategoryType = 'majorDecision' | 'personnelAppointment' | 'majorProject' | 'largeAmount';
+export const itemCategoryMap: Record<ItemCategoryType, string> = {
+    majorDecision: '重大问题决策',
+    personnelAppointment: '重要干部任免',
+    majorProject: '重大项目投资安排',
+    largeAmount: '大额资金使用'
+}
+
+export const getItemCategoryName = (categoryType: string): string => {
+    return itemCategoryMap[categoryType as ItemCategoryType] ?? '其他';
+}
+
 /**
  * 获取导出文件名
  * @param format 文件格式
@@ -51,14 +63,7 @@ function convertMeetingsToTableData(meetings: IMeeting[]): Record<string, any>[]
 
     // 如果有决策项，为每个决策项创建一行
     meeting.keyDecisionItems.forEach((item, index) => {
-      // 根据类型定义中文类别名称
-      let categoryName = '其他';
-      switch (item.categoryType) {
-        case 'majorDecision': categoryName = '重大问题决策'; break;
-        case 'personnelAppointment': categoryName = '重要干部任免'; break;
-        case 'majorProject': categoryName = '重大项目投资安排'; break;
-        case 'largeAmount': categoryName = '大额资金使用'; break;
-      }
+      const categoryName = getItemCategoryName(item.categoryType);
 
       rows.push({
         '会议日期': meeting.meetingDate || '-',

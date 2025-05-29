@@ -1,25 +1,26 @@
 'use client';
 
 import {FileCard} from "@/components/projects/detail/file-card";
+import {projectFilesAtomFamily} from '@/components/projects/detail/project-atoms';
+import {TIOBComp} from "@/components/projects/detail/tiob-comp";
 import {AnalysisEvent} from "@/components/projects/utils/analysis-event";
-import {FileStatus} from "@/components/projects/utils/file-status";
 import {UIFile} from "@/components/projects/utils/ui-file";
 import {Button} from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {useToast} from '@/components/ui/use-toast';
 import {deleteProjectFile, saveFileAnalysisResult} from '@/lib/actions/file-actions';
-import {ProjectFile} from '@/lib/api/project-api';
 import {getFilesByProjectId} from '@/lib/db/documents';
 import {logger} from '@/lib/logger';
-import {RefreshCw, Upload, BarChart2} from 'lucide-react';
-import {startTransition, useActionState, useCallback, useEffect, useRef, useState} from 'react';
 import {useAtom} from 'jotai'
-import {
-    projectFilesAtom, projectFilesAtomFamily, projectFileToUIFile, tiobItemsAtom, projectTiobItemsAtomFamily
-} from '@/components/projects/detail/project-atoms';
-import {
-    Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
-} from "@/components/ui/dialog";
-import {TIOBComp} from "@/components/projects/detail/tiob-comp";
+import {BarChart2, RefreshCw, Upload} from 'lucide-react';
+import {startTransition, useActionState, useCallback, useEffect, useRef, useState} from 'react';
 
 export default function ProjectAnalysis({
                                             projectId, initialFiles = [], onFileChange
