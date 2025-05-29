@@ -35,9 +35,9 @@ export interface GroupedResults {
   majorDecisions: AnalysisResult[];
   // 重要干部任免相关分析结果
   personnelAppointments: AnalysisResult[];
-  // 重大项目投资安排相关分析结果
+  // 重大项目投资安排投资安排相关分析结果
   majorProjects: AnalysisResult[];
-  // 大额资金使用相关分析结果
+  // 大额资金使用使用相关分析结果
   largeAmounts: AnalysisResult[];
 }
 

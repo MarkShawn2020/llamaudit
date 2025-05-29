@@ -212,9 +212,9 @@ index 9dafb89..0000000
 -    try {
 -      // 格式化导出数据
 -      const exportData = items.map(item => ({
--        '类型': item.categoryType === 'majorProject' ? '重大项目' :
--               item.categoryType === 'majorFund' ? '大额资金' :
--               item.categoryType === 'majorDecision' ? '重大决策' : item.categoryType,
+-        '类型': item.categoryType === 'majorProject' ? '重大项目投资安排' :
+-               item.categoryType === 'majorFund' ? '大额资金使用' :
+-               item.categoryType === 'majorDecision' ? '重大问题决策' : item.categoryType,
 -        '事项内容': item.details,
 -        '金额': item.amount,
 -        '责任部门': item.departments,
@@ -386,7 +386,7 @@ index 9dafb89..0000000
 -              </Button>
 -            </div>
 -            <CardDescription>
--              从项目文档中提取的重大决策、项目安排、资金使用等事项
+-              从项目文档中提取的重大问题决策、项目安排、资金使用等事项
 -            </CardDescription>
 -          </CardHeader>
 -          <CardContent>
@@ -405,9 +405,9 @@ index 9dafb89..0000000
 -                {tripleOneMajorItems.map((item, index) => (
 -                  <TableRow key={index}>
 -                    <TableCell className="font-medium">
--                      {item.categoryType === 'majorProject' ? '重大项目' :
--                       item.categoryType === 'majorFund' ? '大额资金' :
--                       item.categoryType === 'majorDecision' ? '重大决策' : item.categoryType}
+-                      {item.categoryType === 'majorProject' ? '重大项目投资安排' :
+-                       item.categoryType === 'majorFund' ? '大额资金使用' :
+-                       item.categoryType === 'majorDecision' ? '重大问题决策' : item.categoryType}
 -                    </TableCell>
 -                    <TableCell>{item.details}</TableCell>
 -                    <TableCell>{item.amount}</TableCell>
@@ -1466,11 +1466,11 @@ index 0000000..d813743
 +        日期: item.meetingDate || "",
 +        类型:
 +          item.categoryType === "majorProject"
-+            ? "重大项目"
++            ? "重大项目投资安排"
 +            : item.categoryType === "majorFund"
-+            ? "大额资金"
++            ? "大额资金使用"
 +            : item.categoryType === "majorDecision"
-+            ? "重大决策"
++            ? "重大问题决策"
 +            : item.categoryType,
 +        事项内容: item.details,
 +        金额: item.amount,
@@ -1524,7 +1524,7 @@ index 0000000..d813743
 +          </Button>
 +        </div>
 +        <CardDescription>
-+          从项目文档中提取的重大决策、项目安排、资金使用等事项
++          从项目文档中提取的重大问题决策、项目安排、资金使用等事项
 +        </CardDescription>
 +      </CardHeader>
 +      <CardContent>
@@ -1549,15 +1549,15 @@ index 0000000..d813743
 +                <TableCell className="font-medium">
 +                  {
 +                    item.categoryType === "majorDecision"
-+                    ? "重大决策"
++                    ? "重大问题决策"
 +                    :
 +                    item.categoryType === "personnelAppointment"
 +                    ? "重要干部任免"
 +                    :
 +                  item.categoryType === "majorProject"
-+                    ? "重大项目"
++                    ? "重大项目投资安排"
 +                    : item.categoryType === "largeAmount"
-+                    ? "大额资金"
++                    ? "大额资金使用"
 +                    :  item.categoryType}
 +                </TableCell>
 +                <TableCell>{item.details}</TableCell>
@@ -1645,10 +1645,10 @@ index 347fd71..148a6c9 100644
 -        };
 -        
 -        const categoryNameMappings: {[key: string]: string} = {
--          'majorDecisions': '重大决策会议',
+-          'majorDecisions': '重大问题决策会议',
 -          'personnelAppointments': '重要干部任免会议',
--          'majorProjects': '重大项目会议',
--          'largeAmounts': '大额资金会议'
+-          'majorProjects': '重大项目投资安排会议',
+-          'largeAmounts': '大额资金使用会议'
 -        };
 -        
 -        // 遍历每个三重一大类型
@@ -1710,10 +1710,10 @@ index 347fd71..148a6c9 100644
 +                };
 +
 +                const categoryNameMappings: { [key: string]: string } = {
-+                    'majorDecisions': '重大决策会议',
++                    'majorDecisions': '重大问题决策会议',
 +                    'personnelAppointments': '重要干部任免会议',
-+                    'majorProjects': '重大项目会议',
-+                    'largeAmounts': '大额资金会议'
++                    'majorProjects': '重大项目投资安排会议',
++                    'largeAmounts': '大额资金使用会议'
 +                };
 +
 +                // 遍历每个三重一大类型
@@ -2067,10 +2067,10 @@ index 0000000..317c8c0
 +## 背景说明
 +
 +"三重一大"是指：
-+- 重大决策：涉及单位战略调整、改制重组、民生政策等全局性事项
++- 重大问题决策：涉及单位战略调整、改制重组、民生政策等全局性事项
 +- 重要干部任免：包括领导班子成员、关键岗位人员的选拔任用
-+- 重大项目：如重大基建、海外投资、并购等高风险项目
-+- 大额资金：单笔或累计超过规定限额的资金运作
++- 重大项目投资安排：如重大基建、海外投资、并购等高风险项目
++- 大额资金使用：单笔或累计超过规定限额的资金运作
 +
 +## 你的任务
 +
@@ -2124,7 +2124,7 @@ index 0000000..317c8c0
 +
 +## 示例
 +
-+### 示例1：重大决策会议
++### 示例1：重大问题决策会议
 +
 +**输入：**
 +```
@@ -2251,7 +2251,7 @@ index 0000000..317c8c0
 +}
 +```
 +
-+### 示例3：重大项目会议
++### 示例3：重大项目投资安排会议
 +
 +**输入：**
 +```

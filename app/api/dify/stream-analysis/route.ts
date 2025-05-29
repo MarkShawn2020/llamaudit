@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     // 构建请求体
     const requestBody = {
       query:
-        "请分析这些文件中的'三重一大'内容（重大问题决策、重要干部任免、重大项目投资安排、大额资金使用）并提取详细信息",
+        "请分析这些文件中的'三重一大'内容（重大问题决策、重要干部任免、重大项目投资安排投资安排、大额资金使用使用）并提取详细信息",
       inputs: {
         outputMode: "json",
       },
