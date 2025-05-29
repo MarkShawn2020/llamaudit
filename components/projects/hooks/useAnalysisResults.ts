@@ -51,10 +51,10 @@ export function useAnalysisResults(fileIds: string[], updateFilesStatus: (fileId
                 };
 
                 const categoryNameMappings: { [key: string]: string } = {
-                    'majorDecisions': '重大决策会议',
+                    'majorDecisions': '重大问题决策会议',
                     'personnelAppointments': '重要干部任免会议',
-                    'majorProjects': '重大项目会议',
-                    'largeAmounts': '大额资金会议'
+                    'majorProjects': '重大项目投资安排会议',
+                    'largeAmounts': '大额资金使用会议'
                 };
 
                 // 遍历每个三重一大类型

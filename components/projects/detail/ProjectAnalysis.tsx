@@ -431,7 +431,7 @@ export default function ProjectAnalysis({
               <DialogHeader>
                 <DialogTitle>三重一大事项分析</DialogTitle>
                 <DialogDescription>
-                  从项目文档中提取的重大决策、项目安排、资金使用等事项
+                  从项目文档中提取的重大问题决策、项目安排、资金使用等事项
                 </DialogDescription>
               </DialogHeader>
               <div className="overflow-auto max-h-[80vh]">

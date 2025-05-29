@@ -31,13 +31,13 @@ export interface AnalysisResult {
 
 // 分组结果类型 - 已废弃，仅为了兼容旧的API
 export interface GroupedResults {
-  // 重大决策相关分析结果
+  // 重大问题决策相关分析结果
   majorDecisions: AnalysisResult[];
   // 重要干部任免相关分析结果
   personnelAppointments: AnalysisResult[];
-  // 重大项目相关分析结果
+  // 重大项目投资安排相关分析结果
   majorProjects: AnalysisResult[];
-  // 大额资金相关分析结果
+  // 大额资金使用相关分析结果
   largeAmounts: AnalysisResult[];
 }
 

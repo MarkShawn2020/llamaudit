@@ -69,7 +69,7 @@ export async function analyzeDifyFiles(fileIds: string[]): Promise<GroupedResult
 
     // 构建请求体
     const requestBody = {
-      query: "请分析这些文件中的'三重一大'内容（重大决策、重要干部任免、重大项目、大额资金）并提取详细信息",
+      query: "请分析这些文件中的'三重一大'内容（重大问题决策、重要干部任免、重大项目投资安排、大额资金使用）并提取详细信息",
       user: user.id,
       response_mode: "blocking", // 使用阻塞模式，等待完整响应
       conversationId: "en9SlHU5dpHbJxdl", // 使用固定会话ID以便追踪上下文
@@ -130,10 +130,10 @@ export async function analyzeDifyFiles(fileIds: string[]): Promise<GroupedResult
 
     // 按三重一大分类分组结果
     const groupedResults: GroupedResults = {
-      majorDecisions: analysisResults.filter(r => r.eventCategory === '重大决策'),
+      majorDecisions: analysisResults.filter(r => r.eventCategory === '重大问题决策'),
       personnelAppointments: analysisResults.filter(r => r.eventCategory === '重要干部任免'),
-      majorProjects: analysisResults.filter(r => r.eventCategory === '重大项目'),
-      largeAmounts: analysisResults.filter(r => r.eventCategory === '大额资金')
+      majorProjects: analysisResults.filter(r => r.eventCategory === '重大项目投资安排'),
+      largeAmounts: analysisResults.filter(r => r.eventCategory === '大额资金使用')
     };
     
     logger.info('完成文件分析，已分组结果', { 

@@ -54,10 +54,10 @@ function convertMeetingsToTableData(meetings: IMeeting[]): Record<string, any>[]
       // 根据类型定义中文类别名称
       let categoryName = '其他';
       switch (item.categoryType) {
-        case 'majorDecision': categoryName = '重大决策'; break;
+        case 'majorDecision': categoryName = '重大问题决策'; break;
         case 'personnelAppointment': categoryName = '重要干部任免'; break;
-        case 'majorProject': categoryName = '重大项目'; break;
-        case 'largeAmount': categoryName = '大额资金'; break;
+        case 'majorProject': categoryName = '重大项目投资安排'; break;
+        case 'largeAmount': categoryName = '大额资金使用'; break;
       }
 
       rows.push({

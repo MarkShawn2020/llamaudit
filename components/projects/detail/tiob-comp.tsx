@@ -56,11 +56,11 @@ export function TIOBComp(props: {
         日期: item.meetingDate || "",
         类型:
           item.categoryType === "majorProject"
-            ? "重大项目"
+            ? "重大项目投资安排"
             : item.categoryType === "majorFund"
-            ? "大额资金"
+            ? "大额资金使用"
             : item.categoryType === "majorDecision"
-            ? "重大决策"
+            ? "重大问题决策"
             : item.categoryType,
         事项内容: item.details,
         金额: item.amount,
@@ -133,15 +133,15 @@ export function TIOBComp(props: {
                 <TableCell className="font-medium whitespace-nowrap">
                   {
                     item.categoryType === "majorDecision"
-                    ? "重大决策"
+                    ? "重大问题决策"
                     :
                     item.categoryType === "personnelAppointment"
                     ? "重要干部任免"
                     :
                   item.categoryType === "majorProject"
-                    ? "重大项目"
+                    ? "重大项目投资安排"
                     : item.categoryType === "largeAmount"
-                    ? "大额资金"
+                    ? "大额资金使用"
                     :  item.categoryType}
                 </TableCell>
                 <TableCell className="max-w-[250px]">{item.details}</TableCell>
