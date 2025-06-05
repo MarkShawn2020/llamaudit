@@ -49,8 +49,9 @@ export async function getProjects(): Promise<Project[]> {
       throw new Error('未授权访问');
     }
 
-    // 获取所有项目（被审计单位）
+    // 获取当前用户创建的项目（被审计单位）
     const projects = await db.query.auditUnits.findMany({
+      where: eq(auditUnits.createdBy, user.id),
       orderBy: (auditUnits, { desc }) => [desc(auditUnits.createdAt)],
       columns: {
         id: true,
