@@ -43,9 +43,21 @@ export async function POST(request: NextRequest) {
 
     console.log('发现新版本，开始更新依赖和构建...');
 
-    // 安装依赖 (包括可能的新依赖)
-    console.log('安装依赖...');
-    await execAsync('pnpm install --frozen-lockfile=false', { timeout: 120000 }); // 2分钟超时，允许更新lockfile
+    // 检查并安装新依赖
+    console.log('检查依赖变化...');
+    try {
+      const { stdout: packageStatus } = await execAsync('git diff HEAD~1 package.json');
+      
+      if (packageStatus.includes('"dependencies"') || packageStatus.includes('"devDependencies"')) {
+        console.log('发现依赖变化，更新依赖...');
+        await execAsync('pnpm install --no-frozen-lockfile', { timeout: 120000 });
+      } else {
+        console.log('无依赖变化，跳过安装...');
+      }
+    } catch (error) {
+      console.log('检查依赖失败，执行安全安装...');
+      await execAsync('pnpm install', { timeout: 60000 });
+    }
 
     // 构建项目
     console.log('构建项目...');
