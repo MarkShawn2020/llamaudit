@@ -43,9 +43,9 @@ export async function POST(request: NextRequest) {
 
     console.log('发现新版本，开始更新依赖和构建...');
 
-    // 安装依赖
+    // 安装依赖 (包括可能的新依赖)
     console.log('安装依赖...');
-    await execAsync('pnpm install', { timeout: 120000 }); // 2分钟超时
+    await execAsync('pnpm install --frozen-lockfile=false', { timeout: 120000 }); // 2分钟超时，允许更新lockfile
 
     // 构建项目
     console.log('构建项目...');
