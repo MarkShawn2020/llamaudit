@@ -108,6 +108,11 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 
     redirect('/projects');
   } catch (error) {
+    // Next.js redirect() 会抛出特殊错误，不应该被捕获
+    if (error instanceof Error && error.message === 'NEXT_REDIRECT') {
+      throw error;
+    }
+    
     console.error('Sign in error:', error);
     
     // 如果是数据库连接错误，返回友好的错误信息
@@ -249,6 +254,11 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
 
     redirect('/projects');
   } catch (error) {
+    // Next.js redirect() 会抛出特殊错误，不应该被捕获
+    if (error instanceof Error && error.message === 'NEXT_REDIRECT') {
+      throw error;
+    }
+    
     console.error('Sign up error:', error);
     
     // 如果是数据库连接错误，返回友好的错误信息
