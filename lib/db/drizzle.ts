@@ -50,7 +50,12 @@ export const client = (() => {
       console.log(`[DB-DEBUG] 进程ID: ${process.pid}, 时间戳: ${Date.now()}`);
     }
     
-    clientInstance = postgres(process.env.POSTGRES_URL!, connectionOptions);
+    try {
+      clientInstance = postgres(process.env.POSTGRES_URL!, connectionOptions);
+    } catch (error) {
+      console.error('[DB] 创建数据库连接池失败:', error);
+      throw new Error('数据库配置错误或连接失败');
+    }
   } else if (DEBUG) {
     console.log(`[DB-${process.env.NODE_ENV}] 复用现有数据库连接池 #${connectionCount}`);
   }

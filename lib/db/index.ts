@@ -25,6 +25,32 @@ export async function withConnection<T>(
     return await operation(db);
   } catch (error) {
     console.error('Database operation failed:', error);
+    
+    // 检查是否是连接错误
+    if (error && typeof error === 'object' && 'code' in error) {
+      const dbError = error as { code?: string; message?: string };
+      
+      if (dbError.code === 'ECONNREFUSED') {
+        throw new Error('数据库服务暂时不可用，请稍后重试或联系管理员');
+      }
+      
+      if (dbError.code === 'ENOTFOUND') {
+        throw new Error('无法连接到数据库服务器，请检查网络连接');
+      }
+      
+      if (dbError.code === 'ETIMEDOUT') {
+        throw new Error('数据库连接超时，请稍后重试');
+      }
+    }
+    
+    // 对于其他数据库错误，也提供友好的错误信息
+    if (error && typeof error === 'object' && 'message' in error) {
+      const message = (error as Error).message;
+      if (message.includes('connect') || message.includes('connection')) {
+        throw new Error('数据库连接失败，请稍后重试');
+      }
+    }
+    
     throw error;
   }
 }
