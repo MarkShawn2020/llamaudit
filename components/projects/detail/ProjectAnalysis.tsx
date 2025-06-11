@@ -3,7 +3,7 @@
 import {FileCard} from "@/components/projects/detail/file-card";
 import {projectFilesAtomFamily} from '@/components/projects/detail/project-atoms';
 import {TIOBComp} from "@/components/projects/detail/tiob-comp";
-import {AnalysisEvent} from "@/components/projects/utils/analysis-event";
+import {AnalysisEvent, AnalysisEventSource} from "@/components/projects/utils/analysis-event";
 import {UIFile} from "@/components/projects/utils/ui-file";
 import {Button} from '@/components/ui/button';
 import {
@@ -21,6 +21,8 @@ import {logger} from '@/lib/logger';
 import {useAtom} from 'jotai'
 import {BarChart2, RefreshCw, Upload} from 'lucide-react';
 import {startTransition, useActionState, useCallback, useEffect, useRef, useState} from 'react';
+import { DifyConfigComponent } from '@/components/dify-config';
+import { useDifyConfig } from '@/contexts/dify-config-context';
 
 export default function ProjectAnalysis({
                                             projectId, initialFiles = [], onFileChange
@@ -36,6 +38,7 @@ export default function ProjectAnalysis({
     const {toast} = useToast();
     const [filesState, getFilesAction] = useActionState(getFilesByProjectId, [])
     const [tiobDialogOpen, setTiobDialogOpen] = useState(false);
+    const { config: difyConfig } = useDifyConfig();
 
     // 初始化 Jotai atom 状态
     useEffect(() => {
@@ -285,22 +288,20 @@ export default function ProjectAnalysis({
 
     // 分析单个文件
     const handleAnalyzeFile = async (file: UIFile) => {
+        let eventSource: AnalysisEventSource | null = null;
         try {
             // 更新文件状态为分析中
             setFiles(prev => prev.map(f => f.id === file.id ? {...f, status: 'analyzing', analysisResult: ''} : f));
 
-            // 创建EventSource进行流式分析
-            const fileIds = JSON.stringify([file.id]);
-            const eventSource = new EventSource(`/api/dify/stream-analysis?fileIds=${encodeURIComponent(fileIds)}`);
+            // 创建EventSource进行流式分析，传递Dify配置
+            eventSource = new AnalysisEventSource([file.id], difyConfig);
 
             // 分析结果
             let combinedResult = '';
 
             // 处理事件
-            eventSource.onmessage = (event) => {
+            eventSource.onEvent((data) => {
                 try {
-                    const data = JSON.parse(event.data) as AnalysisEvent;
-
                     if (data.event === 'error') {
                         throw new Error(data.message || '分析失败');
                     }
@@ -323,31 +324,39 @@ export default function ProjectAnalysis({
                         } : f));
 
                         // 关闭连接
-                        eventSource.close();
+                        if (eventSource) {
+                            eventSource.close();
+                        }
 
                         // 保存分析结果到数据库
                         saveAnalysisResult(file.id, combinedResult);
                     }
                 } catch (error) {
                     console.error('处理分析事件失败:', error);
-                    handleAnalysisError(file.id, error, eventSource);
+                    if (eventSource) {
+                        handleAnalysisError(file.id, error, eventSource);
+                    }
                 }
-            };
+            });
 
             // 处理错误
-            eventSource.onerror = (error) => {
+            eventSource.onError((error) => {
                 console.error('分析事件源错误:', error);
-                handleAnalysisError(file.id, error, eventSource);
-            };
+                if (eventSource) {
+                    handleAnalysisError(file.id, error, eventSource);
+                }
+            });
 
         } catch (error) {
             console.error('启动分析失败:', error);
-            handleAnalysisError(file.id, error);
+            if (eventSource) {
+                handleAnalysisError(file.id, error, eventSource);
+            }
         }
     };
 
     // 处理分析错误 - 支持单个或多个文件ID
-    const handleAnalysisError = (fileIds: string | string[], error: any, eventSource?: EventSource) => {
+    const handleAnalysisError = (fileIds: string | string[], error: any, eventSource?: AnalysisEventSource | EventSource) => {
         // 关闭EventSource
         if (eventSource) {
             eventSource.close();
@@ -428,6 +437,8 @@ export default function ProjectAnalysis({
                         <Upload className="h-4 w-4 mr-2"/>
                         上传文档
                     </Button>
+
+                    <DifyConfigComponent />
                 </div>
 
                 <input

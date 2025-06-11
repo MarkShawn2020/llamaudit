@@ -4,6 +4,7 @@ import { Inter as FontSans } from 'next/font/google';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/theme-provider';
 import { UserProvider } from '@/components/user-provider';
+import { DifyConfigProvider } from '@/contexts/dify-config-context';
 import { GlobalNavbar } from '@/components/GlobalNavbar';
 import { CozeChat } from '@/components/CozeChat';
 import { getUser } from '@/lib/db/queries';
@@ -46,10 +47,12 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <UserProvider initialUser={initialUser}>
-            <div className="flex min-h-screen flex-col">
-              <GlobalNavbar />
-              <main className="flex-1">{children}</main>
-            </div>
+            <DifyConfigProvider>
+              <div className="flex min-h-screen flex-col">
+                <GlobalNavbar />
+                <main className="flex-1">{children}</main>
+              </div>
+            </DifyConfigProvider>
           </UserProvider>
         </ThemeProvider>
         {/* <CozeChat /> */}

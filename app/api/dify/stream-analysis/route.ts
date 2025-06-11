@@ -22,9 +22,10 @@ export async function GET(request: NextRequest) {
       });
     }
     
-    // 从 URL 查询参数中获取 fileIds
+    // 从 URL 查询参数中获取 fileIds 和 Dify 配置
     const searchParams = request.nextUrl.searchParams;
     const fileIdsParam = searchParams.get('fileIds');
+    const difyConfigParam = searchParams.get('difyConfig');
     
     if (!fileIdsParam) {
       logger.error("缺少fileIds查询参数", { user });
@@ -47,8 +48,28 @@ export async function GET(request: NextRequest) {
         headers: { "Content-Type": "application/json" },
       });
     }
+
+    // 解析 Dify 配置，如果没有提供则使用默认配置
+    let difyApiUrl = NEXT_PUBLIC_DIFY_API_URL;
+    let difyApiKey = DIFY_API_KEY;
     
-    if (!DIFY_API_KEY) {
+    if (difyConfigParam) {
+      try {
+        const difyConfig = JSON.parse(difyConfigParam);
+        if (difyConfig.baseUrl && difyConfig.apiKey) {
+          difyApiUrl = difyConfig.baseUrl;
+          difyApiKey = difyConfig.apiKey;
+          logger.info("使用自定义Dify配置", { 
+            baseUrl: difyApiUrl,
+            apiKey: difyApiKey?.substring(0, 10) + '...' 
+          });
+        }
+      } catch (error) {
+        logger.warn("解析Dify配置参数出错，使用默认配置", { error });
+      }
+    }
+    
+    if (!difyApiKey) {
       logger.error("缺少Dify API密钥", { user });
       return new Response(JSON.stringify({ error: "系统配置错误: 缺少Dify API Key" }), {
         status: 500,
@@ -75,7 +96,7 @@ export async function GET(request: NextRequest) {
     
     const headers = {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${DIFY_API_KEY}`,
+      Authorization: `Bearer ${difyApiKey}`,
     };
     
     logger.info("API路由: 准备发送Dify分析请求", requestBody);
@@ -103,7 +124,7 @@ export async function GET(request: NextRequest) {
         })}\n\n`));
         
         // 发送流式请求到Dify API
-        const difyResponse = await fetch(`${process.env.NEXT_PUBLIC_DIFY_API_URL}/chat-messages`, {
+        const difyResponse = await fetch(`${difyApiUrl}/chat-messages`, {
           method: "POST",
           headers,
           body: JSON.stringify(requestBody),
@@ -242,8 +263,9 @@ export async function DELETE(request: NextRequest) {
       });
     }
     
-    // 解析任务ID
-    const { taskId } = await request.json();
+    // 解析任务ID和Dify配置
+    const body = await request.json();
+    const { taskId, difyConfig } = body;
     
     if (!taskId) {
       return new Response(JSON.stringify({ error: "缺少taskId" }), {
@@ -251,9 +273,18 @@ export async function DELETE(request: NextRequest) {
         headers: { "Content-Type": "application/json" },
       });
     }
+
+    // 解析 Dify 配置，如果没有提供则使用默认配置
+    let difyApiUrl = NEXT_PUBLIC_DIFY_API_URL;
+    let difyApiKey = DIFY_API_KEY;
+    
+    if (difyConfig?.baseUrl && difyConfig?.apiKey) {
+      difyApiUrl = difyConfig.baseUrl;
+      difyApiKey = difyConfig.apiKey;
+    }
     
     // 取消Dify分析
-    if (!DIFY_API_KEY) {
+    if (!difyApiKey) {
       return new Response(JSON.stringify({ error: "系统配置错误: 缺少Dify API Key" }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
@@ -261,11 +292,11 @@ export async function DELETE(request: NextRequest) {
     }
     
     // 发送取消请求到Dify
-    const response = await fetch(`${process.env.NEXT_PUBLIC_DIFY_API_URL}/chat-messages/stop-generating`, {
+    const response = await fetch(`${difyApiUrl}/chat-messages/stop-generating`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${DIFY_API_KEY}`,
+        Authorization: `Bearer ${difyApiKey}`,
       },
       body: JSON.stringify({ task_id: taskId }),
     });
