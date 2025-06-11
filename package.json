@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "0.2.19",
+  "version": "0.2.20",
   "scripts": {
     "dev": "next dev",
     "dev:turbo": "next dev --turbopack",
