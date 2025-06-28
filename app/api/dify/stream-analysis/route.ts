@@ -1,6 +1,6 @@
-                                      import { logger } from "@/lib/logger";
-import { getUser } from "@/lib/db/queries";
-import { NextRequest } from "next/server";
+import {getUser} from "@/lib/db/queries";
+import {logger} from "@/lib/logger";
+import {NextRequest} from "next/server";
 
 // Dify API配置
 const NEXT_PUBLIC_DIFY_API_URL = process.env.NEXT_PUBLIC_DIFY_API_URL || "http://localhost/v1";
@@ -16,9 +16,9 @@ export async function GET(request: NextRequest) {
     const user = await getUser();
     if (!user) {
       logger.error("未授权访问流式分析API");
-      return new Response(JSON.stringify({ error: "未授权访问" }), {
+      return new Response(JSON.stringify({error: "未授权访问"}), {
         status: 401,
-        headers: { "Content-Type": "application/json" },
+        headers: {"Content-Type": "application/json"},
       });
     }
     
@@ -28,10 +28,10 @@ export async function GET(request: NextRequest) {
     const difyConfigParam = searchParams.get('difyConfig');
     
     if (!fileIdsParam) {
-      logger.error("缺少fileIds查询参数", { user });
-      return new Response(JSON.stringify({ error: "缺少文件ID" }), {
+      logger.error("缺少fileIds查询参数", {user});
+      return new Response(JSON.stringify({error: "缺少文件ID"}), {
         status: 400,
-        headers: { "Content-Type": "application/json" },
+        headers: {"Content-Type": "application/json"},
       });
     }
     
@@ -42,13 +42,13 @@ export async function GET(request: NextRequest) {
         throw new Error('无效的fileIds格式');
       }
     } catch (error) {
-      logger.error("解析fileIds参数出错", { error, fileIdsParam });
-      return new Response(JSON.stringify({ error: "无效的文件ID格式" }), {
+      logger.error("解析fileIds参数出错", {error, fileIdsParam});
+      return new Response(JSON.stringify({error: "无效的文件ID格式"}), {
         status: 400,
-        headers: { "Content-Type": "application/json" },
+        headers: {"Content-Type": "application/json"},
       });
     }
-
+    
     // 解析 Dify 配置，如果没有提供则使用默认配置
     let difyApiUrl = NEXT_PUBLIC_DIFY_API_URL;
     let difyApiKey = DIFY_API_KEY;
@@ -59,21 +59,21 @@ export async function GET(request: NextRequest) {
         if (difyConfig.baseUrl && difyConfig.apiKey) {
           difyApiUrl = difyConfig.baseUrl;
           difyApiKey = difyConfig.apiKey;
-          logger.info("使用自定义Dify配置", { 
+          logger.info("使用自定义Dify配置", {
             baseUrl: difyApiUrl,
-            apiKey: difyApiKey?.substring(0, 10) + '...' 
+            apiKey: difyApiKey?.substring(0, 10) + '...'
           });
         }
       } catch (error) {
-        logger.warn("解析Dify配置参数出错，使用默认配置", { error });
+        logger.warn("解析Dify配置参数出错，使用默认配置", {error});
       }
     }
     
     if (!difyApiKey) {
-      logger.error("缺少Dify API密钥", { user });
-      return new Response(JSON.stringify({ error: "系统配置错误: 缺少Dify API Key" }), {
+      logger.error("缺少Dify API密钥", {user});
+      return new Response(JSON.stringify({error: "系统配置错误: 缺少Dify API Key"}), {
         status: 500,
-        headers: { "Content-Type": "application/json" },
+        headers: {"Content-Type": "application/json"},
       });
     }
     
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
     logger.info("API路由: 准备发送Dify分析请求", requestBody);
     
     // 创建一个新的TransformStream来处理Dify响应
-    const { readable, writable } = new TransformStream();
+    const {readable, writable} = new TransformStream();
     const writer = writable.getWriter();
     const encoder = new TextEncoder();
     
@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
     (async () => {
       try {
         // 发送任务开始消息
-        writer.write(encoder.encode(`data: ${JSON.stringify({ 
+        writer.write(encoder.encode(`data: ${JSON.stringify({
           event: "start"
         })}\n\n`));
         
@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
           headers,
           body: JSON.stringify(requestBody),
         });
-    
+        
         if (!difyResponse.ok) {
           const errorText = await difyResponse.text();
           logger.error("Dify API返回错误", {
@@ -137,10 +137,10 @@ export async function GET(request: NextRequest) {
             error: errorText,
           });
           
-          writer.write(encoder.encode(`data: ${JSON.stringify({ 
+          writer.write(encoder.encode(`data: ${JSON.stringify({
             event: "error",
             message: `Dify API错误: ${difyResponse.status}`,
-            details: errorText 
+            details: errorText
           })}\n\n`));
           writer.close();
           return;
@@ -148,14 +148,14 @@ export async function GET(request: NextRequest) {
         
         // 确保响应流存在
         if (!difyResponse.body) {
-          writer.write(encoder.encode(`data: ${JSON.stringify({ 
+          writer.write(encoder.encode(`data: ${JSON.stringify({
             event: "error",
             message: "无法获取Dify响应流"
           })}\n\n`));
           writer.close();
           return;
         }
-    
+        
         // 处理Dify响应流并转发给客户端
         const reader = difyResponse.body.getReader();
         const decoder = new TextDecoder();
@@ -163,21 +163,21 @@ export async function GET(request: NextRequest) {
         let buffer = "";
         let done = false;
         let taskId = "";
-                
+        
         while (!done) {
-          const { value, done: streamDone } = await reader.read();
+          const {value, done: streamDone} = await reader.read();
           done = streamDone;
           
           if (done) {
-            writer.write(encoder.encode(`data: ${JSON.stringify({ 
+            writer.write(encoder.encode(`data: ${JSON.stringify({
               event: "done",
-              task_id: taskId 
+              task_id: taskId
             })}\n\n`));
             break;
           }
           
           // 解码并添加到缓冲区
-          buffer += decoder.decode(value, { stream: true });
+          buffer += decoder.decode(value, {stream: true});
           
           // 处理SSE消息
           const lines = buffer.split("\n");
@@ -188,15 +188,16 @@ export async function GET(request: NextRequest) {
             if (!line.startsWith("data:")) continue;
             
             const data = line.substring(5).trim();
-            logger.info("From DIFY: ", JSON.parse(data));
+            // don't stringify, too long
+            logger.info("From DIFY: ", data);
             
             try {
               // 处理特殊情况
               if (data === "") continue;
               if (data === "[DONE]") {
-                writer.write(encoder.encode(`data: ${JSON.stringify({ 
+                writer.write(encoder.encode(`data: ${JSON.stringify({
                   event: "done",
-                  task_id: taskId 
+                  task_id: taskId
                 })}\n\n`));
                 continue;
               }
@@ -210,25 +211,25 @@ export async function GET(request: NextRequest) {
                 const parsedData = JSON.parse(data);
                 if (parsedData.task_id && !taskId) {
                   taskId = parsedData.task_id;
-                  logger.info("获取到Dify任务ID", { taskId });
+                  logger.info("获取到Dify任务ID", {taskId});
                 }
               } catch (parseError) {
                 // 忽略解析错误，不影响消息转发
-                logger.warn("解析任务ID出错", { parseError });
+                logger.warn("解析任务ID出错", {parseError});
               }
             } catch (error) {
-              logger.error("处理SSE消息时出错", { error, line });
-              continue;
+              logger.error("处理SSE消息时出错", {error, line});
+              
             }
           }
         }
         
         // 最后确保writer关闭
         writer.close();
-        logger.info("完成Dify流式分析转发", { taskId });
+        logger.info("完成Dify流式分析转发", {taskId});
       } catch (error) {
-        logger.error("处理Dify流时出错", { error });
-        writer.write(encoder.encode(`data: ${JSON.stringify({ 
+        logger.error("处理Dify流时出错", {error});
+        writer.write(encoder.encode(`data: ${JSON.stringify({
           event: "error",
           message: error instanceof Error ? error.message : "处理流时出错"
         })}\n\n`));
@@ -238,13 +239,13 @@ export async function GET(request: NextRequest) {
     
     return response;
   } catch (error) {
-    logger.error("流式分析API发生错误", { error });
-    return new Response(JSON.stringify({ 
+    logger.error("流式分析API发生错误", {error});
+    return new Response(JSON.stringify({
       error: "服务器内部错误",
-      details: error instanceof Error ? error.message : "未知错误" 
+      details: error instanceof Error ? error.message : "未知错误"
     }), {
       status: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: {"Content-Type": "application/json"},
     });
   }
 }
@@ -257,23 +258,23 @@ export async function DELETE(request: NextRequest) {
     // 验证用户
     const user = await getUser();
     if (!user) {
-      return new Response(JSON.stringify({ error: "未授权访问" }), {
+      return new Response(JSON.stringify({error: "未授权访问"}), {
         status: 401,
-        headers: { "Content-Type": "application/json" },
+        headers: {"Content-Type": "application/json"},
       });
     }
     
     // 解析任务ID和Dify配置
     const body = await request.json();
-    const { taskId, difyConfig } = body;
+    const {taskId, difyConfig} = body;
     
     if (!taskId) {
-      return new Response(JSON.stringify({ error: "缺少taskId" }), {
+      return new Response(JSON.stringify({error: "缺少taskId"}), {
         status: 400,
-        headers: { "Content-Type": "application/json" },
+        headers: {"Content-Type": "application/json"},
       });
     }
-
+    
     // 解析 Dify 配置，如果没有提供则使用默认配置
     let difyApiUrl = NEXT_PUBLIC_DIFY_API_URL;
     let difyApiKey = DIFY_API_KEY;
@@ -285,9 +286,9 @@ export async function DELETE(request: NextRequest) {
     
     // 取消Dify分析
     if (!difyApiKey) {
-      return new Response(JSON.stringify({ error: "系统配置错误: 缺少Dify API Key" }), {
+      return new Response(JSON.stringify({error: "系统配置错误: 缺少Dify API Key"}), {
         status: 500,
-        headers: { "Content-Type": "application/json" },
+        headers: {"Content-Type": "application/json"},
       });
     }
     
@@ -298,40 +299,40 @@ export async function DELETE(request: NextRequest) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${difyApiKey}`,
       },
-      body: JSON.stringify({ task_id: taskId }),
+      body: JSON.stringify({task_id: taskId}),
     });
     
     if (!response.ok) {
       const errorText = await response.text();
-      logger.error("取消Dify分析时出错", { 
+      logger.error("取消Dify分析时出错", {
         taskId,
         status: response.status,
-        error: errorText 
+        error: errorText
       });
       
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         success: false,
         error: `取消分析失败: ${response.status}`,
-        details: errorText 
+        details: errorText
       }), {
         status: response.status,
-        headers: { "Content-Type": "application/json" },
+        headers: {"Content-Type": "application/json"},
       });
     }
     
-    logger.info("成功取消Dify分析", { taskId });
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { "Content-Type": "application/json" },
+    logger.info("成功取消Dify分析", {taskId});
+    return new Response(JSON.stringify({success: true}), {
+      headers: {"Content-Type": "application/json"},
     });
   } catch (error) {
-    logger.error("取消分析API发生错误", { error });
-    return new Response(JSON.stringify({ 
+    logger.error("取消分析API发生错误", {error});
+    return new Response(JSON.stringify({
       success: false,
       error: "服务器内部错误",
-      details: error instanceof Error ? error.message : "未知错误" 
+      details: error instanceof Error ? error.message : "未知错误"
     }), {
       status: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: {"Content-Type": "application/json"},
     });
   }
 }
