@@ -19,7 +19,8 @@ export async function saveDifyFileToDatabase(
     size: number;
     mime_type: string;
     created_at: number;
-  }
+  },
+  knowledgeBaseId?: string
 ) {
   try {
     const user = await getUser();
@@ -72,6 +73,7 @@ export async function saveDifyFileToDatabase(
       uploadDate: new Date(difyFileData.created_at * 1000),
       userId: user.id,
       auditUnitId: auditUnitId,
+      knowledgeBaseId: knowledgeBaseId || null, // 关联知识库ID
       isAnalyzed: false,
       metadata: JSON.stringify({
         storageProvider: 'dify',

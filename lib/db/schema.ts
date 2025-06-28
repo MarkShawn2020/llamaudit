@@ -214,6 +214,9 @@ export const files = pgTable('files', {
   uploadDate: timestamp('upload_date', { withTimezone: true }).defaultNow(),
   userId: uuid('user_id').references(() => users.id),
   auditUnitId: uuid('audit_unit_id').references(() => auditUnits.id, { onDelete: 'cascade' }),
+  knowledgeBaseId: uuid('knowledge_base_id').references(() => knowledgeBases.id, { onDelete: 'set null' }),
+  difyDocumentId: varchar('dify_document_id', { length: 255 }), // Dify 文档 ID
+  indexingStatus: varchar('indexing_status', { length: 50 }).default('waiting'), // 索引状态
   metadata: text('metadata'),
   storageProvider: text('storage_provider'),
   storagePath: text('storage_path')
@@ -231,6 +234,10 @@ export const filesRelations = relations(files, ({ one, many }) => ({
   auditUnit: one(auditUnits, {
     fields: [files.auditUnitId],
     references: [auditUnits.id]
+  }),
+  knowledgeBase: one(knowledgeBases, {
+    fields: [files.knowledgeBaseId],
+    references: [knowledgeBases.id]
   }),
   uploadedBy: one(users, {
     fields: [files.userId],
@@ -269,11 +276,74 @@ export const llmAnalysisTasksRelations = relations(llmAnalysisTasks, ({ one }) =
 export type LlmAnalysisTask = typeof llmAnalysisTasks.$inferSelect;
 export type InsertLlmAnalysisTask = typeof llmAnalysisTasks.$inferInsert;
 
+// 知识库表
+export const knowledgeBases = pgTable('knowledge_bases', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  auditUnitId: uuid('audit_unit_id').notNull().references(() => auditUnits.id, { onDelete: 'cascade' }),
+  difyDatasetId: varchar('dify_dataset_id', { length: 255 }).notNull().unique(), // Dify 知识库 ID
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  indexingTechnique: varchar('indexing_technique', { length: 50 }).default('high_quality'), // 索引方法
+  permission: varchar('permission', { length: 20 }).default('only_me'), // 权限设置
+  embeddingModel: varchar('embedding_model', { length: 100 }), // 嵌入模型
+  embeddingModelProvider: varchar('embedding_model_provider', { length: 50 }), // 嵌入模型提供商
+  retrievalConfig: jsonb('retrieval_config'), // 检索配置
+  createdBy: uuid('created_by').notNull().references(() => users.id),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow()
+});
+
+// 问答记录表
+export const qaConversations = pgTable('qa_conversations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  knowledgeBaseId: uuid('knowledge_base_id').notNull().references(() => knowledgeBases.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id),
+  question: text('question').notNull(),
+  answer: text('answer'),
+  sources: jsonb('sources'), // 引用的文档片段
+  metadata: jsonb('metadata'), // 额外的元数据，如检索配置等
+  responseTime: real('response_time'), // 响应时间(秒)
+  confidence: real('confidence'), // 置信度分数
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow()
+});
+
+export type KnowledgeBase = typeof knowledgeBases.$inferSelect;
+export type NewKnowledgeBase = typeof knowledgeBases.$inferInsert;
+export type QaConversation = typeof qaConversations.$inferSelect;
+export type NewQaConversation = typeof qaConversations.$inferInsert;
+
+// 知识库关系
+export const knowledgeBasesRelations = relations(knowledgeBases, ({ one, many }) => ({
+  auditUnit: one(auditUnits, {
+    fields: [knowledgeBases.auditUnitId],
+    references: [auditUnits.id]
+  }),
+  createdBy: one(users, {
+    fields: [knowledgeBases.createdBy],
+    references: [users.id]
+  }),
+  files: many(files),
+  qaConversations: many(qaConversations)
+}));
+
+// 问答记录关系
+export const qaConversationsRelations = relations(qaConversations, ({ one }) => ({
+  knowledgeBase: one(knowledgeBases, {
+    fields: [qaConversations.knowledgeBaseId],
+    references: [knowledgeBases.id]
+  }),
+  user: one(users, {
+    fields: [qaConversations.userId],
+    references: [users.id]
+  })
+}));
+
 // 被审计单位关系
 export const auditUnitsRelations = relations(auditUnits, ({ one, many }) => ({
   createdBy: one(users, {
     fields: [auditUnits.createdBy],
     references: [users.id]
   }),
-  files: many(files)
+  files: many(files),
+  knowledgeBases: many(knowledgeBases)
 }));
