@@ -120,7 +120,17 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
           </div>
 
           {state?.error && (
-            <div className="text-red-500 text-sm">{state.error}</div>
+            <div className="bg-red-50 border border-red-200 rounded-md p-3">
+              <div className="text-red-800 text-sm">
+                {state.error}
+              </div>
+              {/* 在开发环境中显示错误代码，方便调试 */}
+              {process.env.NODE_ENV === 'development' && state.error.includes('[ERR_') && (
+                <div className="text-red-600 text-xs mt-1 font-mono">
+                  错误代码: {state.error.match(/\[ERR_[^\]]+\]/)?.[0] || 'UNKNOWN'}
+                </div>
+              )}
+            </div>
           )}
 
           <div>

@@ -113,10 +113,21 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
       throw error;
     }
     
-    console.error('Sign in error:', error);
+    // 详细的错误日志，方便调试
+    console.error('Sign in error details:', {
+      error: error,
+      errorType: error?.constructor?.name,
+      message: (error as Error)?.message,
+      stack: (error as Error)?.stack?.split('\n').slice(0, 5),
+      email: email, // 记录出错的邮箱（便于调试）
+      timestamp: new Date().toISOString(),
+    });
     
     // 如果是数据库连接错误，返回友好的错误信息
-    if (error instanceof Error && error.message.includes('数据库')) {
+    if (error instanceof Error && (
+      error.message.includes('数据库') || 
+      error.message.includes('[ERR_DB_')
+    )) {
       return {
         error: error.message,
         email,
@@ -124,9 +135,35 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
       };
     }
     
-    // 对于其他错误，返回通用错误信息
+    // 检查其他特定错误类型
+    if (error instanceof Error) {
+      // 密码比较错误
+      if (error.message.includes('bcrypt') || error.message.includes('hash')) {
+        console.error('Password comparison error:', error);
+        return {
+          error: '密码验证失败，请重试 [ERR_AUTH_HASH]',
+          email,
+          password,
+        };
+      }
+      
+      // 会话创建错误
+      if (error.message.includes('session') || error.message.includes('cookie')) {
+        console.error('Session creation error:', error);
+        return {
+          error: '登录成功但会话创建失败，请重试 [ERR_SESSION_CREATE]',
+          email,
+          password,
+        };
+      }
+    }
+    
+    // 对于其他错误，返回通用错误信息，但在开发环境中提供更多细节
+    const isDevelopment = process.env.NODE_ENV === 'development';
     return {
-      error: '登录失败，请稍后重试',
+      error: isDevelopment 
+        ? `登录失败，请稍后重试 [ERR_SIGNIN_UNKNOWN]: ${(error as Error)?.message || 'Unknown error'}`
+        : '登录失败，请稍后重试',
       email,
       password,
     };
@@ -259,10 +296,22 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
       throw error;
     }
     
-    console.error('Sign up error:', error);
+    // 详细的错误日志，方便调试
+    console.error('Sign up error details:', {
+      error: error,
+      errorType: error?.constructor?.name,
+      message: (error as Error)?.message,
+      stack: (error as Error)?.stack?.split('\n').slice(0, 5),
+      email: email, // 记录出错的邮箱（便于调试）
+      inviteId: inviteId, // 记录邀请ID（如果有）
+      timestamp: new Date().toISOString(),
+    });
     
     // 如果是数据库连接错误，返回友好的错误信息
-    if (error instanceof Error && error.message.includes('数据库')) {
+    if (error instanceof Error && (
+      error.message.includes('数据库') || 
+      error.message.includes('[ERR_DB_')
+    )) {
       return {
         error: error.message,
         email,
@@ -270,9 +319,55 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
       };
     }
     
-    // 对于其他错误，返回通用错误信息
+    // 检查其他特定错误类型
+    if (error instanceof Error) {
+      // 密码哈希错误
+      if (error.message.includes('bcrypt') || error.message.includes('hash')) {
+        console.error('Password hashing error:', error);
+        return {
+          error: '密码处理失败，请重试 [ERR_PASSWORD_HASH]',
+          email,
+          password,
+        };
+      }
+      
+      // 唯一约束违反（邮箱重复）
+      if (error.message.includes('unique') || error.message.includes('duplicate')) {
+        console.error('Unique constraint error:', error);
+        return {
+          error: '该邮箱已被注册，请使用其他邮箱 [ERR_EMAIL_EXISTS]',
+          email,
+          password,
+        };
+      }
+      
+      // 会话创建错误
+      if (error.message.includes('session') || error.message.includes('cookie')) {
+        console.error('Session creation error:', error);
+        return {
+          error: '注册成功但会话创建失败，请重试登录 [ERR_SESSION_CREATE]',
+          email,
+          password,
+        };
+      }
+      
+      // 邀请相关错误
+      if (error.message.includes('invitation') || error.message.includes('invite')) {
+        console.error('Invitation error:', error);
+        return {
+          error: '邀请处理失败，请检查邀请链接 [ERR_INVITATION]',
+          email,
+          password,
+        };
+      }
+    }
+    
+    // 对于其他错误，返回通用错误信息，但在开发环境中提供更多细节
+    const isDevelopment = process.env.NODE_ENV === 'development';
     return {
-      error: '注册失败，请稍后重试',
+      error: isDevelopment 
+        ? `注册失败，请稍后重试 [ERR_SIGNUP_UNKNOWN]: ${(error as Error)?.message || 'Unknown error'}`
+        : '注册失败，请稍后重试',
       email,
       password,
     };

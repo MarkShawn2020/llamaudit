@@ -24,22 +24,39 @@ export async function withConnection<T>(
     // 执行数据库操作
     return await operation(db);
   } catch (error) {
-    console.error('Database operation failed:', error);
+    // 详细的错误日志，包含错误类型、代码和消息
+    console.error('Database operation failed:', {
+      error: error,
+      errorType: error?.constructor?.name,
+      code: (error as any)?.code,
+      message: (error as any)?.message,
+      stack: (error as any)?.stack?.split('\n').slice(0, 3), // 只显示前3行堆栈
+      timestamp: new Date().toISOString(),
+    });
     
     // 检查是否是连接错误
     if (error && typeof error === 'object' && 'code' in error) {
       const dbError = error as { code?: string; message?: string };
       
       if (dbError.code === 'ECONNREFUSED') {
-        throw new Error('数据库服务暂时不可用，请稍后重试或联系管理员');
+        throw new Error('数据库服务暂时不可用，请稍后重试或联系管理员 [ERR_DB_CONN_REFUSED]');
       }
       
       if (dbError.code === 'ENOTFOUND') {
-        throw new Error('无法连接到数据库服务器，请检查网络连接');
+        throw new Error('无法连接到数据库服务器，请检查网络连接 [ERR_DB_HOST_NOT_FOUND]');
       }
       
       if (dbError.code === 'ETIMEDOUT') {
-        throw new Error('数据库连接超时，请稍后重试');
+        throw new Error('数据库连接超时，请稍后重试 [ERR_DB_TIMEOUT]');
+      }
+      
+      // 添加其他常见数据库错误代码
+      if (dbError.code === 'ENOTFOUND') {
+        throw new Error('数据库主机未找到 [ERR_DB_HOST_MISSING]');
+      }
+      
+      if (dbError.code === 'EACCES') {
+        throw new Error('数据库访问权限不足 [ERR_DB_ACCESS_DENIED]');
       }
     }
     
@@ -47,10 +64,19 @@ export async function withConnection<T>(
     if (error && typeof error === 'object' && 'message' in error) {
       const message = (error as Error).message;
       if (message.includes('connect') || message.includes('connection')) {
-        throw new Error('数据库连接失败，请稍后重试');
+        throw new Error(`数据库连接失败，请稍后重试 [ERR_DB_CONNECTION]: ${message}`);
+      }
+      
+      if (message.includes('authentication') || message.includes('auth')) {
+        throw new Error('数据库认证失败，请检查凭据 [ERR_DB_AUTH]');
+      }
+      
+      if (message.includes('password')) {
+        throw new Error('数据库密码错误 [ERR_DB_PASSWORD]');
       }
     }
     
+    // 保留原始错误以便调试
     throw error;
   }
 }
