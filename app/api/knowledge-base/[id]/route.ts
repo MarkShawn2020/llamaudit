@@ -3,9 +3,9 @@ import { getUser } from '@/lib/db/queries';
 import { knowledgeBaseApi } from '@/lib/api/knowledge-base-api';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 // GET - 获取知识库详情
@@ -16,7 +16,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: '未授权访问' }, { status: 401 });
     }
 
-    const knowledgeBase = await knowledgeBaseApi.getKnowledgeBase(params.id);
+    const { id } = await params;
+    const knowledgeBase = await knowledgeBaseApi.getKnowledgeBase(id);
     
     return NextResponse.json({ data: knowledgeBase });
   } catch (error) {
@@ -38,8 +39,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: '未授权访问' }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
-    const knowledgeBase = await knowledgeBaseApi.updateKnowledgeBase(params.id, body);
+    const knowledgeBase = await knowledgeBaseApi.updateKnowledgeBase(id, body);
 
     return NextResponse.json({ data: knowledgeBase });
   } catch (error) {
@@ -61,7 +63,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: '未授权访问' }, { status: 401 });
     }
 
-    await knowledgeBaseApi.deleteKnowledgeBase(params.id);
+    const { id } = await params;
+    await knowledgeBaseApi.deleteKnowledgeBase(id);
 
     return NextResponse.json({ message: '知识库删除成功' });
   } catch (error) {

@@ -179,7 +179,7 @@ export default function ProjectAnalysis({
             const controller = new AbortController();
             const signal = controller.signal;
 
-            const response = await fetch('/api/dify/upload', {
+            const response = await fetch(`/api/projects/${projectId}/upload-to-knowledge-base`, {
                 method: 'POST', body: formData, signal
             });
 

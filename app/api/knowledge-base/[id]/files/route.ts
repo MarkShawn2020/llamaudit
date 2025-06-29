@@ -3,9 +3,9 @@ import { getUser } from '@/lib/db/queries';
 import { knowledgeBaseApi } from '@/lib/api/knowledge-base-api';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 // GET - 获取知识库中的文件
@@ -16,7 +16,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: '未授权访问' }, { status: 401 });
     }
 
-    const files = await knowledgeBaseApi.getKnowledgeBaseFiles(params.id);
+    const { id } = await params;
+    const files = await knowledgeBaseApi.getKnowledgeBaseFiles(id);
     
     return NextResponse.json({ data: files });
   } catch (error) {

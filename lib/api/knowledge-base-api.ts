@@ -53,8 +53,9 @@ export class KnowledgeBaseApi {
   private difyBaseUrl: string;
 
   constructor() {
-    this.difyApiKey = process.env.DIFY_API_KEY || '';
-    this.difyBaseUrl = process.env.DIFY_BASE_URL || 'https://api.dify.ai';
+    // 优先使用数据集API密钥进行知识库管理
+    this.difyApiKey = process.env.DIFY_DATASET_API_KEY || process.env.DIFY_API_KEY || '';
+    this.difyBaseUrl = process.env.NEXT_PUBLIC_DIFY_API_URL || 'https://api.dify.ai';
   }
 
   // 创建知识库
@@ -224,7 +225,7 @@ export class KnowledgeBaseApi {
 
   // 创建 Dify 知识库
   private async createDifyDataset(data: DifyDatasetCreateRequest): Promise<DifyDatasetResponse> {
-    const response = await fetch(`${this.difyBaseUrl}/v1/datasets`, {
+    const response = await fetch(`${this.difyBaseUrl}/datasets`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.difyApiKey}`,
@@ -243,7 +244,7 @@ export class KnowledgeBaseApi {
 
   // 删除 Dify 知识库
   private async deleteDifyDataset(datasetId: string): Promise<void> {
-    const response = await fetch(`${this.difyBaseUrl}/v1/datasets/${datasetId}`, {
+    const response = await fetch(`${this.difyBaseUrl}/datasets/${datasetId}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${this.difyApiKey}`
@@ -258,7 +259,7 @@ export class KnowledgeBaseApi {
 
   // 从 Dify 检索内容
   private async retrieveFromDify(datasetId: string, request: DifyRetrievalRequest): Promise<DifyRetrievalResponse> {
-    const response = await fetch(`${this.difyBaseUrl}/v1/datasets/${datasetId}/retrieve`, {
+    const response = await fetch(`${this.difyBaseUrl}/datasets/${datasetId}/retrieve`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.difyApiKey}`,

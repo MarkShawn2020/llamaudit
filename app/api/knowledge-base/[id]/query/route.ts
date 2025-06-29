@@ -3,9 +3,9 @@ import { getUser } from '@/lib/db/queries';
 import { knowledgeBaseApi } from '@/lib/api/knowledge-base-api';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 // POST - 知识库问答
@@ -16,6 +16,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: '未授权访问' }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { question, topK, scoreThreshold } = body;
 
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     const result = await knowledgeBaseApi.queryKnowledgeBase(
-      params.id,
+      id,
       question,
       user.id,
       {

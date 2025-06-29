@@ -2,7 +2,8 @@
 
 import { getUser } from '@/lib/db/queries';
 import { db } from '@/lib/db/drizzle';
-import { auditUnits, files, users } from '@/lib/db/schema';
+import { auditUnits, files, users, knowledgeBases } from '@/lib/db/schema';
+import { knowledgeBaseApi } from '@/lib/api/knowledge-base-api';
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import crypto from 'crypto';
@@ -246,6 +247,20 @@ export async function createProject(projectData: Omit<Project, 'id' | 'createdAt
 
     if (!newProject[0]) {
       throw new Error('创建项目失败');
+    }
+
+    // 为新项目自动创建默认知识库
+    try {
+      await knowledgeBaseApi.createKnowledgeBase(newProject[0].id, {
+        name: `${newProject[0].name} - 项目知识库`,
+        description: `${newProject[0].name}项目的文档知识库，包含所有上传的项目文档`,
+        indexingTechnique: 'high_quality',
+        permission: 'only_me',
+        createdBy: user.id
+      });
+    } catch (kbError) {
+      console.warn('自动创建知识库失败，但项目创建成功:', kbError);
+      // 不抛出错误，允许项目创建成功，用户可以后续手动创建知识库
     }
 
     // 格式化响应，保持与前端一致的命名
