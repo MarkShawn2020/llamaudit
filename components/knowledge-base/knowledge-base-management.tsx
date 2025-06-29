@@ -16,7 +16,7 @@ import { Plus, Brain, Settings, Trash2, FileText, MessageSquare, Upload, Search,
 import { toast } from 'sonner';
 import { KnowledgeBase } from '@/lib/db/schema';
 import { createKnowledgeBase, getKnowledgeBasesByAuditUnit, deleteKnowledgeBase } from '@/lib/actions/knowledge-base-actions';
-import { KnowledgeBaseQA } from './knowledge-base-qa';
+import { useChatBot } from './chat-bot-provider';
 
 interface KnowledgeBaseManagementProps {
   auditUnitId: string;
@@ -37,6 +37,7 @@ export function KnowledgeBaseManagement({ auditUnitId, auditUnitName }: Knowledg
   const [creating, setCreating] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedKnowledgeBase, setSelectedKnowledgeBase] = useState<KnowledgeBase | null>(null);
+  const { showChatBot, hideChatBot } = useChatBot();
   
   const [createForm, setCreateForm] = useState<CreateKnowledgeBaseForm>({
     name: '',
@@ -70,6 +71,25 @@ export function KnowledgeBaseManagement({ auditUnitId, auditUnitName }: Knowledg
   useEffect(() => {
     loadKnowledgeBases();
   }, [auditUnitId]);
+
+  // 自动显示聊天机器人
+  useEffect(() => {
+    if (knowledgeBases.length > 0 && knowledgeBases[0]) {
+      const primaryKnowledgeBase = knowledgeBases[0];
+      showChatBot(
+        primaryKnowledgeBase.id, 
+        primaryKnowledgeBase.name, 
+        auditUnitName
+      );
+    } else {
+      hideChatBot();
+    }
+    
+    // 清理函数
+    return () => {
+      hideChatBot();
+    };
+  }, [knowledgeBases, auditUnitName, showChatBot, hideChatBot]);
 
   // 创建知识库
   const handleCreateKnowledgeBase = async () => {
@@ -293,110 +313,81 @@ export function KnowledgeBaseManagement({ auditUnitId, auditUnitName }: Knowledg
             </p>
           </div>
         ) : (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="overview">知识库概览</TabsTrigger>
-              <TabsTrigger value="qa">智能问答</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="overview" className="space-y-4">
-              {knowledgeBases.map((kb) => (
-                <Card key={kb.id} className={`hover:shadow-md transition-shadow ${selectedKnowledgeBase?.id === kb.id ? 'ring-2 ring-primary' : ''}`}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-lg">{kb.name}</CardTitle>
-                        {kb.description && (
-                          <CardDescription className="mt-1">
-                            {kb.description}
-                          </CardDescription>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {getIndexingTechniqueBadge(kb.indexingTechnique || 'high_quality')}
-                        {getPermissionBadge(kb.permission || 'only_me')}
-                        {knowledgeBases.length > 1 && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>确认删除知识库</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  确定要删除知识库 "{kb.name}" 吗？此操作不可撤销，知识库中的所有文档和问答记录都将被删除。
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>取消</AlertDialogCancel>
-                                <AlertDialogAction 
-                                  onClick={() => handleDeleteKnowledgeBase(kb.id, kb.name)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  删除
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
+          <div className="space-y-4">
+            {knowledgeBases.map((kb) => (
+              <Card key={kb.id} className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="text-lg">{kb.name}</CardTitle>
+                      {kb.description && (
+                        <CardDescription className="mt-1">
+                          {kb.description}
+                        </CardDescription>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {getIndexingTechniqueBadge(kb.indexingTechnique || 'high_quality')}
+                      {getPermissionBadge(kb.permission || 'only_me')}
+                      {knowledgeBases.length > 1 && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>确认删除知识库</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                确定要删除知识库 "{kb.name}" 吗？此操作不可撤销，知识库中的所有文档和问答记录都将被删除。
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>取消</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleDeleteKnowledgeBase(kb.id, kb.name)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                删除
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                    <div className="flex items-center gap-1">
+                      <FileText className="h-4 w-4" />
+                      <span>项目文档: 自动同步</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <MessageSquare className="h-4 w-4" />
+                      <span>支持智能问答</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span>创建时间: {new Date(kb.createdAt!).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="flex items-start gap-2">
+                      <MessageSquare className="h-5 w-5 text-blue-600 mt-0.5" />
+                      <div className="text-sm">
+                        <p className="font-medium text-blue-800 mb-1">智能问答助手已启用</p>
+                        <p className="text-blue-700">
+                          点击右下角的聊天机器人图标即可开始与知识库对话，随时获取项目文档相关的解答。
+                        </p>
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <FileText className="h-4 w-4" />
-                        <span>项目文档: 自动同步</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MessageSquare className="h-4 w-4" />
-                        <span>支持智能问答</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span>创建时间: {new Date(kb.createdAt!).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2 mt-3">
-                      <Button 
-                        size="sm" 
-                        variant={selectedKnowledgeBase?.id === kb.id ? "default" : "outline"}
-                        onClick={() => {
-                          setSelectedKnowledgeBase(kb);
-                          setActiveTab('qa');
-                        }}
-                      >
-                        <MessageSquare className="h-4 w-4 mr-2" />
-                        开始问答
-                      </Button>
-                      <Button size="sm" variant="outline">
-                        <Settings className="h-4 w-4 mr-2" />
-                        设置
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </TabsContent>
-            
-            <TabsContent value="qa">
-              {selectedKnowledgeBase ? (
-                <KnowledgeBaseQA 
-                  knowledgeBaseId={selectedKnowledgeBase.id}
-                  knowledgeBaseName={selectedKnowledgeBase.name}
-                />
-              ) : (
-                <div className="text-center py-8">
-                  <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">请选择知识库</h3>
-                  <p className="text-muted-foreground">
-                    请先在"知识库概览"中选择一个知识库开始问答
-                  </p>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
       </CardContent>
     </Card>

@@ -26,6 +26,7 @@ import {logger} from '@/lib/logger';
 import ProjectAnalysis from 'components/projects/detail/ProjectAnalysis';
 import ProjectInfo from 'components/projects/detail/ProjectInfo';
 import { KnowledgeBaseManagement } from '@/components/knowledge-base/knowledge-base-management';
+import { ChatBotProvider } from '@/components/knowledge-base/chat-bot-provider';
 import {PencilIcon, TrashIcon} from 'lucide-react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
@@ -142,85 +143,89 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
         </div>);
     }
 
-    return (<div className="container mx-auto py-6 space-y-6">
-        <Card className="mb-6">
-            <CardHeader className="pb-2">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <CardTitle className="text-lg">项目概览（{project.name}）</CardTitle>
-                        <CardDescription>单位代码: {project.code}</CardDescription>
-                    </div>
-                    <div className='flex justify-end gap-2'>
-                        <Dialog open={showProjectInfo} onOpenChange={setShowProjectInfo}>
-                            <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="gap-1">
-                                    <PencilIcon className="h-4 w-4"/>
-                                    编辑基本信息
+    return (
+        <ChatBotProvider>
+            <div className="container mx-auto py-6 space-y-6">
+                <Card className="mb-6">
+                    <CardHeader className="pb-2">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <CardTitle className="text-lg">项目概览（{project.name}）</CardTitle>
+                                <CardDescription>单位代码: {project.code}</CardDescription>
+                            </div>
+                            <div className='flex justify-end gap-2'>
+                                <Dialog open={showProjectInfo} onOpenChange={setShowProjectInfo}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="outline" size="sm" className="gap-1">
+                                            <PencilIcon className="h-4 w-4"/>
+                                            编辑基本信息
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-3xl">
+                                        <DialogHeader>
+                                            <DialogTitle>项目基本信息</DialogTitle>
+                                            <DialogDescription>
+                                                查看和编辑项目的详细信息
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <ProjectInfo project={project} onUpdate={handleProjectUpdate}/>
+                                    </DialogContent>
+                                </Dialog>
+
+                                <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    className="gap-1"
+                                    onClick={() => setDeleteDialogOpen(true)}
+                                >
+                                    <TrashIcon className="h-4 w-4"/>
+                                    删除项目
                                 </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-3xl">
-                                <DialogHeader>
-                                    <DialogTitle>项目基本信息</DialogTitle>
-                                    <DialogDescription>
-                                        查看和编辑项目的详细信息
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <ProjectInfo project={project} onUpdate={handleProjectUpdate}/>
-                            </DialogContent>
-                        </Dialog>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <div className="text-sm font-medium text-muted-foreground">单位类型</div>
+                            <div>{project.type}</div>
+                        </div>
+                        <div>
+                            <div className="text-sm font-medium text-muted-foreground">文件数量</div>
+                            <div>{fileCount}</div>
+                        </div>
+                        <div>
+                            <div className="text-sm font-medium text-muted-foreground">分析任务</div>
+                            <div>{project.taskCount}</div>
+                        </div>
+                    </CardContent>
+                </Card>
 
-                        <Button
-                            variant="destructive"
-                            size="sm"
-                            className="gap-1"
-                            onClick={() => setDeleteDialogOpen(true)}
-                        >
-                            <TrashIcon className="h-4 w-4"/>
-                            删除项目
-                        </Button>
-                    </div>
-                </div>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <div className="text-sm font-medium text-muted-foreground">单位类型</div>
-                    <div>{project.type}</div>
-                </div>
-                <div>
-                    <div className="text-sm font-medium text-muted-foreground">文件数量</div>
-                    <div>{fileCount}</div>
-                </div>
-                <div>
-                    <div className="text-sm font-medium text-muted-foreground">分析任务</div>
-                    <div>{project.taskCount}</div>
-                </div>
-            </CardContent>
-        </Card>
+                <KnowledgeBaseManagement auditUnitId={projectId} auditUnitName={project.name} />
 
-        <KnowledgeBaseManagement auditUnitId={projectId} auditUnitName={project.name} />
+                <ProjectAnalysis projectId={projectId} initialFiles={files}/>
 
-        <ProjectAnalysis projectId={projectId} initialFiles={files}/>
-
-        {/* 删除项目 */}
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>确认删除项目</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        您确定要删除项目"{project.name}"吗？此操作将删除所有相关数据，且无法恢复。
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel disabled={deleteLoading}>取消</AlertDialogCancel>
-                    <AlertDialogAction
-                        onClick={handleDeleteProject}
-                        disabled={deleteLoading}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                        {deleteLoading ? '删除中...' : '确认删除'}
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-    </div>);
+                {/* 删除项目 */}
+                <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>确认删除项目</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                您确定要删除项目"{project.name}"吗？此操作将删除所有相关数据，且无法恢复。
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel disabled={deleteLoading}>取消</AlertDialogCancel>
+                            <AlertDialogAction
+                                onClick={handleDeleteProject}
+                                disabled={deleteLoading}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                                {deleteLoading ? '删除中...' : '确认删除'}
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            </div>
+        </ChatBotProvider>
+    );
 }
