@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Send, MessageSquare, FileText, Clock, Brain, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { queryKnowledgeBase, getQaHistory } from '@/lib/actions/knowledge-base-actions';
+// 现在直接使用API调用，不需要server actions
 import { QaConversation } from '@/lib/db/schema';
 
 interface KnowledgeBaseQAProps {
@@ -54,12 +54,20 @@ export function KnowledgeBaseQA({ knowledgeBaseId, knowledgeBaseName }: Knowledg
   const loadHistory = async () => {
     try {
       setLoadingHistory(true);
-      const result = await getQaHistory(knowledgeBaseId, 10, 0);
-      if (result.success && result.data) {
+      
+      const response = await fetch(`/api/knowledge-base/${knowledgeBaseId}/history?limit=10&offset=0`);
+      
+      if (!response.ok) {
+        throw new Error('获取历史记录失败');
+      }
+      
+      const result = await response.json();
+      
+      if (result.data) {
         setHistory(result.data);
         // 将历史记录转换为消息格式
         const historyMessages: QAMessage[] = [];
-        result.data.reverse().forEach((qa) => {
+        result.data.reverse().forEach((qa: any) => {
           historyMessages.push({
             id: `${qa.id}-q`,
             type: 'question',
@@ -82,6 +90,7 @@ export function KnowledgeBaseQA({ knowledgeBaseId, knowledgeBaseName }: Knowledg
       }
     } catch (error) {
       console.error('Error loading QA history:', error);
+      toast.error('加载问答历史失败');
     } finally {
       setLoadingHistory(false);
     }
@@ -108,43 +117,59 @@ export function KnowledgeBaseQA({ knowledgeBaseId, knowledgeBaseName }: Knowledg
     setIsAsking(true);
 
     try {
-      const result = await queryKnowledgeBase({
-        knowledgeBaseId,
-        question,
-        topK: 5,
-        scoreThreshold: 0.3
+      // 直接调用API而不是server action
+      const response = await fetch(`/api/knowledge-base/${knowledgeBaseId}/ask`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          question,
+          topK: 5,
+          scoreThreshold: 0.3
+        }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '请求失败');
+      }
+
+      const result = await response.json();
 
       if (result.success && result.data) {
         const answerMessage: QAMessage = {
           id: `a-${Date.now()}`,
           type: 'answer',
           content: result.data.answer || '抱歉，我无法基于现有知识库内容回答您的问题。',
-          sources: result.data.retrievalResult?.records,
+          sources: result.data.sources,
           confidence: result.data.confidence,
           responseTime: result.data.responseTime,
           timestamp: new Date()
         };
 
         setMessages(prev => [...prev, answerMessage]);
-        toast.success('问答完成');
+        
+        // 显示不同的提示信息
+        if (result.data.isFallback) {
+          toast.warning('使用备用回复模式');
+        } else if (result.data.method === 'dataset_retrieval') {
+          toast.success(`问答完成 (知识库检索: ${result.data.sources?.length || 0} 个相关结果)`);
+        } else if (result.data.method === 'app_api_fallback') {
+          toast.info('问答完成 (应用API模式)');
+        } else {
+          toast.success('问答完成');
+        }
       } else {
-        toast.error(result.error || '问答失败');
-        const errorMessage: QAMessage = {
-          id: `a-${Date.now()}`,
-          type: 'answer',
-          content: '抱歉，问答失败，请稍后重试。',
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, errorMessage]);
+        throw new Error(result.error || '问答失败');
       }
     } catch (error) {
       console.error('Error asking question:', error);
-      toast.error('问答失败');
+      toast.error(error instanceof Error ? error.message : '问答失败');
       const errorMessage: QAMessage = {
         id: `a-${Date.now()}`,
         type: 'answer',
-        content: '抱歉，系统出现错误，请稍后重试。',
+        content: '抱歉，问答失败，请稍后重试。请检查网络连接或联系管理员。',
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);
