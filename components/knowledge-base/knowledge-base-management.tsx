@@ -81,15 +81,9 @@ export function KnowledgeBaseManagement({ auditUnitId, auditUnitName }: Knowledg
         primaryKnowledgeBase.name, 
         auditUnitName
       );
-    } else {
-      hideChatBot();
     }
-    
-    // 清理函数
-    return () => {
-      hideChatBot();
-    };
-  }, [knowledgeBases, auditUnitName, showChatBot, hideChatBot]);
+    // 移除hideChatBot调用，避免无限循环
+  }, [knowledgeBases.length, auditUnitName]); // 移除函数依赖
 
   // 创建知识库
   const handleCreateKnowledgeBase = async () => {

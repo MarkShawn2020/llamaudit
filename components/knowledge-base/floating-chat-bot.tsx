@@ -57,6 +57,7 @@ export function FloatingChatBot({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+
   // 滚动到最新消息
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -184,7 +185,7 @@ export function FloatingChatBot({
     <>
       {/* 悬浮按钮 */}
       {!isOpen && (
-        <div className="fixed bottom-6 right-6 z-50">
+        <div className="fixed bottom-6 right-6 z-[9999]">
           <Button
             onClick={() => setIsOpen(true)}
             size="lg"
@@ -199,9 +200,10 @@ export function FloatingChatBot({
       {isOpen && (
         <div 
           className={cn(
-            "fixed bottom-6 right-6 z-50 bg-background border rounded-lg shadow-2xl transition-all duration-300",
+            "fixed bottom-6 right-6 z-[9999] bg-background border rounded-lg shadow-2xl transition-all duration-300 flex flex-col",
             isMinimized ? "w-80 h-14" : "w-96 h-[600px]"
           )}
+          style={{ zIndex: 9999 }}
         >
           {/* 标题栏 */}
           <div className="flex items-center justify-between p-4 border-b bg-muted/30 rounded-t-lg">
@@ -239,7 +241,7 @@ export function FloatingChatBot({
           {/* 聊天内容 */}
           {!isMinimized && (
             <>
-              <ScrollArea className="flex-1 p-4 h-[480px]">
+              <ScrollArea className="flex-1 p-4">
                 <div className="space-y-4">
                   {messages.map((message) => (
                     <div key={message.id} className={cn(
@@ -318,7 +320,7 @@ export function FloatingChatBot({
               </ScrollArea>
 
               {/* 输入框 */}
-              <div className="p-4 border-t">
+              <div className="p-4 border-t shrink-0">
                 <div className="flex gap-2">
                   <Input
                     ref={inputRef}
