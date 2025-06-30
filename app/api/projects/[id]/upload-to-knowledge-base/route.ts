@@ -155,14 +155,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         // 保存文件记录到数据库，关联知识库
         const newFile = await withConnection(async (db) => {
           const [fileRecord] = await db.insert(files).values({
+            name: file.name,
+            originalName: file.name,
+            filePath: '', // Dify存储，无本地路径
+            fileSize: file.size,
+            fileType: file.type,
             auditUnitId: projectId,
             knowledgeBaseId: knowledgeBase.id,
             difyDocumentId: responseData.document?.id,
-            originalName: file.name,
-            fileSize: file.size,
-            fileType: file.type,
-            filePath: '', // Dify存储，无本地路径
-            uploadDate: new Date().toISOString(),
             userId: user.id,
             indexingStatus: 'pending'
           }).returning();
@@ -189,6 +189,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // 回退上传函数
     async function handleFallbackUpload() {
       logger.info('回退到普通文件上传');
+      
+      if (!file) {
+        throw new Error('文件不存在');
+      }
       
       const difyFormData = new FormData();
       difyFormData.append('file', file);

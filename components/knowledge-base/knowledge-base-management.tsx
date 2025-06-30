@@ -94,10 +94,15 @@ export function KnowledgeBaseManagement({ auditUnitId, auditUnitName }: Knowledg
 
     try {
       setCreating(true);
-      const result = await createKnowledgeBase({
-        auditUnitId,
-        ...createForm
-      });
+      
+      const formData = new FormData();
+      formData.append('auditUnitId', auditUnitId);
+      formData.append('name', createForm.name);
+      formData.append('description', createForm.description || '');
+      formData.append('indexingTechnique', createForm.indexingTechnique);
+      formData.append('permission', createForm.permission);
+      
+      const result = await createKnowledgeBase({}, formData);
 
       if (result.success) {
         toast.success('知识库创建成功');

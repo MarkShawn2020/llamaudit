@@ -7,8 +7,8 @@ import {ScrollArea} from "@/components/ui/scroll-area";
 import {formatFileSize} from "@/lib/format-file-size";
 import {getFileIconColor} from "@/lib/get-file-icon-color";
 import {FileIcon, RefreshCw, Trash2} from "lucide-react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+// import Markdown from "react-markdown";
+// import remarkGfm from "remark-gfm";
 
 /**
  * 单个文档卡片组件
@@ -61,26 +61,9 @@ export function FileCard({
                 <CardContent className="pt-0 pb-2">
                     <div className="border rounded-md p-3 bg-gray-50 mt-2">
                         <ScrollArea className="h-[200px]">
-                            <Markdown
-                                remarkPlugins={[remarkGfm]}
-                                components={{
-                                    // 使用components属性代替className
-                                    p: ({node, ...props}) => <p className="prose prose-sm max-w-none" {...props} />,
-                                    // 其他元素也可以在这里定义
-                                    ul: ({node, ...props}) => <ul className="prose prose-sm max-w-none" {...props} />,
-                                    ol: ({node, ...props}) => <ol className="prose prose-sm max-w-none" {...props} />,
-                                    li: ({node, ...props}) => <li className="prose prose-sm" {...props} />,
-                                    h1: ({node, ...props}) => <h1 className="prose prose-sm" {...props} />,
-                                    h2: ({node, ...props}) => <h2 className="prose prose-sm" {...props} />,
-                                    h3: ({node, ...props}) => <h3 className="prose prose-sm" {...props} />,
-                                    blockquote: ({node, ...props}) => <blockquote
-                                        className="prose prose-sm" {...props} />,
-                                    code: ({node, ...props}) => <code className="prose prose-sm" {...props} />,
-                                    pre: ({node, ...props}) => <pre className="prose prose-sm" {...props} />
-                                }}
-                            >
+                            <div className="prose prose-sm max-w-none whitespace-pre-wrap text-sm">
                                 {file.analysisResult}
-                            </Markdown>
+                            </div>
                         </ScrollArea>
                     </div>
                 </CardContent>
