@@ -2,12 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Brain, FileText, MessageSquare, Loader2, Settings, Database } from 'lucide-react';
+import { Brain, FileText, MessageSquare, Loader2, Settings, Database, RefreshCw, BarChart3 } from 'lucide-react';
 import { useChatBot } from '@/components/knowledge-base/chat-bot-provider';
 import {
   useKnowledgeBases,
@@ -22,7 +20,6 @@ interface KnowledgeBaseTabProps {
 }
 
 export function KnowledgeBaseTab({ auditUnitId, auditUnitName }: KnowledgeBaseTabProps) {
-  const [activeTab, setActiveTab] = useState('overview');
   const [syncingFiles, setSyncingFiles] = useState<Set<string>>(new Set());
   const { showChatBot } = useChatBot();
   const { invalidateStats, invalidateDocuments } = useInvalidateKnowledgeBase();
@@ -109,107 +106,67 @@ export function KnowledgeBaseTab({ auditUnitId, auditUnitName }: KnowledgeBaseTa
     }
   }, [knowledgeBases.length, auditUnitName, showChatBot]);
 
-  // Skeleton 组件
-  const KnowledgeBaseSkeleton = () => (
-    <div className="space-y-4">
-      {/* 顶部状态栏骨架 */}
-      <div className="flex items-center justify-between py-2 px-4 bg-muted/30 rounded-lg">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Database className="h-4 w-4 text-muted-foreground" />
-            <Skeleton className="h-4 w-20" />
-          </div>
-          <div className="flex items-center gap-4">
-            <Skeleton className="h-4 w-16" />
-            <div className="flex items-center gap-1">
-              <span className="w-2 h-2 bg-muted rounded-full animate-pulse"></span>
-              <Skeleton className="h-4 w-12" />
-            </div>
-          </div>
-        </div>
-        <Skeleton className="h-8 w-24" />
+  // 刷新数据
+  const handleRefresh = useCallback(() => {
+    invalidateStats(auditUnitId);
+    if (primaryDatasetId) {
+      invalidateDocuments(auditUnitId, primaryDatasetId);
+    }
+  }, [auditUnitId, primaryDatasetId, invalidateStats, invalidateDocuments]);
+
+  // 统计数据
+  const totalDocuments = Object.values(knowledgeBaseStats).reduce((total, stats) => total + stats.documentCount, 0);
+  const totalWords = Object.values(knowledgeBaseStats).reduce((total, stats) => total + stats.wordCount, 0);
+
+  // 头部 Skeleton
+  const HeaderSkeleton = () => (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b">
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-6 w-32" />
+        <Skeleton className="h-5 w-16" />
       </div>
-      
-      {/* Tab 骨架 */}
-      <div className="space-y-4">
-        <div className="flex space-x-1 bg-muted p-1 rounded-md">
-          <Skeleton className="h-8 flex-1" />
-          <Skeleton className="h-8 flex-1" />
-        </div>
-        
-        {/* 内容骨架 */}
-        <div className="space-y-4">
-          <Card className="border border-muted">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="space-y-2">
-                  <Skeleton className="h-5 w-32" />
-                  <Skeleton className="h-4 w-48" />
-                </div>
-                <Skeleton className="h-6 w-16" />
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="grid grid-cols-3 gap-4 text-sm mb-4">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="text-center space-y-2">
-                    <Skeleton className="h-8 w-12 mx-auto" />
-                    <Skeleton className="h-4 w-16 mx-auto" />
-                  </div>
-                ))}
-              </div>
-              
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-start gap-2">
-                  <Skeleton className="h-4 w-4 mt-0.5" />
-                  <div className="space-y-1 flex-1">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-3 w-48" />
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Skeleton className="h-8 w-24" />
+        <Skeleton className="h-8 w-20" />
+        <Skeleton className="h-8 w-24" />
       </div>
     </div>
   );
-  
-  // 文档列表骨架
-  const DocumentsSkeleton = () => (
-    <ScrollArea className="h-[400px]">
-      <div className="space-y-3">
-        {[...Array(4)].map((_, i) => (
-          <Card key={i} className="border">
-            <CardContent className="p-4">
-              <div className="space-y-3">
-                {/* 文件名和状态 */}
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-4 w-4" />
-                  <Skeleton className="h-4 w-40" />
-                  <Skeleton className="h-5 w-16" />
-                  <Skeleton className="h-5 w-12" />
-                </div>
-                
-                {/* 统计信息 */}
-                <div className="grid grid-cols-2 gap-4">
-                  {[...Array(4)].map((_, j) => (
-                    <div key={j} className="flex items-center gap-2">
-                      <Skeleton className="h-3 w-8" />
-                      <Skeleton className="h-3 w-12" />
-                    </div>
-                  ))}
-                </div>
+
+  // 文档卡片 Skeleton
+  const DocumentCardSkeleton = () => (
+    <Card className="overflow-hidden">
+      <CardContent className="p-4">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-4" />
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-5 w-16" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            {[...Array(4)].map((_, j) => (
+              <div key={j} className="flex items-center gap-2">
+                <Skeleton className="h-3 w-8" />
+                <Skeleton className="h-3 w-12" />
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </ScrollArea>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 
   if (knowledgeBasesLoading) {
-    return <KnowledgeBaseSkeleton />;
+    return (
+      <div className="space-y-4">
+        <HeaderSkeleton />
+        <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <DocumentCardSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   if (knowledgeBasesError) {
@@ -224,209 +181,214 @@ export function KnowledgeBaseTab({ auditUnitId, auditUnitName }: KnowledgeBaseTa
     );
   }
 
-  const totalDocuments = Object.values(knowledgeBaseStats).reduce((total, stats) => total + stats.documentCount, 0);
-
   return (
     <div className="space-y-4">
-      {/* 顶部状态栏 */}
-      <div className="flex items-center justify-between py-2 px-4 bg-muted/30 rounded-lg">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Database className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">智能知识库</span>
-          </div>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+      {/* 顶部标题和操作栏 */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b">
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-semibold">智能知识库</h3>
+          <div className="text-sm text-muted-foreground bg-secondary/50 px-2 py-0.5 rounded">
             {statsLoading ? (
               <Skeleton className="h-4 w-16" />
             ) : (
               <span>{totalDocuments} 个文档</span>
             )}
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-              自动同步
-            </span>
           </div>
         </div>
         
-        {knowledgeBases.length > 0 && (
-          <Button variant="outline" size="sm">
-            <Settings className="h-4 w-4 mr-1" />
-            知识库设置
-          </Button>
-        )}
+        {/* 操作区域 */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* 状态指示器 */}
+          <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-background border text-sm">
+            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+            <span className="text-xs font-medium">自动同步</span>
+          </div>
+          
+          {/* 功能按钮组 */}
+          <div className="flex gap-1">
+            <Button variant="outline" size="sm" onClick={handleRefresh}>
+              <RefreshCw className="h-4 w-4 mr-1"/>
+              刷新
+            </Button>
+            
+            {knowledgeBases.length > 0 && (
+              <>
+                <Button variant="outline" size="sm">
+                  <BarChart3 className="h-4 w-4 mr-1"/>
+                  统计
+                </Button>
+                
+                <Button variant="outline" size="sm">
+                  <Settings className="h-4 w-4 mr-1"/>
+                  设置
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {knowledgeBases.length === 0 ? (
-        <div className="text-center py-8">
-          <Brain className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-          <h3 className="text-lg font-semibold mb-2">项目知识库</h3>
-          <p className="text-muted-foreground mb-4">
-            上传项目文档后将自动创建知识库，支持AI智能问答
-          </p>
-          <p className="text-sm text-muted-foreground">
-            💡 提示：前往"文档分析"页面上传文档即可开始使用
-          </p>
+        <div className="h-32 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground">
+          <div className="text-center">
+            <Brain className="h-6 w-6 mx-auto mb-2 opacity-50" />
+            <p className="text-sm font-medium">尚未创建知识库</p>
+            <p className="text-xs mt-1 opacity-75">上传项目文档后将自动创建知识库</p>
+          </div>
         </div>
       ) : (
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="overview" className="text-sm">概览统计</TabsTrigger>
-            <TabsTrigger value="documents" className="text-sm">文档列表</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="overview" className="mt-4">
-            <div className="space-y-4">
-              {knowledgeBases.map((kb) => (
-                <Card key={kb.id} className="border border-muted">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-base">{kb.name}</CardTitle>
-                        {kb.description && (
-                          <CardDescription className="text-sm mt-1">
-                            {kb.description}
-                          </CardDescription>
-                        )}
+        <>
+          {/* 知识库概览卡片 */}
+          {knowledgeBases.map((kb) => (
+            <Card key={kb.id} className="border border-muted mb-4">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h4 className="text-base font-medium">{kb.name}</h4>
+                    {kb.description && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {kb.description}
+                      </p>
+                    )}
+                  </div>
+                  <Badge variant="outline" className="text-xs">
+                    {kb.indexingTechnique === 'high_quality' ? '高质量' : '经济型'}
+                  </Badge>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-4 text-sm mb-4">
+                  <div className="text-center">
+                    {statsLoading ? (
+                      <Skeleton className="h-6 w-12 mx-auto mb-1" />
+                    ) : (
+                      <div className="text-xl font-bold text-blue-600">
+                        {knowledgeBaseStats[kb.difyDatasetId]?.documentCount || 0}
                       </div>
-                      <Badge variant="outline" className="text-xs">
-                        {kb.indexingTechnique === 'high_quality' ? '高质量' : '经济型'}
-                      </Badge>
+                    )}
+                    <div className="text-muted-foreground text-xs">文档数量</div>
+                  </div>
+                  <div className="text-center">
+                    {statsLoading ? (
+                      <Skeleton className="h-6 w-12 mx-auto mb-1" />
+                    ) : (
+                      <div className="text-xl font-bold text-green-600">
+                        {knowledgeBaseStats[kb.difyDatasetId]?.wordCount || 0}
+                      </div>
+                    )}
+                    <div className="text-muted-foreground text-xs">字数统计</div>
+                  </div>
+                  <div className="text-center">
+                    {statsLoading ? (
+                      <Skeleton className="h-6 w-12 mx-auto mb-1" />
+                    ) : (
+                      <div className="text-xl font-bold text-purple-600">
+                        {knowledgeBaseStats[kb.difyDatasetId]?.appCount || 0}
+                      </div>
+                    )}
+                    <div className="text-muted-foreground text-xs">应用数量</div>
+                  </div>
+                </div>
+                
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <MessageSquare className="h-4 w-4 text-blue-600 mt-0.5" />
+                    <div className="text-sm">
+                      <p className="font-medium text-blue-800">智能问答助手已启用</p>
+                      <p className="text-blue-700 text-xs mt-1">
+                        点击右下角聊天图标即可开始与知识库对话
+                      </p>
                     </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div className="text-center">
-                        {statsLoading ? (
-                          <Skeleton className="h-8 w-12 mx-auto mb-2" />
-                        ) : (
-                          <div className="text-2xl font-bold text-blue-600">
-                            {knowledgeBaseStats[kb.difyDatasetId]?.documentCount || 0}
-                          </div>
-                        )}
-                        <div className="text-muted-foreground">文档数量</div>
-                      </div>
-                      <div className="text-center">
-                        {statsLoading ? (
-                          <Skeleton className="h-8 w-12 mx-auto mb-2" />
-                        ) : (
-                          <div className="text-2xl font-bold text-green-600">
-                            {knowledgeBaseStats[kb.difyDatasetId]?.wordCount || 0}
-                          </div>
-                        )}
-                        <div className="text-muted-foreground">字数统计</div>
-                      </div>
-                      <div className="text-center">
-                        {statsLoading ? (
-                          <Skeleton className="h-8 w-12 mx-auto mb-2" />
-                        ) : (
-                          <div className="text-2xl font-bold text-purple-600">
-                            {knowledgeBaseStats[kb.difyDatasetId]?.appCount || 0}
-                          </div>
-                        )}
-                        <div className="text-muted-foreground">应用数量</div>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <div className="flex items-start gap-2">
-                        <MessageSquare className="h-4 w-4 text-blue-600 mt-0.5" />
-                        <div className="text-sm">
-                          <p className="font-medium text-blue-800">智能问答助手已启用</p>
-                          <p className="text-blue-700 text-xs mt-1">
-                            点击右下角聊天图标即可开始与知识库对话
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+          {/* 文档列表 */}
+          {documentsLoading ? (
+            <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {[...Array(4)].map((_, i) => (
+                <DocumentCardSkeleton key={i} />
               ))}
             </div>
-          </TabsContent>
-          
-          <TabsContent value="documents" className="mt-4">
-            {documentsLoading ? (
-              <DocumentsSkeleton />
-            ) : documents.length === 0 ? (
-              <div className="text-center py-8">
-                <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-                <h3 className="text-lg font-semibold mb-2">暂无文档</h3>
-                <p className="text-muted-foreground">
-                  知识库中还没有文档，上传项目文档后即可在此查看
-                </p>
-              </div>
-            ) : (
-              <ScrollArea className="h-[400px]">
-                <div className="space-y-3">
-                  {documents.map((doc, index) => {
-                    const isSyncing = syncingFiles.has(doc.name);
-                    return (
-                      <Card 
-                        key={doc.id || index} 
-                        className={`transition-all duration-300 ${
-                          isSyncing 
-                            ? 'ring-2 ring-blue-500 bg-blue-50 border-blue-200' 
-                            : 'hover:shadow-sm'
-                        }`}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                {isSyncing ? (
-                                  <div className="flex items-center gap-2">
-                                    <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
-                                    <span className="font-medium text-sm">{doc.name}</span>
-                                    <Badge variant="default" className="bg-blue-600 text-xs animate-pulse">
-                                      同步中...
-                                    </Badge>
-                                  </div>
-                                ) : (
-                                  <>
-                                    <FileText className="h-4 w-4 text-muted-foreground" />
-                                    <span className="font-medium text-sm">{doc.name}</span>
-                                    <Badge variant={doc.enabled ? "default" : "secondary"} className="text-xs">
-                                      {doc.enabled ? "已启用" : "已禁用"}
-                                    </Badge>
-                                  </>
-                                )}
-                              </div>
-                              
-                              <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">创建:</span> 
-                                  <span>{new Date(doc.created_at * 1000).toLocaleDateString()}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">字数:</span> 
-                                  <span>{doc.word_count?.toLocaleString() || 0}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">Token:</span> 
-                                  <span>{doc.tokens?.toLocaleString() || 0}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">访问:</span> 
-                                  <span>{doc.hit_count || 0} 次</span>
-                                </div>
-                              </div>
-                              
-                              {doc.error && (
-                                <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">
-                                  <span className="font-medium">错误:</span> {doc.error}
-                                </div>
-                              )}
-                            </div>
+          ) : documents.length === 0 ? (
+            <div className="text-center py-8">
+              <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+              <h3 className="text-lg font-semibold mb-2">暂无文档</h3>
+              <p className="text-muted-foreground">
+                知识库中还没有文档，上传项目文档后即可在此查看
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {documents.map((doc, index) => {
+                const isSyncing = syncingFiles.has(doc.name);
+                return (
+                  <Card 
+                    key={doc.id || index} 
+                    className={`overflow-hidden hover:shadow-md transition-shadow duration-200 ${
+                      isSyncing 
+                        ? 'ring-2 ring-blue-500 bg-blue-50 border-blue-200' 
+                        : ''
+                    }`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        {/* 文件名和状态 */}
+                        <div className="flex items-center gap-2">
+                          {isSyncing ? (
+                            <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
+                          ) : (
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                          )}
+                          <span className="font-medium text-sm truncate flex-1" title={doc.name}>
+                            {doc.name}
+                          </span>
+                          {isSyncing && (
+                            <Badge variant="default" className="bg-blue-600 text-xs animate-pulse">
+                              同步中
+                            </Badge>
+                          )}
+                          {!isSyncing && (
+                            <Badge variant={doc.enabled ? "default" : "secondary"} className="text-xs">
+                              {doc.enabled ? "已启用" : "已禁用"}
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {/* 统计信息 */}
+                        <div className="grid grid-cols-2 gap-3 text-xs text-muted-foreground">
+                          <div>
+                            <span className="font-medium">创建:</span><br/>
+                            <span>{new Date(doc.created_at * 1000).toLocaleDateString()}</span>
                           </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
-            )}
-          </TabsContent>
-        </Tabs>
+                          <div>
+                            <span className="font-medium">字数:</span><br/>
+                            <span>{doc.word_count?.toLocaleString() || 0}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium">Token:</span><br/>
+                            <span>{doc.tokens?.toLocaleString() || 0}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium">访问:</span><br/>
+                            <span>{doc.hit_count || 0} 次</span>
+                          </div>
+                        </div>
+                        
+                        {doc.error && (
+                          <div className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">
+                            <span className="font-medium">错误:</span> {doc.error}
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
