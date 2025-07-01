@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { KnowledgeBase } from '@/lib/db/schema';
 import { getKnowledgeBasesByAuditUnit, getKnowledgeBaseStats, getDifyDocuments } from '@/lib/actions/knowledge-base-actions';
 import { useChatBot } from '@/components/knowledge-base/chat-bot-provider';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface KnowledgeBaseTabProps {
   auditUnitId: string;
@@ -20,9 +21,10 @@ interface KnowledgeBaseTabProps {
 export function KnowledgeBaseTab({ auditUnitId, auditUnitName }: KnowledgeBaseTabProps) {
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
   const [knowledgeBaseStats, setKnowledgeBaseStats] = useState<Record<string, { documentCount: number; wordCount: number; appCount: number }>>({});
+  const [statsLoading, setStatsLoading] = useState(false);
   const [documents, setDocuments] = useState<any[]>([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedKnowledgeBase, setSelectedKnowledgeBase] = useState<KnowledgeBase | null>(null);
   const [syncingFiles, setSyncingFiles] = useState<Set<string>>(new Set());
@@ -30,29 +32,34 @@ export function KnowledgeBaseTab({ auditUnitId, auditUnitName }: KnowledgeBaseTa
 
   // 加载知识库统计信息
   const loadKnowledgeBaseStats = async (knowledgeBases: KnowledgeBase[]) => {
-    const statsPromises = knowledgeBases.map(async (kb) => {
-      try {
-        const result = await getKnowledgeBaseStats(kb.difyDatasetId);
-        return { 
-          id: kb.difyDatasetId, 
-          stats: result.success ? result.data : { documentCount: 0, wordCount: 0, appCount: 0 }
-        };
-      } catch (error) {
-        console.error(`Error loading stats for knowledge base ${kb.id}:`, error);
-        return { 
-          id: kb.difyDatasetId, 
-          stats: { documentCount: 0, wordCount: 0, appCount: 0 }
-        };
-      }
-    });
+    try {
+      setStatsLoading(true);
+      const statsPromises = knowledgeBases.map(async (kb) => {
+        try {
+          const result = await getKnowledgeBaseStats(kb.difyDatasetId);
+          return { 
+            id: kb.difyDatasetId, 
+            stats: result.success ? result.data : { documentCount: 0, wordCount: 0, appCount: 0 }
+          };
+        } catch (error) {
+          console.error(`Error loading stats for knowledge base ${kb.id}:`, error);
+          return { 
+            id: kb.difyDatasetId, 
+            stats: { documentCount: 0, wordCount: 0, appCount: 0 }
+          };
+        }
+      });
 
-    const statsResults = await Promise.all(statsPromises);
-    const statsMap = statsResults.reduce((acc, { id, stats }) => {
-      acc[id] = stats;
-      return acc;
-    }, {} as Record<string, { documentCount: number; wordCount: number; appCount: number }>);
-    
-    setKnowledgeBaseStats(statsMap);
+      const statsResults = await Promise.all(statsPromises);
+      const statsMap = statsResults.reduce((acc, { id, stats }) => {
+        acc[id] = stats;
+        return acc;
+      }, {} as Record<string, { documentCount: number; wordCount: number; appCount: number }>);
+      
+      setKnowledgeBaseStats(statsMap);
+    } finally {
+      setStatsLoading(false);
+    }
   };
 
   // 加载文档列表
@@ -77,21 +84,26 @@ export function KnowledgeBaseTab({ auditUnitId, auditUnitName }: KnowledgeBaseTa
   // 加载知识库列表
   const loadKnowledgeBases = async () => {
     try {
-      setLoading(true);
+      setInitialLoading(true);
       const result = await getKnowledgeBasesByAuditUnit(auditUnitId);
       if (result.success) {
         const kbList = result.data || [];
         setKnowledgeBases(kbList);
         
-        // 加载统计信息
-        await loadKnowledgeBaseStats(kbList);
-        
-        // 如果有知识库且没有选中的，自动选中第一个
-        if (kbList.length > 0 && !selectedKnowledgeBase) {
-          setSelectedKnowledgeBase(kbList[0]);
-          // 自动加载第一个知识库的文档
-          await loadDocuments(kbList[0].difyDatasetId);
+        // 并行加载统计信息和文档
+        const promises = [];
+        if (kbList.length > 0) {
+          promises.push(loadKnowledgeBaseStats(kbList));
+          
+          // 如果有知识库且没有选中的，自动选中第一个
+          if (!selectedKnowledgeBase) {
+            setSelectedKnowledgeBase(kbList[0]);
+            promises.push(loadDocuments(kbList[0].difyDatasetId));
+          }
         }
+        
+        // 等待所有加载完成
+        await Promise.allSettled(promises);
       } else {
         toast.error(result.error || '加载知识库列表失败');
       }
@@ -99,7 +111,7 @@ export function KnowledgeBaseTab({ auditUnitId, auditUnitName }: KnowledgeBaseTa
       toast.error('加载知识库列表失败');
       console.error('Error loading knowledge bases:', error);
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
     }
   };
 
@@ -194,15 +206,107 @@ export function KnowledgeBaseTab({ auditUnitId, auditUnitName }: KnowledgeBaseTa
     }
   }, [knowledgeBases.length, auditUnitName]);
 
-  if (loading) {
-    return (
-      <div className="h-32 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-2">
-          <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground"/>
-          <p className="text-sm text-muted-foreground">加载知识库...</p>
+  // Skeleton 组件
+  const KnowledgeBaseSkeleton = () => (
+    <div className="space-y-4">
+      {/* 顶部状态栏骨架 */}
+      <div className="flex items-center justify-between py-2 px-4 bg-muted/30 rounded-lg">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Database className="h-4 w-4 text-muted-foreground" />
+            <Skeleton className="h-4 w-20" />
+          </div>
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-4 w-16" />
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 bg-muted rounded-full animate-pulse"></span>
+              <Skeleton className="h-4 w-12" />
+            </div>
+          </div>
+        </div>
+        <Skeleton className="h-8 w-24" />
+      </div>
+      
+      {/* Tab 骨架 */}
+      <div className="space-y-4">
+        <div className="flex space-x-1 bg-muted p-1 rounded-md">
+          <Skeleton className="h-8 flex-1" />
+          <Skeleton className="h-8 flex-1" />
+        </div>
+        
+        {/* 内容骨架 */}
+        <div className="space-y-4">
+          <Card className="border border-muted">
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-32" />
+                  <Skeleton className="h-4 w-48" />
+                </div>
+                <Skeleton className="h-6 w-16" />
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-3 gap-4 text-sm mb-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="text-center space-y-2">
+                    <Skeleton className="h-8 w-12 mx-auto" />
+                    <Skeleton className="h-4 w-16 mx-auto" />
+                  </div>
+                ))}
+              </div>
+              
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <Skeleton className="h-4 w-4 mt-0.5" />
+                  <div className="space-y-1 flex-1">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-48" />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
-    );
+    </div>
+  );
+  
+  // 文档列表骨架
+  const DocumentsSkeleton = () => (
+    <ScrollArea className="h-[400px]">
+      <div className="space-y-3">
+        {[...Array(4)].map((_, i) => (
+          <Card key={i} className="border">
+            <CardContent className="p-4">
+              <div className="space-y-3">
+                {/* 文件名和状态 */}
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4" />
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-5 w-16" />
+                  <Skeleton className="h-5 w-12" />
+                </div>
+                
+                {/* 统计信息 */}
+                <div className="grid grid-cols-2 gap-4">
+                  {[...Array(4)].map((_, j) => (
+                    <div key={j} className="flex items-center gap-2">
+                      <Skeleton className="h-3 w-8" />
+                      <Skeleton className="h-3 w-12" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </ScrollArea>
+  );
+
+  if (initialLoading) {
+    return <KnowledgeBaseSkeleton />;
   }
 
   const totalDocuments = Object.values(knowledgeBaseStats).reduce((total, stats) => total + stats.documentCount, 0);
@@ -217,7 +321,11 @@ export function KnowledgeBaseTab({ auditUnitId, auditUnitName }: KnowledgeBaseTa
             <span className="text-sm font-medium">智能知识库</span>
           </div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span>{totalDocuments} 个文档</span>
+            {statsLoading ? (
+              <Skeleton className="h-4 w-16" />
+            ) : (
+              <span>{totalDocuments} 个文档</span>
+            )}
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 bg-green-500 rounded-full"></span>
               自动同步
@@ -273,21 +381,33 @@ export function KnowledgeBaseTab({ auditUnitId, auditUnitName }: KnowledgeBaseTa
                   <CardContent className="pt-0">
                     <div className="grid grid-cols-3 gap-4 text-sm">
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">
-                          {knowledgeBaseStats[kb.difyDatasetId]?.documentCount || 0}
-                        </div>
+                        {statsLoading ? (
+                          <Skeleton className="h-8 w-12 mx-auto mb-2" />
+                        ) : (
+                          <div className="text-2xl font-bold text-blue-600">
+                            {knowledgeBaseStats[kb.difyDatasetId]?.documentCount || 0}
+                          </div>
+                        )}
                         <div className="text-muted-foreground">文档数量</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">
-                          {knowledgeBaseStats[kb.difyDatasetId]?.wordCount || 0}
-                        </div>
+                        {statsLoading ? (
+                          <Skeleton className="h-8 w-12 mx-auto mb-2" />
+                        ) : (
+                          <div className="text-2xl font-bold text-green-600">
+                            {knowledgeBaseStats[kb.difyDatasetId]?.wordCount || 0}
+                          </div>
+                        )}
                         <div className="text-muted-foreground">字数统计</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-purple-600">
-                          {knowledgeBaseStats[kb.difyDatasetId]?.appCount || 0}
-                        </div>
+                        {statsLoading ? (
+                          <Skeleton className="h-8 w-12 mx-auto mb-2" />
+                        ) : (
+                          <div className="text-2xl font-bold text-purple-600">
+                            {knowledgeBaseStats[kb.difyDatasetId]?.appCount || 0}
+                          </div>
+                        )}
                         <div className="text-muted-foreground">应用数量</div>
                       </div>
                     </div>
@@ -311,12 +431,7 @@ export function KnowledgeBaseTab({ auditUnitId, auditUnitName }: KnowledgeBaseTa
           
           <TabsContent value="documents" className="mt-4">
             {documentsLoading ? (
-              <div className="h-32 flex items-center justify-center">
-                <div className="flex flex-col items-center gap-2">
-                  <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">加载文档列表...</p>
-                </div>
-              </div>
+              <DocumentsSkeleton />
             ) : documents.length === 0 ? (
               <div className="text-center py-8">
                 <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
@@ -344,39 +459,46 @@ export function KnowledgeBaseTab({ auditUnitId, auditUnitName }: KnowledgeBaseTa
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-2">
                                 {isSyncing ? (
-                                  <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
+                                  <div className="flex items-center gap-2">
+                                    <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
+                                    <span className="font-medium text-sm">{doc.name}</span>
+                                    <Badge variant="default" className="bg-blue-600 text-xs animate-pulse">
+                                      同步中...
+                                    </Badge>
+                                  </div>
                                 ) : (
-                                  <FileText className="h-4 w-4 text-muted-foreground" />
+                                  <>
+                                    <FileText className="h-4 w-4 text-muted-foreground" />
+                                    <span className="font-medium text-sm">{doc.name}</span>
+                                    <Badge variant={doc.enabled ? "default" : "secondary"} className="text-xs">
+                                      {doc.enabled ? "已启用" : "已禁用"}
+                                    </Badge>
+                                  </>
                                 )}
-                                <span className="font-medium text-sm">{doc.name}</span>
-                                {isSyncing && (
-                                  <Badge variant="default" className="bg-blue-600 text-xs">
-                                    同步中...
-                                  </Badge>
-                                )}
-                                <Badge variant={doc.enabled ? "default" : "secondary"} className="text-xs">
-                                  {doc.enabled ? "已启用" : "已禁用"}
-                                </Badge>
                               </div>
                               
                               <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
-                                <div>
-                                  <span className="font-medium">创建:</span> {new Date(doc.created_at * 1000).toLocaleDateString()}
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">创建:</span> 
+                                  <span>{new Date(doc.created_at * 1000).toLocaleDateString()}</span>
                                 </div>
-                                <div>
-                                  <span className="font-medium">字数:</span> {doc.word_count?.toLocaleString() || 0}
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">字数:</span> 
+                                  <span>{doc.word_count?.toLocaleString() || 0}</span>
                                 </div>
-                                <div>
-                                  <span className="font-medium">Token:</span> {doc.tokens?.toLocaleString() || 0}
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">Token:</span> 
+                                  <span>{doc.tokens?.toLocaleString() || 0}</span>
                                 </div>
-                                <div>
-                                  <span className="font-medium">访问:</span> {doc.hit_count || 0} 次
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">访问:</span> 
+                                  <span>{doc.hit_count || 0} 次</span>
                                 </div>
                               </div>
                               
                               {doc.error && (
                                 <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">
-                                  错误: {doc.error}
+                                  <span className="font-medium">错误:</span> {doc.error}
                                 </div>
                               )}
                             </div>

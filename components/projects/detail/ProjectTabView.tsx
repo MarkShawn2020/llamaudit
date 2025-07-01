@@ -21,7 +21,7 @@ export default function ProjectTabView({
     initialFiles = [],
     onFileChange
 }: ProjectTabViewProps) {
-    const [activeTab, setActiveTab] = useState('documents');
+    const [activeTab, setActiveTab] = useState('knowledge-base');
     
     // 统计信息
     const documentCount = initialFiles?.length || 0;
