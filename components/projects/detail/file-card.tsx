@@ -32,40 +32,42 @@ export function FileCard({
     const isExpanded = expanded || file.status === 'analyzing' || file.status === 'analyzed';
 
     return (
-        <Card className="mb-4 overflow-hidden">
-            <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-2">
-                        <FileIcon className={`h-6 w-6 ${getFileIconColor(file.fileType)}`}/>
-                        <div>
-                            <CardTitle className="text-sm font-medium">{file.originalName}</CardTitle>
-                            <CardDescription className="text-xs">
-                                {formatFileSize(file.fileSize)} • {new Date(file.uploadDate).toLocaleString()}
-                            </CardDescription>
-                        </div>
+        <Card className="overflow-hidden hover:shadow-md transition-shadow duration-200">
+            <CardHeader className="pb-3">
+                <div className="flex items-start gap-3">
+                    <FileIcon className={`h-5 w-5 mt-0.5 flex-shrink-0 ${getFileIconColor(file.fileType)}`}/>
+                    <div className="flex-1 min-w-0">
+                        <CardTitle className="text-sm font-medium truncate" title={file.originalName}>
+                            {file.originalName}
+                        </CardTitle>
+                        <CardDescription className="text-xs mt-0.5">
+                            {formatFileSize(file.fileSize)} • {new Date(file.uploadDate).toLocaleDateString()}
+                        </CardDescription>
                     </div>
                     <FileStatusBadge status={file.status}/>
                 </div>
             </CardHeader>
 
             {file.status === 'uploading' && (
-                <CardContent className="pb-2">
-                    <Progress value={file.progress || 0} className="h-2"/>
-                    <p className="text-xs text-muted-foreground mt-1 text-right">{file.progress}%</p>
+                <CardContent className="pb-3">
+                    <div className="space-y-1">
+                        <Progress value={file.progress || 0} className="h-1.5"/>
+                        <p className="text-xs text-muted-foreground text-right">{file.progress}%</p>
+                    </div>
                 </CardContent>
             )}
 
             {file.error && (
                 <CardContent className="py-2">
-                    <p className="text-xs text-red-500 italic">{file.error}</p>
+                    <p className="text-xs text-destructive bg-destructive/10 p-2 rounded text-center">{file.error}</p>
                 </CardContent>
             )}
 
             {isExpanded && file.analysisResult && (
-                <CardContent className="pt-0 pb-2">
-                    <div className="border rounded-md p-3 bg-gray-50 mt-2">
-                        <ScrollArea className="h-[200px]">
-                            <div className="prose prose-sm max-w-none whitespace-pre-wrap text-sm">
+                <CardContent className="pt-0 pb-3">
+                    <div className="border rounded-md p-3 bg-muted/30">
+                        <ScrollArea className="h-[160px]">
+                            <div className="text-xs leading-relaxed whitespace-pre-wrap">
                                 {file.analysisResult}
                             </div>
                         </ScrollArea>
@@ -75,17 +77,16 @@ export function FileCard({
 
             {/* 同步到知识库设置 */}
             {file.status === 'uploaded' || file.status === 'analyzed' ? (
-                <CardContent className="py-2 border-t">
+                <CardContent className="py-2 border-t bg-muted/20">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center gap-2">
                             {file.syncLoading ? (
-                                <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
+                                <Loader2 className="h-3.5 w-3.5 text-blue-500 animate-spin" />
                             ) : (
-                                <Database className="h-4 w-4 text-muted-foreground" />
+                                <Database className="h-3.5 w-3.5 text-muted-foreground" />
                             )}
-                            <Label htmlFor={`sync-${file.id}`} className="text-sm font-medium">
-                                同步到知识库
-                                {file.syncLoading && <span className="text-blue-500 ml-1">处理中...</span>}
+                            <Label htmlFor={`sync-${file.id}`} className="text-xs font-medium cursor-pointer">
+                                同步知识库{file.syncLoading && <span className="text-blue-500 ml-1">(处理中)</span>}
                             </Label>
                         </div>
                         <Switch
@@ -93,22 +94,21 @@ export function FileCard({
                             checked={file.syncToKnowledgeBase ?? false}
                             onCheckedChange={(checked) => onSyncToggle?.(file, checked)}
                             disabled={file.status === 'uploading' || file.status === 'analyzing' || file.syncLoading}
+                            className="scale-90"
                         />
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1 ml-6">
-                        启用后文档将自动添加到项目知识库，支持AI智能问答
-                    </p>
                 </CardContent>
             ) : null}
 
-            <CardFooter className="pt-0 pb-3 flex justify-between">
+            <CardFooter className="pt-2 pb-3 flex gap-2">
                 <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => onRemove(file)}
                     disabled={file.status === 'uploading' || file.status === 'analyzing'}
+                    className="flex-1 h-8 text-xs"
                 >
-                    <Trash2 className="h-4 w-4 mr-1"/>
+                    <Trash2 className="h-3.5 w-3.5 mr-1"/>
                     删除
                 </Button>
 
@@ -117,8 +117,9 @@ export function FileCard({
                         variant="outline"
                         size="sm"
                         onClick={() => onAnalyze(file)}
+                        className="flex-1 h-8 text-xs"
                     >
-                        <RefreshCw className="h-4 w-4 mr-1"/>
+                        <RefreshCw className="h-3.5 w-3.5 mr-1"/>
                         {file.status === 'analyzed' ? '重新分析' : '分析'}
                     </Button>
                 )}

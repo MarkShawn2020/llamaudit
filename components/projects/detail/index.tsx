@@ -23,9 +23,8 @@ import {
 } from "@/components/ui/dialog";
 import {deleteProject, getProject, Project as BaseProject} from '@/lib/api/project-api';
 import {logger} from '@/lib/logger';
-import ProjectAnalysis from 'components/projects/detail/ProjectAnalysis';
+import ProjectTabView from 'components/projects/detail/ProjectTabView';
 import ProjectInfo from 'components/projects/detail/ProjectInfo';
-import { KnowledgeBaseManagement } from '@/components/knowledge-base/knowledge-base-management';
 import { ChatBotProvider } from '@/components/knowledge-base/chat-bot-provider';
 import {PencilIcon, TrashIcon} from 'lucide-react';
 import Link from 'next/link';
@@ -200,9 +199,11 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
                     </CardContent>
                 </Card>
 
-                <KnowledgeBaseManagement auditUnitId={projectId} auditUnitName={project.name} />
-
-                <ProjectAnalysis projectId={projectId} initialFiles={files}/>
+                <ProjectTabView 
+                    projectId={projectId} 
+                    projectName={project.name}
+                    initialFiles={files}
+                />
 
                 {/* 删除项目 */}
                 <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
