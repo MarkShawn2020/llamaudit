@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { FloatingChatBot } from './floating-chat-bot';
 
 interface ChatBotContextType {
@@ -21,22 +21,22 @@ export function ChatBotProvider({ children }: { children: React.ReactNode }) {
   const [isVisible, setIsVisible] = useState(false);
   const [chatBotState, setChatBotState] = useState<ChatBotState | null>(null);
 
-  const showChatBot = (knowledgeBaseId: string, knowledgeBaseName: string, projectName?: string) => {
+  const showChatBot = useCallback((knowledgeBaseId: string, knowledgeBaseName: string, projectName?: string) => {
     setChatBotState({ knowledgeBaseId, knowledgeBaseName, projectName });
     setIsVisible(true);
-  };
+  }, []);
 
-  const hideChatBot = () => {
+  const hideChatBot = useCallback(() => {
     setIsVisible(false);
     // 延迟清理状态，避免组件销毁时的闪烁
     setTimeout(() => setChatBotState(null), 300);
-  };
+  }, []);
 
-  const contextValue: ChatBotContextType = {
+  const contextValue: ChatBotContextType = useMemo(() => ({
     showChatBot,
     hideChatBot,
     isVisible
-  };
+  }), [showChatBot, hideChatBot, isVisible]);
 
   return (
     <ChatBotContext.Provider value={contextValue}>

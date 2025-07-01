@@ -1,17 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Brain, FileText, MessageSquare, RefreshCw, Loader2, Settings, Database } from 'lucide-react';
-import { toast } from 'sonner';
-import { KnowledgeBase } from '@/lib/db/schema';
-import { getKnowledgeBasesByAuditUnit, getKnowledgeBaseStats, getDifyDocuments } from '@/lib/actions/knowledge-base-actions';
-import { useChatBot } from '@/components/knowledge-base/chat-bot-provider';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Brain, FileText, MessageSquare, Loader2, Settings, Database } from 'lucide-react';
+import { useChatBot } from '@/components/knowledge-base/chat-bot-provider';
+import {
+  useKnowledgeBases,
+  useKnowledgeBaseStats,
+  useKnowledgeBaseDocuments,
+  useInvalidateKnowledgeBase,
+} from '@/hooks/use-knowledge-base';
 
 interface KnowledgeBaseTabProps {
   auditUnitId: string;
@@ -19,105 +22,29 @@ interface KnowledgeBaseTabProps {
 }
 
 export function KnowledgeBaseTab({ auditUnitId, auditUnitName }: KnowledgeBaseTabProps) {
-  const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
-  const [knowledgeBaseStats, setKnowledgeBaseStats] = useState<Record<string, { documentCount: number; wordCount: number; appCount: number }>>({});
-  const [statsLoading, setStatsLoading] = useState(false);
-  const [documents, setDocuments] = useState<any[]>([]);
-  const [documentsLoading, setDocumentsLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
-  const [selectedKnowledgeBase, setSelectedKnowledgeBase] = useState<KnowledgeBase | null>(null);
   const [syncingFiles, setSyncingFiles] = useState<Set<string>>(new Set());
   const { showChatBot } = useChatBot();
+  const { invalidateStats, invalidateDocuments } = useInvalidateKnowledgeBase();
 
-  // 加载知识库统计信息
-  const loadKnowledgeBaseStats = async (knowledgeBases: KnowledgeBase[]) => {
-    try {
-      setStatsLoading(true);
-      const statsPromises = knowledgeBases.map(async (kb) => {
-        try {
-          const result = await getKnowledgeBaseStats(kb.difyDatasetId);
-          return { 
-            id: kb.difyDatasetId, 
-            stats: result.success ? result.data : { documentCount: 0, wordCount: 0, appCount: 0 }
-          };
-        } catch (error) {
-          console.error(`Error loading stats for knowledge base ${kb.id}:`, error);
-          return { 
-            id: kb.difyDatasetId, 
-            stats: { documentCount: 0, wordCount: 0, appCount: 0 }
-          };
-        }
-      });
+  // React Query hooks
+  const {
+    data: knowledgeBases = [],
+    isLoading: knowledgeBasesLoading,
+    error: knowledgeBasesError,
+  } = useKnowledgeBases(auditUnitId);
 
-      const statsResults = await Promise.all(statsPromises);
-      const statsMap = statsResults.reduce((acc, { id, stats }) => {
-        acc[id] = stats;
-        return acc;
-      }, {} as Record<string, { documentCount: number; wordCount: number; appCount: number }>);
-      
-      setKnowledgeBaseStats(statsMap);
-    } finally {
-      setStatsLoading(false);
-    }
-  };
+  const {
+    data: knowledgeBaseStats = {},
+    isLoading: statsLoading,
+  } = useKnowledgeBaseStats(auditUnitId, knowledgeBases);
 
-  // 加载文档列表
-  const loadDocuments = async (difyDatasetId: string) => {
-    try {
-      setDocumentsLoading(true);
-      const result = await getDifyDocuments(difyDatasetId, 1, 50);
-      if (result.success) {
-        setDocuments(result.documents || []);
-      } else {
-        console.error('Failed to load documents:', result.error);
-        setDocuments([]);
-      }
-    } catch (error) {
-      console.error('Error loading documents:', error);
-      setDocuments([]);
-    } finally {
-      setDocumentsLoading(false);
-    }
-  };
-
-  // 加载知识库列表
-  const loadKnowledgeBases = async () => {
-    try {
-      setInitialLoading(true);
-      const result = await getKnowledgeBasesByAuditUnit(auditUnitId);
-      if (result.success) {
-        const kbList = result.data || [];
-        setKnowledgeBases(kbList);
-        
-        // 并行加载统计信息和文档
-        const promises = [];
-        if (kbList.length > 0) {
-          promises.push(loadKnowledgeBaseStats(kbList));
-          
-          // 如果有知识库且没有选中的，自动选中第一个
-          if (!selectedKnowledgeBase) {
-            setSelectedKnowledgeBase(kbList[0]);
-            promises.push(loadDocuments(kbList[0].difyDatasetId));
-          }
-        }
-        
-        // 等待所有加载完成
-        await Promise.allSettled(promises);
-      } else {
-        toast.error(result.error || '加载知识库列表失败');
-      }
-    } catch (error) {
-      toast.error('加载知识库列表失败');
-      console.error('Error loading knowledge bases:', error);
-    } finally {
-      setInitialLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadKnowledgeBases();
-  }, [auditUnitId]);
+  const primaryKnowledgeBase = knowledgeBases[0];
+  const primaryDatasetId = primaryKnowledgeBase?.difyDatasetId;
+  const {
+    data: documents = [],
+    isLoading: documentsLoading,
+  } = useKnowledgeBaseDocuments(auditUnitId, primaryDatasetId);
 
   // 监听知识库同步事件
   useEffect(() => {
@@ -140,10 +67,10 @@ export function KnowledgeBaseTab({ auditUnitId, auditUnitName }: KnowledgeBaseTa
     };
 
     const handleKnowledgeBaseUpdate = (event: CustomEvent) => {
-      const { projectId: eventProjectId, action, fileName } = event.detail;
+      const { projectId: eventProjectId, fileName } = event.detail;
       
       if (eventProjectId === auditUnitId) {
-        console.log(`Knowledge base updated: ${action} - ${fileName}`);
+        console.log(`Knowledge base updated - ${fileName}`);
         
         setSyncingFiles(prev => {
           const updated = new Set(prev);
@@ -151,34 +78,10 @@ export function KnowledgeBaseTab({ auditUnitId, auditUnitName }: KnowledgeBaseTa
           return updated;
         });
         
-        // 更新统计数字
-        if (action === 'fileAdded') {
-          setKnowledgeBaseStats(prev => {
-            const updated = { ...prev };
-            Object.keys(updated).forEach(datasetId => {
-              updated[datasetId] = {
-                ...updated[datasetId],
-                documentCount: (updated[datasetId]?.documentCount || 0) + 1
-              };
-            });
-            return updated;
-          });
-        } else if (action === 'fileRemoved') {
-          setKnowledgeBaseStats(prev => {
-            const updated = { ...prev };
-            Object.keys(updated).forEach(datasetId => {
-              updated[datasetId] = {
-                ...updated[datasetId],
-                documentCount: Math.max((updated[datasetId]?.documentCount || 0) - 1, 0)
-              };
-            });
-            return updated;
-          });
-        }
-        
-        // 静默重新加载文档列表
-        if (selectedKnowledgeBase) {
-          loadDocuments(selectedKnowledgeBase.difyDatasetId);
+        // 使用 React Query 的 invalidate 来重新获取数据
+        invalidateStats(auditUnitId);
+        if (primaryDatasetId) {
+          invalidateDocuments(auditUnitId, primaryDatasetId);
         }
       }
     };
@@ -192,9 +95,9 @@ export function KnowledgeBaseTab({ auditUnitId, auditUnitName }: KnowledgeBaseTa
       window.removeEventListener('knowledgeBaseSyncError', handleSyncError as EventListener);
       window.removeEventListener('knowledgeBaseUpdated', handleKnowledgeBaseUpdate as EventListener);
     };
-  }, [auditUnitId, selectedKnowledgeBase]);
+  }, [auditUnitId, primaryDatasetId, invalidateStats, invalidateDocuments]);
 
-  // 自动显示聊天机器人
+  // 自动显示聊天机器人 - 使用稳定的依赖
   useEffect(() => {
     if (knowledgeBases.length > 0 && knowledgeBases[0]) {
       const primaryKnowledgeBase = knowledgeBases[0];
@@ -204,7 +107,7 @@ export function KnowledgeBaseTab({ auditUnitId, auditUnitName }: KnowledgeBaseTa
         auditUnitName
       );
     }
-  }, [knowledgeBases.length, auditUnitName]);
+  }, [knowledgeBases.length, auditUnitName, showChatBot]);
 
   // Skeleton 组件
   const KnowledgeBaseSkeleton = () => (
@@ -305,8 +208,20 @@ export function KnowledgeBaseTab({ auditUnitId, auditUnitName }: KnowledgeBaseTa
     </ScrollArea>
   );
 
-  if (initialLoading) {
+  if (knowledgeBasesLoading) {
     return <KnowledgeBaseSkeleton />;
+  }
+
+  if (knowledgeBasesError) {
+    return (
+      <div className="text-center py-8">
+        <Brain className="h-12 w-12 mx-auto text-red-500 mb-4 opacity-50" />
+        <h3 className="text-lg font-semibold mb-2 text-red-600">加载失败</h3>
+        <p className="text-muted-foreground">
+          {knowledgeBasesError.message || '无法加载知识库信息'}
+        </p>
+      </div>
+    );
   }
 
   const totalDocuments = Object.values(knowledgeBaseStats).reduce((total, stats) => total + stats.documentCount, 0);

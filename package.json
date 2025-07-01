@@ -37,6 +37,8 @@
     "@radix-ui/react-toast": "^1.2.13",
     "@streamparser/json": "^0.0.22",
     "@tailwindcss/postcss": "4.0.12",
+    "@tanstack/react-query": "^5.81.5",
+    "@tanstack/react-query-devtools": "^5.81.5",
     "@types/bcryptjs": "^2.4.6",
     "@types/nanoid": "^3.0.0",
     "@types/node": "^22.13.9",

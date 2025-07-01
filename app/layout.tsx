@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/theme-provider';
 import { UserProvider } from '@/components/user-provider';
 import { DifyConfigProvider } from '@/contexts/dify-config-context';
+import { QueryProvider } from '@/components/providers/query-provider';
 import { GlobalNavbar } from '@/components/GlobalNavbar';
 import { CozeChat } from '@/components/CozeChat';
 import { getUser } from '@/lib/db/queries';
@@ -46,14 +47,16 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <UserProvider initialUser={initialUser}>
-            <DifyConfigProvider>
-              <div className="flex min-h-screen flex-col">
-                <GlobalNavbar />
-                <main className="flex-1">{children}</main>
-              </div>
-            </DifyConfigProvider>
-          </UserProvider>
+          <QueryProvider>
+            <UserProvider initialUser={initialUser}>
+              <DifyConfigProvider>
+                <div className="flex min-h-screen flex-col">
+                  <GlobalNavbar />
+                  <main className="flex-1">{children}</main>
+                </div>
+              </DifyConfigProvider>
+            </UserProvider>
+          </QueryProvider>
         </ThemeProvider>
         {/* <CozeChat /> */}
       </body>
