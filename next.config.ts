@@ -13,6 +13,12 @@ const nextConfig: NextConfig = {
       { module: /node_modules\/any-promise/ }
     ];
     
+    // Add a rule to exclude the directory from being processed by webpack's loaders
+    config.module.rules.push({
+      test: /dify-docs/, // A regex to match the path
+      use: 'null-loader', // Use a loader that returns an empty module
+    });
+    
     return config;
   }
 };
