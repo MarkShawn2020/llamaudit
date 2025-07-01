@@ -8,7 +8,7 @@ import {Switch} from "@/components/ui/switch";
 import {Label} from "@/components/ui/label";
 import {formatFileSize} from "@/lib/format-file-size";
 import {getFileIconColor} from "@/lib/get-file-icon-color";
-import {FileIcon, RefreshCw, Trash2, Database} from "lucide-react";
+import {FileIcon, RefreshCw, Trash2, Database, Loader2} from "lucide-react";
 // import Markdown from "react-markdown";
 // import remarkGfm from "remark-gfm";
 
@@ -78,16 +78,21 @@ export function FileCard({
                 <CardContent className="py-2 border-t">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                            <Database className="h-4 w-4 text-muted-foreground" />
+                            {file.syncLoading ? (
+                                <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
+                            ) : (
+                                <Database className="h-4 w-4 text-muted-foreground" />
+                            )}
                             <Label htmlFor={`sync-${file.id}`} className="text-sm font-medium">
                                 同步到知识库
+                                {file.syncLoading && <span className="text-blue-500 ml-1">处理中...</span>}
                             </Label>
                         </div>
                         <Switch
                             id={`sync-${file.id}`}
                             checked={file.syncToKnowledgeBase ?? false}
                             onCheckedChange={(checked) => onSyncToggle?.(file, checked)}
-                            disabled={file.status === 'uploading' || file.status === 'analyzing'}
+                            disabled={file.status === 'uploading' || file.status === 'analyzing' || file.syncLoading}
                         />
                     </div>
                     <p className="text-xs text-muted-foreground mt-1 ml-6">

@@ -15,4 +15,5 @@ export interface UIFile {
     error?: string; // 错误信息
     uploadDate: string;
     syncToKnowledgeBase?: boolean; // 是否同步到知识库
+    syncLoading?: boolean; // 同步操作进行中
 }

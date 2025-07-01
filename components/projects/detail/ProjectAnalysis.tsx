@@ -414,19 +414,22 @@ export default function ProjectAnalysis({
 
     // 处理单个文件的同步切换
     const handleSyncToggle = async (file: UIFile, syncEnabled: boolean) => {
-        try {
-            // 更新文件的同步状态
-            setFiles(prev => prev.map(f => 
-                f.id === file.id ? { ...f, syncToKnowledgeBase: syncEnabled } : f
-            ));
+        // 立即设置loading状态
+        setFiles(prev => prev.map(f => 
+            f.id === file.id ? { ...f, syncToKnowledgeBase: syncEnabled, syncLoading: true } : f
+        ));
 
-            // 如果启用同步且文件已上传，立即同步到知识库
+        // 立即通知知识库组件进入loading状态
+        window.dispatchEvent(new CustomEvent('knowledgeBaseSyncStart', {
+            detail: { projectId, fileName: file.originalName, action: syncEnabled ? 'fileAdded' : 'fileRemoved' }
+        }));
+
+        try {
+            // 如果启用同步且文件已上传，同步到知识库
             if (syncEnabled && (file.status === 'uploaded' || file.status === 'analyzed')) {
                 const response = await fetch(`/api/projects/${projectId}/sync-file-to-knowledge-base`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ fileId: file.id }),
                 });
 
@@ -440,47 +443,42 @@ export default function ProjectAnalysis({
                     throw new Error(result.message || '同步到知识库失败');
                 }
 
-                toast({
-                    title: '同步成功',
-                    description: `文档 ${file.originalName} 已同步到知识库`,
-                });
-
-                // 触发知识库更新事件
-                window.dispatchEvent(new CustomEvent('knowledgeBaseUpdated', {
-                    detail: { projectId, action: 'fileAdded', fileName: file.originalName }
-                }));
             } else if (!syncEnabled) {
                 // 如果禁用同步，从知识库中移除
                 const response = await fetch(`/api/projects/${projectId}/remove-file-from-knowledge-base`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ fileId: file.id }),
                 });
 
                 if (!response.ok) {
                     throw new Error('从知识库移除失败');
                 }
-
-                toast({
-                    title: '已移除',
-                    description: `文档 ${file.originalName} 已从知识库中移除`,
-                });
-
-                // 触发知识库更新事件
-                window.dispatchEvent(new CustomEvent('knowledgeBaseUpdated', {
-                    detail: { projectId, action: 'fileRemoved', fileName: file.originalName }
-                }));
             }
-        } catch (error) {
-            // 如果操作失败，恢复之前的状态
+
+            // 操作成功，移除loading状态
             setFiles(prev => prev.map(f => 
-                f.id === file.id ? { ...f, syncToKnowledgeBase: !syncEnabled } : f
+                f.id === file.id ? { ...f, syncLoading: false } : f
+            ));
+
+            // 触发知识库更新事件
+            window.dispatchEvent(new CustomEvent('knowledgeBaseUpdated', {
+                detail: { projectId, action: syncEnabled ? 'fileAdded' : 'fileRemoved', fileName: file.originalName }
+            }));
+
+        } catch (error) {
+            // 如果操作失败，恢复之前的状态并移除loading
+            setFiles(prev => prev.map(f => 
+                f.id === file.id ? { ...f, syncToKnowledgeBase: !syncEnabled, syncLoading: false } : f
             ));
             
+            // 通知知识库组件操作失败
+            window.dispatchEvent(new CustomEvent('knowledgeBaseSyncError', {
+                detail: { projectId, fileName: file.originalName }
+            }));
+            
             toast({
-                title: '操作失败',
+                title: '同步操作失败',
                 description: error instanceof Error ? error.message : '未知错误',
                 variant: 'destructive'
             });

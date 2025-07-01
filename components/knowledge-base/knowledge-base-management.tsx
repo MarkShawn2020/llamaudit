@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Brain, Settings, Trash2, FileText, MessageSquare, Upload, Search, RefreshCw } from 'lucide-react';
+import { Plus, Brain, Settings, Trash2, FileText, MessageSquare, Upload, Search, RefreshCw, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { KnowledgeBase } from '@/lib/db/schema';
 import { createKnowledgeBase, getKnowledgeBasesByAuditUnit, deleteKnowledgeBase, getKnowledgeBaseStats, getDifyDocuments } from '@/lib/actions/knowledge-base-actions';
@@ -40,6 +40,7 @@ export function KnowledgeBaseManagement({ auditUnitId, auditUnitName }: Knowledg
   const [creating, setCreating] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedKnowledgeBase, setSelectedKnowledgeBase] = useState<KnowledgeBase | null>(null);
+  const [syncingFiles, setSyncingFiles] = useState<Set<string>>(new Set()); // 跟踪正在同步的文档
   const { showChatBot, hideChatBot } = useChatBot();
   
   const [createForm, setCreateForm] = useState<CreateKnowledgeBaseForm>({
@@ -95,6 +96,20 @@ export function KnowledgeBaseManagement({ auditUnitId, auditUnitName }: Knowledg
     }
   };
 
+  // 静默加载文档列表（不触发loading UI）
+  const silentLoadDocuments = async (difyDatasetId: string) => {
+    try {
+      const result = await getDifyDocuments(difyDatasetId, 1, 50);
+      if (result.success) {
+        setDocuments(result.documents || []);
+      } else {
+        console.error('Failed to load documents:', result.error);
+      }
+    } catch (error) {
+      console.error('Error loading documents:', error);
+    }
+  };
+
   // 加载知识库列表
   const loadKnowledgeBases = async () => {
     try {
@@ -128,8 +143,39 @@ export function KnowledgeBaseManagement({ auditUnitId, auditUnitName }: Knowledg
     loadKnowledgeBases();
   }, [auditUnitId]);
 
-  // 监听知识库更新事件
+  // 轻量级更新统计信息和文档列表
+  const lightweightUpdate = async () => {
+    if (knowledgeBases.length > 0) {
+      // 只更新统计信息，不触发loading状态
+      await loadKnowledgeBaseStats(knowledgeBases);
+      
+      // 如果有选中的知识库，静默重新加载文档列表
+      if (selectedKnowledgeBase) {
+        await silentLoadDocuments(selectedKnowledgeBase.difyDatasetId);
+      }
+    }
+  };
+
+  // 监听知识库同步事件
   useEffect(() => {
+    const handleSyncStart = (event: CustomEvent) => {
+      const { projectId: eventProjectId, fileName } = event.detail;
+      if (eventProjectId === auditUnitId) {
+        setSyncingFiles(prev => new Set([...prev, fileName]));
+      }
+    };
+
+    const handleSyncError = (event: CustomEvent) => {
+      const { projectId: eventProjectId, fileName } = event.detail;
+      if (eventProjectId === auditUnitId) {
+        setSyncingFiles(prev => {
+          const updated = new Set(prev);
+          updated.delete(fileName);
+          return updated;
+        });
+      }
+    };
+
     const handleKnowledgeBaseUpdate = (event: CustomEvent) => {
       const { projectId: eventProjectId, action, fileName } = event.detail;
       
@@ -137,31 +183,58 @@ export function KnowledgeBaseManagement({ auditUnitId, auditUnitName }: Knowledg
       if (eventProjectId === auditUnitId) {
         console.log(`Knowledge base updated: ${action} - ${fileName}`);
         
-        // 自动重新加载知识库数据
-        loadKnowledgeBases();
+        // 移除同步loading状态
+        setSyncingFiles(prev => {
+          const updated = new Set(prev);
+          updated.delete(fileName);
+          return updated;
+        });
         
-        // 如果有选中的知识库，重新加载文档列表
-        if (selectedKnowledgeBase) {
-          loadDocuments(selectedKnowledgeBase.difyDatasetId);
+        // 立即更新UI统计数字
+        if (action === 'fileAdded') {
+          setKnowledgeBaseStats(prev => {
+            const updated = { ...prev };
+            Object.keys(updated).forEach(datasetId => {
+              updated[datasetId] = {
+                ...updated[datasetId],
+                documentCount: (updated[datasetId]?.documentCount || 0) + 1
+              };
+            });
+            return updated;
+          });
+          
+        } else if (action === 'fileRemoved') {
+          setKnowledgeBaseStats(prev => {
+            const updated = { ...prev };
+            Object.keys(updated).forEach(datasetId => {
+              updated[datasetId] = {
+                ...updated[datasetId],
+                documentCount: Math.max((updated[datasetId]?.documentCount || 0) - 1, 0)
+              };
+            });
+            return updated;
+          });
         }
         
-        // 显示提示信息
-        if (action === 'fileAdded') {
-          toast.success(`文档 "${fileName}" 已添加到知识库`);
-        } else if (action === 'fileRemoved') {
-          toast.success(`文档 "${fileName}" 已从知识库中移除`);
+        // 静默重新加载文档列表以获取最新状态（不触发loading UI）
+        if (selectedKnowledgeBase) {
+          silentLoadDocuments(selectedKnowledgeBase.difyDatasetId);
         }
       }
     };
 
     // 添加事件监听器
+    window.addEventListener('knowledgeBaseSyncStart', handleSyncStart as EventListener);
+    window.addEventListener('knowledgeBaseSyncError', handleSyncError as EventListener);
     window.addEventListener('knowledgeBaseUpdated', handleKnowledgeBaseUpdate as EventListener);
 
     // 清理函数
     return () => {
+      window.removeEventListener('knowledgeBaseSyncStart', handleSyncStart as EventListener);
+      window.removeEventListener('knowledgeBaseSyncError', handleSyncError as EventListener);
       window.removeEventListener('knowledgeBaseUpdated', handleKnowledgeBaseUpdate as EventListener);
     };
-  }, [auditUnitId, loadKnowledgeBases]);
+  }, [auditUnitId, selectedKnowledgeBase]);
 
   // 自动显示聊天机器人
   useEffect(() => {
@@ -488,15 +561,12 @@ export function KnowledgeBaseManagement({ auditUnitId, auditUnitName }: Knowledg
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-lg font-medium">知识库文档</h4>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => selectedKnowledgeBase && loadDocuments(selectedKnowledgeBase.difyDatasetId)}
-                    disabled={documentsLoading}
-                  >
-                    <RefreshCw className={`h-4 w-4 mr-2 ${documentsLoading ? 'animate-spin' : ''}`} />
-                    刷新
-                  </Button>
+                  <div className="text-sm text-muted-foreground">
+                    <span className="inline-flex items-center">
+                      <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                      自动同步
+                    </span>
+                  </div>
                 </div>
                 
                 {documentsLoading ? (
@@ -516,23 +586,41 @@ export function KnowledgeBaseManagement({ auditUnitId, auditUnitName }: Knowledg
                   </div>
                 ) : (
                   <div className="grid gap-3">
-                    {documents.map((doc, index) => (
-                      <Card key={doc.id || index} className="hover:shadow-sm transition-shadow">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <FileText className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-medium">{doc.name}</span>
-                                <Badge variant={doc.enabled ? "default" : "secondary"}>
-                                  {doc.enabled ? "已启用" : "已禁用"}
-                                </Badge>
-                                <Badge variant="outline">
-                                  {doc.indexing_status === "completed" ? "已完成" : 
-                                   doc.indexing_status === "indexing" ? "索引中" : 
-                                   doc.indexing_status === "waiting" ? "等待中" : "未知"}
-                                </Badge>
-                              </div>
+                    {documents.map((doc, index) => {
+                      const isSyncing = syncingFiles.has(doc.name);
+                      return (
+                        <Card 
+                          key={doc.id || index} 
+                          className={`hover:shadow-sm transition-all duration-300 ${
+                            isSyncing 
+                              ? 'ring-2 ring-blue-500 bg-blue-50 border-blue-200' 
+                              : ''
+                          }`}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  {isSyncing ? (
+                                    <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
+                                  ) : (
+                                    <FileText className="h-4 w-4 text-muted-foreground" />
+                                  )}
+                                  <span className="font-medium">{doc.name}</span>
+                                  {isSyncing && (
+                                    <Badge variant="default" className="bg-blue-600">
+                                      同步中...
+                                    </Badge>
+                                  )}
+                                  <Badge variant={doc.enabled ? "default" : "secondary"}>
+                                    {doc.enabled ? "已启用" : "已禁用"}
+                                  </Badge>
+                                  <Badge variant="outline">
+                                    {doc.indexing_status === "completed" ? "已完成" : 
+                                     doc.indexing_status === "indexing" ? "索引中" : 
+                                     doc.indexing_status === "waiting" ? "等待中" : "未知"}
+                                  </Badge>
+                                </div>
                               
                               <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
                                 <div>
@@ -549,16 +637,17 @@ export function KnowledgeBaseManagement({ auditUnitId, auditUnitName }: Knowledg
                                 </div>
                               </div>
                               
-                              {doc.error && (
-                                <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-600">
-                                  错误: {doc.error}
+                                  {doc.error && (
+                                    <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-600">
+                                      错误: {doc.error}
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
                   </div>
                 )}
               </div>
