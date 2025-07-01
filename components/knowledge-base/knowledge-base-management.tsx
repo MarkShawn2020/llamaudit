@@ -15,7 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Brain, Settings, Trash2, FileText, MessageSquare, Upload, Search, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { KnowledgeBase } from '@/lib/db/schema';
-import { createKnowledgeBase, getKnowledgeBasesByAuditUnit, deleteKnowledgeBase, getKnowledgeBaseStats } from '@/lib/actions/knowledge-base-actions';
+import { createKnowledgeBase, getKnowledgeBasesByAuditUnit, deleteKnowledgeBase, getKnowledgeBaseStats, getDifyDocuments } from '@/lib/actions/knowledge-base-actions';
 import { useChatBot } from './chat-bot-provider';
 
 interface KnowledgeBaseManagementProps {
@@ -33,6 +33,8 @@ interface CreateKnowledgeBaseForm {
 export function KnowledgeBaseManagement({ auditUnitId, auditUnitName }: KnowledgeBaseManagementProps) {
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
   const [knowledgeBaseStats, setKnowledgeBaseStats] = useState<Record<string, { documentCount: number; wordCount: number; appCount: number }>>({});
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -74,6 +76,25 @@ export function KnowledgeBaseManagement({ auditUnitId, auditUnitName }: Knowledg
     setKnowledgeBaseStats(statsMap);
   };
 
+  // 加载文档列表
+  const loadDocuments = async (difyDatasetId: string) => {
+    try {
+      setDocumentsLoading(true);
+      const result = await getDifyDocuments(difyDatasetId, 1, 50);
+      if (result.success) {
+        setDocuments(result.documents || []);
+      } else {
+        console.error('Failed to load documents:', result.error);
+        setDocuments([]);
+      }
+    } catch (error) {
+      console.error('Error loading documents:', error);
+      setDocuments([]);
+    } finally {
+      setDocumentsLoading(false);
+    }
+  };
+
   // 加载知识库列表
   const loadKnowledgeBases = async () => {
     try {
@@ -89,6 +110,8 @@ export function KnowledgeBaseManagement({ auditUnitId, auditUnitName }: Knowledg
         // 如果有知识库且没有选中的，自动选中第一个（通常是默认知识库）
         if (kbList.length > 0 && !selectedKnowledgeBase) {
           setSelectedKnowledgeBase(kbList[0]);
+          // 自动加载第一个知识库的文档
+          await loadDocuments(kbList[0].difyDatasetId);
         }
       } else {
         toast.error(result.error || '加载知识库列表失败');
@@ -116,6 +139,11 @@ export function KnowledgeBaseManagement({ auditUnitId, auditUnitName }: Knowledg
         
         // 自动重新加载知识库数据
         loadKnowledgeBases();
+        
+        // 如果有选中的知识库，重新加载文档列表
+        if (selectedKnowledgeBase) {
+          loadDocuments(selectedKnowledgeBase.difyDatasetId);
+        }
         
         // 显示提示信息
         if (action === 'fileAdded') {
@@ -372,81 +400,170 @@ export function KnowledgeBaseManagement({ auditUnitId, auditUnitName }: Knowledg
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {knowledgeBases.map((kb) => (
-              <Card key={kb.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{kb.name}</CardTitle>
-                      {kb.description && (
-                        <CardDescription className="mt-1">
-                          {kb.description}
-                        </CardDescription>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {getIndexingTechniqueBadge(kb.indexingTechnique || 'high_quality')}
-                      {getPermissionBadge(kb.permission || 'only_me')}
-                      {knowledgeBases.length > 1 && (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>确认删除知识库</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                确定要删除知识库 "{kb.name}" 吗？此操作不可撤销，知识库中的所有文档和问答记录都将被删除。
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>取消</AlertDialogCancel>
-                              <AlertDialogAction 
-                                onClick={() => handleDeleteKnowledgeBase(kb.id, kb.name)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              >
-                                删除
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                    <div className="flex items-center gap-1">
-                      <FileText className="h-4 w-4" />
-                      <span>文档: {knowledgeBaseStats[kb.difyDatasetId]?.documentCount || 0} 个</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <MessageSquare className="h-4 w-4" />
-                      <span>支持智能问答</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span>创建时间: {new Date(kb.createdAt!).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <div className="flex items-start gap-2">
-                      <MessageSquare className="h-5 w-5 text-blue-600 mt-0.5" />
-                      <div className="text-sm">
-                        <p className="font-medium text-blue-800 mb-1">智能问答助手已启用</p>
-                        <p className="text-blue-700">
-                          点击右下角的聊天机器人图标即可开始与知识库对话，随时获取项目文档相关的解答。
-                        </p>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="overview">概览</TabsTrigger>
+              <TabsTrigger value="documents">文档列表</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="overview" className="mt-4">
+              <div className="space-y-4">
+                {knowledgeBases.map((kb) => (
+                  <Card key={kb.id} className="hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="text-lg">{kb.name}</CardTitle>
+                          {kb.description && (
+                            <CardDescription className="mt-1">
+                              {kb.description}
+                            </CardDescription>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {getIndexingTechniqueBadge(kb.indexingTechnique || 'high_quality')}
+                          {getPermissionBadge(kb.permission || 'only_me')}
+                          {knowledgeBases.length > 1 && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>确认删除知识库</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    确定要删除知识库 "{kb.name}" 吗？此操作不可撤销，知识库中的所有文档和问答记录都将被删除。
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>取消</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    onClick={() => handleDeleteKnowledgeBase(kb.id, kb.name)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    删除
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                        </div>
                       </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                        <div className="flex items-center gap-1">
+                          <FileText className="h-4 w-4" />
+                          <span>文档: {knowledgeBaseStats[kb.difyDatasetId]?.documentCount || 0} 个</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <MessageSquare className="h-4 w-4" />
+                          <span>支持智能问答</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span>创建时间: {new Date(kb.createdAt!).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <div className="flex items-start gap-2">
+                          <MessageSquare className="h-5 w-5 text-blue-600 mt-0.5" />
+                          <div className="text-sm">
+                            <p className="font-medium text-blue-800 mb-1">智能问答助手已启用</p>
+                            <p className="text-blue-700">
+                              点击右下角的聊天机器人图标即可开始与知识库对话，随时获取项目文档相关的解答。
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="documents" className="mt-4">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-lg font-medium">知识库文档</h4>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => selectedKnowledgeBase && loadDocuments(selectedKnowledgeBase.difyDatasetId)}
+                    disabled={documentsLoading}
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${documentsLoading ? 'animate-spin' : ''}`} />
+                    刷新
+                  </Button>
+                </div>
+                
+                {documentsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="flex flex-col items-center">
+                      <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+                      <p className="mt-2 text-sm text-muted-foreground">加载文档列表...</p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                ) : documents.length === 0 ? (
+                  <div className="text-center py-8">
+                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">暂无文档</h3>
+                    <p className="text-muted-foreground">
+                      知识库中还没有文档，上传项目文档后即可在此查看。
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid gap-3">
+                    {documents.map((doc, index) => (
+                      <Card key={doc.id || index} className="hover:shadow-sm transition-shadow">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <FileText className="h-4 w-4 text-muted-foreground" />
+                                <span className="font-medium">{doc.name}</span>
+                                <Badge variant={doc.enabled ? "default" : "secondary"}>
+                                  {doc.enabled ? "已启用" : "已禁用"}
+                                </Badge>
+                                <Badge variant="outline">
+                                  {doc.indexing_status === "completed" ? "已完成" : 
+                                   doc.indexing_status === "indexing" ? "索引中" : 
+                                   doc.indexing_status === "waiting" ? "等待中" : "未知"}
+                                </Badge>
+                              </div>
+                              
+                              <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
+                                <div>
+                                  <span className="font-medium">创建时间:</span> {new Date(doc.created_at * 1000).toLocaleString()}
+                                </div>
+                                <div>
+                                  <span className="font-medium">字数:</span> {doc.word_count?.toLocaleString() || 0}
+                                </div>
+                                <div>
+                                  <span className="font-medium">Token数:</span> {doc.tokens?.toLocaleString() || 0}
+                                </div>
+                                <div>
+                                  <span className="font-medium">访问次数:</span> {doc.hit_count || 0}
+                                </div>
+                              </div>
+                              
+                              {doc.error && (
+                                <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-600">
+                                  错误: {doc.error}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
         )}
       </CardContent>
     </Card>

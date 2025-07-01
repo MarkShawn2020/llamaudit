@@ -207,3 +207,22 @@ export async function getKnowledgeBaseStats(difyDatasetId: string) {
     };
   }
 }
+
+// 获取Dify知识库文档列表
+export async function getDifyDocuments(difyDatasetId: string, page: number = 1, limit: number = 20) {
+  try {
+    const result = await knowledgeBaseApi.getDifyDocuments(difyDatasetId, page, limit);
+    return result;
+  } catch (error) {
+    console.error('Failed to get Dify documents:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : '获取知识库文档失败',
+      documents: [],
+      hasMore: false,
+      total: 0,
+      page: 1,
+      limit: 20
+    };
+  }
+}

@@ -147,6 +147,44 @@ export class KnowledgeBaseApi {
     }
   }
 
+  // 获取Dify知识库中的文档列表
+  async getDifyDocuments(difyDatasetId: string, page: number = 1, limit: number = 20) {
+    try {
+      const response = await fetch(`${this.difyBaseUrl}/datasets/${difyDatasetId}/documents?page=${page}&limit=${limit}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.difyApiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch documents: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        documents: data.data || [],
+        hasMore: data.has_more || false,
+        total: data.total || 0,
+        page: data.page || 1,
+        limit: data.limit || 20
+      };
+    } catch (error) {
+      console.error('Error fetching Dify documents:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to fetch documents',
+        documents: [],
+        hasMore: false,
+        total: 0,
+        page: 1,
+        limit: 20
+      };
+    }
+  }
+
   // 更新知识库
   async updateKnowledgeBase(id: string, data: {
     name?: string;
