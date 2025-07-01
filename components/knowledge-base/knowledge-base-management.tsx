@@ -15,7 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Brain, Settings, Trash2, FileText, MessageSquare, Upload, Search, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { KnowledgeBase } from '@/lib/db/schema';
-import { createKnowledgeBase, getKnowledgeBasesByAuditUnit, deleteKnowledgeBase } from '@/lib/actions/knowledge-base-actions';
+import { createKnowledgeBase, getKnowledgeBasesByAuditUnit, deleteKnowledgeBase, getKnowledgeBaseStats } from '@/lib/actions/knowledge-base-actions';
 import { useChatBot } from './chat-bot-provider';
 
 interface KnowledgeBaseManagementProps {
@@ -32,6 +32,7 @@ interface CreateKnowledgeBaseForm {
 
 export function KnowledgeBaseManagement({ auditUnitId, auditUnitName }: KnowledgeBaseManagementProps) {
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
+  const [knowledgeBaseStats, setKnowledgeBaseStats] = useState<Record<string, { documentCount: number; wordCount: number; appCount: number }>>({});
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -46,16 +47,48 @@ export function KnowledgeBaseManagement({ auditUnitId, auditUnitName }: Knowledg
     permission: 'only_me'
   });
 
+  // 加载知识库统计信息
+  const loadKnowledgeBaseStats = async (knowledgeBases: KnowledgeBase[]) => {
+    const statsPromises = knowledgeBases.map(async (kb) => {
+      try {
+        const result = await getKnowledgeBaseStats(kb.difyDatasetId);
+        return { 
+          id: kb.difyDatasetId, 
+          stats: result.success ? result.data : { documentCount: 0, wordCount: 0, appCount: 0 }
+        };
+      } catch (error) {
+        console.error(`Error loading stats for knowledge base ${kb.id}:`, error);
+        return { 
+          id: kb.difyDatasetId, 
+          stats: { documentCount: 0, wordCount: 0, appCount: 0 }
+        };
+      }
+    });
+
+    const statsResults = await Promise.all(statsPromises);
+    const statsMap = statsResults.reduce((acc, { id, stats }) => {
+      acc[id] = stats;
+      return acc;
+    }, {} as Record<string, { documentCount: number; wordCount: number; appCount: number }>);
+    
+    setKnowledgeBaseStats(statsMap);
+  };
+
   // 加载知识库列表
   const loadKnowledgeBases = async () => {
     try {
       setLoading(true);
       const result = await getKnowledgeBasesByAuditUnit(auditUnitId);
       if (result.success) {
-        setKnowledgeBases(result.data || []);
+        const kbList = result.data || [];
+        setKnowledgeBases(kbList);
+        
+        // 加载统计信息
+        await loadKnowledgeBaseStats(kbList);
+        
         // 如果有知识库且没有选中的，自动选中第一个（通常是默认知识库）
-        if (result.data && result.data.length > 0 && !selectedKnowledgeBase) {
-          setSelectedKnowledgeBase(result.data[0]);
+        if (kbList.length > 0 && !selectedKnowledgeBase) {
+          setSelectedKnowledgeBase(kbList[0]);
         }
       } else {
         toast.error(result.error || '加载知识库列表失败');
@@ -71,6 +104,36 @@ export function KnowledgeBaseManagement({ auditUnitId, auditUnitName }: Knowledg
   useEffect(() => {
     loadKnowledgeBases();
   }, [auditUnitId]);
+
+  // 监听知识库更新事件
+  useEffect(() => {
+    const handleKnowledgeBaseUpdate = (event: CustomEvent) => {
+      const { projectId: eventProjectId, action, fileName } = event.detail;
+      
+      // 只有当事件来自当前项目时才更新
+      if (eventProjectId === auditUnitId) {
+        console.log(`Knowledge base updated: ${action} - ${fileName}`);
+        
+        // 自动重新加载知识库数据
+        loadKnowledgeBases();
+        
+        // 显示提示信息
+        if (action === 'fileAdded') {
+          toast.success(`文档 "${fileName}" 已添加到知识库`);
+        } else if (action === 'fileRemoved') {
+          toast.success(`文档 "${fileName}" 已从知识库中移除`);
+        }
+      }
+    };
+
+    // 添加事件监听器
+    window.addEventListener('knowledgeBaseUpdated', handleKnowledgeBaseUpdate as EventListener);
+
+    // 清理函数
+    return () => {
+      window.removeEventListener('knowledgeBaseUpdated', handleKnowledgeBaseUpdate as EventListener);
+    };
+  }, [auditUnitId, loadKnowledgeBases]);
 
   // 自动显示聊天机器人
   useEffect(() => {
@@ -274,17 +337,14 @@ export function KnowledgeBaseManagement({ auditUnitId, auditUnitName }: Knowledg
       <CardContent>
         <div className="flex justify-between items-center mb-4">
           <p className="text-sm text-muted-foreground">
-            知识库文档数量：{knowledgeBases.length > 0 ? '查看概览获取详情' : '0'}
+            知识库文档数量：{
+              knowledgeBases.length > 0 
+                ? Object.values(knowledgeBaseStats).reduce((total, stats) => total + stats.documentCount, 0) 
+                : '0'
+            }
+            <span className="ml-2 text-xs text-green-600">●</span>
+            <span className="ml-1 text-xs text-muted-foreground">自动同步</span>
           </p>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={loadKnowledgeBases}
-            disabled={loading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            刷新
-          </Button>
         </div>
 
         {knowledgeBases.length === 0 ? (
@@ -361,7 +421,7 @@ export function KnowledgeBaseManagement({ auditUnitId, auditUnitName }: Knowledg
                   <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                     <div className="flex items-center gap-1">
                       <FileText className="h-4 w-4" />
-                      <span>项目文档: 自动同步</span>
+                      <span>文档: {knowledgeBaseStats[kb.difyDatasetId]?.documentCount || 0} 个</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <MessageSquare className="h-4 w-4" />

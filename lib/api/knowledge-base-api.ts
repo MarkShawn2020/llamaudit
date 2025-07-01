@@ -120,6 +120,33 @@ export class KnowledgeBaseApi {
     });
   }
 
+  // 获取知识库统计信息（包含文档数量）
+  async getKnowledgeBaseStats(difyDatasetId: string) {
+    try {
+      const response = await fetch(`${this.difyBaseUrl}/datasets/${difyDatasetId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.difyApiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch dataset stats: ${response.statusText}`);
+      }
+
+      const data: DifyDatasetResponse = await response.json();
+      return {
+        documentCount: data.document_count,
+        wordCount: data.word_count,
+        appCount: data.app_count
+      };
+    } catch (error) {
+      console.error('Error fetching knowledge base stats:', error);
+      return { documentCount: 0, wordCount: 0, appCount: 0 };
+    }
+  }
+
   // 更新知识库
   async updateKnowledgeBase(id: string, data: {
     name?: string;

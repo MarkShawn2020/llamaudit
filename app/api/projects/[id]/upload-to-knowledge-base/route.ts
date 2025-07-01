@@ -119,9 +119,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         
         const difyFormData = new FormData();
         difyFormData.append('file', file);
-        difyFormData.append('indexing_technique', indexingTechnique);
-        difyFormData.append('process_rule', JSON.stringify({
-          mode: 'automatic'
+        difyFormData.append('data', JSON.stringify({
+          indexing_technique: indexingTechnique,
+          process_rule: {
+            mode: 'automatic'
+          }
         }));
 
         logger.info('上传文件到Dify知识库', {

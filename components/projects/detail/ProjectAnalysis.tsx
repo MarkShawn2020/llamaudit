@@ -23,6 +23,9 @@ import {BarChart2, RefreshCw, Upload} from 'lucide-react';
 import {startTransition, useActionState, useCallback, useEffect, useRef, useState} from 'react';
 import { DifyConfigComponent } from '@/components/dify-config';
 import { useDifyConfig } from '@/contexts/dify-config-context';
+import {Switch} from '@/components/ui/switch';
+import {Label} from '@/components/ui/label';
+import {Database} from 'lucide-react';
 
 export default function ProjectAnalysis({
                                             projectId, initialFiles = [], onFileChange
@@ -39,6 +42,7 @@ export default function ProjectAnalysis({
     const [filesState, getFilesAction] = useActionState(getFilesByProjectId, [])
     const [tiobDialogOpen, setTiobDialogOpen] = useState(false);
     const { config: difyConfig } = useDifyConfig();
+    const [globalSyncEnabled, setGlobalSyncEnabled] = useState(true); // 全局同步设置
 
     // 初始化 Jotai atom 状态
     useEffect(() => {
@@ -123,7 +127,8 @@ export default function ProjectAnalysis({
             status: 'uploading',
             userId: '',
             isAnalyzed: false,
-            progress: 0
+            progress: 0,
+            syncToKnowledgeBase: globalSyncEnabled // 使用全局设置作为默认值
         }));
 
         // 批量更新所有文件到状态中
@@ -179,7 +184,15 @@ export default function ProjectAnalysis({
             const controller = new AbortController();
             const signal = controller.signal;
 
-            const response = await fetch(`/api/projects/${projectId}/upload-to-knowledge-base`, {
+            // 获取当前文件的同步设置
+            const currentFile = files.find(f => f.id === tempFileId);
+            const shouldSync = currentFile?.syncToKnowledgeBase ?? globalSyncEnabled;
+
+            const uploadUrl = shouldSync 
+                ? `/api/projects/${projectId}/upload-to-knowledge-base`
+                : `/api/projects/${projectId}/upload`;
+
+            const response = await fetch(uploadUrl, {
                 method: 'POST', body: formData, signal
             });
 
@@ -203,8 +216,18 @@ export default function ProjectAnalysis({
             } : file));
 
             toast({
-                title: '上传成功', description: `文件 ${file.name} 上传成功`,
+                title: '上传成功', 
+                description: shouldSync 
+                    ? `文件 ${file.name} 上传成功并已同步到知识库`
+                    : `文件 ${file.name} 上传成功`,
             });
+
+            // 如果同步到知识库，触发知识库更新事件
+            if (shouldSync) {
+                window.dispatchEvent(new CustomEvent('knowledgeBaseUpdated', {
+                    detail: { projectId, action: 'fileAdded', fileName: file.name }
+                }));
+            }
 
             // 返回服务器分配的文件ID
             return data.id || "";
@@ -389,11 +412,100 @@ export default function ProjectAnalysis({
         }
     };
 
+    // 处理单个文件的同步切换
+    const handleSyncToggle = async (file: UIFile, syncEnabled: boolean) => {
+        try {
+            // 更新文件的同步状态
+            setFiles(prev => prev.map(f => 
+                f.id === file.id ? { ...f, syncToKnowledgeBase: syncEnabled } : f
+            ));
+
+            // 如果启用同步且文件已上传，立即同步到知识库
+            if (syncEnabled && (file.status === 'uploaded' || file.status === 'analyzed')) {
+                const response = await fetch(`/api/projects/${projectId}/sync-file-to-knowledge-base`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ fileId: file.id }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || '同步到知识库失败');
+                }
+
+                const result = await response.json();
+                if (!result.success) {
+                    throw new Error(result.message || '同步到知识库失败');
+                }
+
+                toast({
+                    title: '同步成功',
+                    description: `文档 ${file.originalName} 已同步到知识库`,
+                });
+
+                // 触发知识库更新事件
+                window.dispatchEvent(new CustomEvent('knowledgeBaseUpdated', {
+                    detail: { projectId, action: 'fileAdded', fileName: file.originalName }
+                }));
+            } else if (!syncEnabled) {
+                // 如果禁用同步，从知识库中移除
+                const response = await fetch(`/api/projects/${projectId}/remove-file-from-knowledge-base`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ fileId: file.id }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('从知识库移除失败');
+                }
+
+                toast({
+                    title: '已移除',
+                    description: `文档 ${file.originalName} 已从知识库中移除`,
+                });
+
+                // 触发知识库更新事件
+                window.dispatchEvent(new CustomEvent('knowledgeBaseUpdated', {
+                    detail: { projectId, action: 'fileRemoved', fileName: file.originalName }
+                }));
+            }
+        } catch (error) {
+            // 如果操作失败，恢复之前的状态
+            setFiles(prev => prev.map(f => 
+                f.id === file.id ? { ...f, syncToKnowledgeBase: !syncEnabled } : f
+            ));
+            
+            toast({
+                title: '操作失败',
+                description: error instanceof Error ? error.message : '未知错误',
+                variant: 'destructive'
+            });
+        }
+    };
+
     return (<div className="space-y-6 py-4">
             <div className="flex justify-between items-center">
                 <h3 className="text-lg font-medium">项目文档分析</h3>
 
-                <div className="flex space-x-2">
+                <div className="flex items-center space-x-4">
+                    {/* 全局同步设置 */}
+                    <div className="flex items-center space-x-2">
+                        <Database className="h-4 w-4 text-muted-foreground" />
+                        <Label htmlFor="global-sync" className="text-sm font-medium">
+                            默认同步到知识库
+                        </Label>
+                        <Switch
+                            id="global-sync"
+                            checked={globalSyncEnabled}
+                            onCheckedChange={setGlobalSyncEnabled}
+                        />
+                    </div>
+                    
+                    <div className="flex space-x-2">
                     <Dialog open={tiobDialogOpen} onOpenChange={setTiobDialogOpen}>
                         <DialogTrigger asChild>
                             <Button variant="outline">
@@ -439,6 +551,7 @@ export default function ProjectAnalysis({
                     </Button>
 
                     <DifyConfigComponent />
+                    </div>
                 </div>
 
                 <input
@@ -470,6 +583,7 @@ export default function ProjectAnalysis({
                             onAnalyze={handleAnalyzeFile}
                             onRemove={handleRemoveFile}
                             expanded={expandedFileId === file.id}
+                            onSyncToggle={handleSyncToggle}
                         />))}
                 </div>)}
         </div>);

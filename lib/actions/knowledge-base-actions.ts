@@ -193,3 +193,17 @@ export async function getKnowledgeBaseFiles(knowledgeBaseId: string) {
     };
   }
 }
+
+// 获取知识库统计信息
+export async function getKnowledgeBaseStats(difyDatasetId: string) {
+  try {
+    const stats = await knowledgeBaseApi.getKnowledgeBaseStats(difyDatasetId);
+    return { success: true, data: stats };
+  } catch (error) {
+    console.error('Failed to get knowledge base stats:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : '获取知识库统计信息失败'
+    };
+  }
+}

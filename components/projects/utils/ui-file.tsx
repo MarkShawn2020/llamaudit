@@ -14,4 +14,5 @@ export interface UIFile {
     analysisResult?: string; // 分析结果
     error?: string; // 错误信息
     uploadDate: string;
+    syncToKnowledgeBase?: boolean; // 是否同步到知识库
 }
