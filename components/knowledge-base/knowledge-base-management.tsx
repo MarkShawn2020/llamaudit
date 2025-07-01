@@ -70,7 +70,9 @@ export function KnowledgeBaseManagement({ auditUnitId, auditUnitName }: Knowledg
 
     const statsResults = await Promise.all(statsPromises);
     const statsMap = statsResults.reduce((acc, { id, stats }) => {
-      acc[id] = stats;
+      if (stats) {
+        acc[id] = stats;
+      }
       return acc;
     }, {} as Record<string, { documentCount: number; wordCount: number; appCount: number }>);
     

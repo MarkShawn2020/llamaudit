@@ -93,7 +93,7 @@ export function FileCard({
                             id={`sync-${file.id}`}
                             checked={file.syncToKnowledgeBase ?? false}
                             onCheckedChange={(checked) => onSyncToggle?.(file, checked)}
-                            disabled={file.status === 'uploading' || file.status === 'analyzing' || file.syncLoading}
+                            disabled={['uploading', 'analyzing'].includes(file.status) || !!file.syncLoading}
                             className="scale-90"
                         />
                     </div>
@@ -105,7 +105,7 @@ export function FileCard({
                     variant="ghost"
                     size="sm"
                     onClick={() => onRemove(file)}
-                    disabled={file.status === 'uploading' || file.status === 'analyzing'}
+                    disabled={['uploading', 'analyzing'].includes(file.status)}
                     className="flex-1 h-8 text-xs"
                 >
                     <Trash2 className="h-3.5 w-3.5 mr-1"/>

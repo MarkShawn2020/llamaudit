@@ -321,7 +321,7 @@ export function KnowledgeBaseTab({ auditUnitId, auditUnitName }: KnowledgeBaseTa
             </div>
           ) : (
             <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {documents.map((doc, index) => {
+              {documents.map((doc: any, index: number) => {
                 const isSyncing = syncingFiles.has(doc.name);
                 return (
                   <Card 

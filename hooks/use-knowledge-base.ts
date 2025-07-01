@@ -57,7 +57,9 @@ export function useKnowledgeBaseStats(auditUnitId: string, knowledgeBases: Knowl
 
       const statsResults = await Promise.all(statsPromises);
       return statsResults.reduce((acc, { id, stats }) => {
-        acc[id] = stats;
+        if (stats) {
+          acc[id] = stats;
+        }
         return acc;
       }, {} as Record<string, { documentCount: number; wordCount: number; appCount: number }>);
     },
