@@ -372,9 +372,13 @@ ${result.data.recordCount === 0 ? '❌ 未找到相关内容，建议：\n• �
         <div 
           className={cn(
             "fixed bottom-6 right-6 z-[9999] bg-background border rounded-lg shadow-2xl transition-all duration-300 flex flex-col",
-            isMinimized ? "w-80 h-14" : "w-96 h-[600px]"
+            isMinimized ? "w-80 h-14" : "w-96 h-[600px]",
+            "max-w-[calc(100vw-3rem)]"
           )}
-          style={{ zIndex: 9999 }}
+          style={{ 
+            zIndex: 9999,
+            right: 'clamp(1.5rem, 1.5rem, calc(100vw - 24rem))'
+          }}
         >
           {/* 标题栏 */}
           <div className="flex items-center justify-between p-4 border-b bg-muted/30 rounded-t-lg">
@@ -431,18 +435,18 @@ ${result.data.recordCount === 0 ? '❌ 未找到相关内容，建议：\n• �
           {/* 聊天内容 */}
           {!isMinimized && (
             <>
-              <ScrollArea className="flex-1 p-4">
-                <div className="space-y-4">
+              <div className="flex-1 overflow-y-auto">
+                <div className="space-y-4 p-4">
                   {messages.map((message) => (
                     <div key={message.id} className={cn(
                       "flex",
                       message.type === 'user' ? 'justify-end' : 'justify-start'
                     )}>
                       <div className={cn(
-                        "max-w-[80%] rounded-lg text-sm relative group",
+                        "rounded-lg text-sm relative group",
                         message.type === 'user' 
-                          ? 'bg-primary text-primary-foreground' 
-                          : 'bg-muted'
+                          ? 'bg-primary text-primary-foreground max-w-[80%]' 
+                          : 'bg-muted max-w-[95%]'
                       )}>
                         <div className="p-3 space-y-2">
                           <p className="whitespace-pre-wrap">{message.content}</p>
@@ -567,7 +571,7 @@ ${result.data.recordCount === 0 ? '❌ 未找到相关内容，建议：\n• �
                   
                   <div ref={messagesEndRef} />
                 </div>
-              </ScrollArea>
+              </div>
 
               {/* 输入框 */}
               <div className="p-4 border-t shrink-0">
