@@ -160,61 +160,108 @@ async function performKnowledgeRetrieval(
     
     if (datasetApiKey && knowledgeBase.difyDatasetId) {
         try {
-            // 使用数据集检索API
+            logger.info('开始知识库检索', {
+                datasetId: knowledgeBase.difyDatasetId,
+                question: question.substring(0, 100),
+                method
+            });
+
+            // 使用数据集检索API，按照Dify文档格式
+            const retrievalPayload = {
+                query: question,
+                retrieval_model: {
+                    search_method: "hybrid_search", // 混合搜索效果更好
+                    reranking_enable: false,
+                    reranking_mode: null,
+                    reranking_model: {
+                        reranking_provider_name: "",
+                        reranking_model_name: ""
+                    },
+                    weights: {
+                        vector_setting: {
+                            vector_weight: 0.7
+                        },
+                        keyword_setting: {
+                            keyword_weight: 0.3
+                        }
+                    },
+                    top_k: 10, // 增加检索数量
+                    score_threshold_enabled: true,
+                    score_threshold: 0.1 // 降低阈值，增加召回
+                }
+            };
+
+            logger.info('检索API调用参数', { 
+                url: `${process.env.NEXT_PUBLIC_DIFY_API_URL}/datasets/${knowledgeBase.difyDatasetId}/retrieve`,
+                payload: retrievalPayload 
+            });
+
             const retrievalResponse = await fetch(`${process.env.NEXT_PUBLIC_DIFY_API_URL}/datasets/${knowledgeBase.difyDatasetId}/retrieve`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${datasetApiKey}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    query: question,
-                    retrieval_setting: {
-                        top_k: 5,
-                        score_threshold: 0.3
-                    }
-                }),
+                body: JSON.stringify(retrievalPayload),
+            });
+
+            logger.info('检索API响应状态', { 
+                status: retrievalResponse.status,
+                statusText: retrievalResponse.statusText 
             });
 
             if (retrievalResponse.ok) {
                 const retrievalData = await retrievalResponse.json();
                 sources = retrievalData.records || [];
+                
+                logger.info('检索结果', {
+                    recordCount: sources.length,
+                    records: sources.map(r => ({
+                        score: r.score,
+                        documentName: r.segment?.document?.name,
+                        contentPreview: r.segment?.content?.substring(0, 100)
+                    }))
+                });
 
                 if (sources.length > 0) {
-                    const context = sources.slice(0, 3).map(record => record.content).join('\n\n');
+                    // Dify API返回的数据结构：record.segment.content
+                    const context = sources.slice(0, 3).map(record => record.segment?.content || '').filter(Boolean).join('\n\n');
                     
                     // 根据问题类型调整提示词
                     let prompt = '';
                     if (method === '技术术语解释') {
-                        prompt = `请基于以下文档内容，详细解释用户询问的技术术语或概念：
+                        prompt = `你是一个专业的技术文档助手。请基于以下文档内容，用自然语言详细解释用户询问的技术术语或概念。
+
+重要：请直接用自然语言回答，不要返回JSON或结构化数据。
 
 文档内容：
 ${context}
 
 用户问题：${question}
 
-请提供：
-1. 清晰的定义或解释
-2. 在项目中的应用场景
-3. 相关的技术细节
-4. 实际使用建议
+请提供清晰易懂的解释，包括：
+- 术语的定义和含义
+- 在项目中的应用场景
+- 相关的技术细节
+- 实际使用建议
 
-如果文档中没有直接相关的信息，请诚实说明，并提供通用的技术解释。`;
+如果文档中没有直接相关的信息，请诚实说明并提供通用的技术解释。`;
                     } else {
-                        prompt = `你是一个专业的技术文档助手，请基于以下文档内容回答用户问题：
+                        prompt = `你是一个专业的技术文档助手。请基于以下文档内容用自然语言回答用户问题。
+
+重要：请直接用自然语言回答，不要返回JSON、结构化数据或代码格式。
 
 文档内容：
 ${context}
 
 用户问题：${question}
 
-请提供：
-1. 准确、有帮助的回答
-2. 引用相关的文档内容
-3. 实际的代码示例（如果适用）
-4. 相关的最佳实践建议
+请提供准确、有帮助的回答，包括：
+- 基于文档内容的详细解答
+- 相关的最佳实践建议
+- 实际的使用指导
 
-如果文档中没有足够信息回答问题，请诚实说明，并建议用户查看完整文档或寻求进一步帮助。`;
+如果文档中没有足够信息回答问题，请诚实说明并建议用户查看完整文档或寻求进一步帮助。`;
                     }
 
                     // 调用LLM生成答案
@@ -238,32 +285,117 @@ ${context}
 
                     if (llmResponse.ok) {
                         const llmData = await llmResponse.json();
-                        answer = llmData.answer || '抱歉，我无法基于现有知识库内容回答您的问题。';
+                        let rawAnswer = llmData.answer || '抱歉，我无法基于现有知识库内容回答您的问题。';
+                        
+                        logger.info('Dify API原始回复', {
+                            rawAnswer: rawAnswer.substring(0, 200),
+                            isLikelyJson: rawAnswer.trim().startsWith('{')
+                        });
+                        
+                        // 检查并处理可能的JSON格式回复
+                        try {
+                            const possibleJson = JSON.parse(rawAnswer);
+                            if (typeof possibleJson === 'object' && possibleJson !== null) {
+                                // 如果返回的是JSON，转换为自然语言
+                                logger.warn('检测到JSON格式回复，正在转换为自然语言', { json: possibleJson });
+                                answer = '基于文档内容，我为您整理了以下信息：\n\n';
+                                Object.entries(possibleJson).forEach(([key, value]) => {
+                                    if (value && value !== '未提及' && value !== '未找到') {
+                                        answer += `• **${key}**: ${value}\n`;
+                                    }
+                                });
+                                answer += '\n如需更详细信息，请查看完整文档或尝试其他问题。';
+                            } else {
+                                answer = rawAnswer;
+                            }
+                        } catch {
+                            // 不是JSON格式，直接使用原始答案
+                            answer = rawAnswer;
+                        }
                     } else {
+                        const errorData = await llmResponse.json().catch(() => ({}));
+                        logger.error('Dify API调用失败', { 
+                            status: llmResponse.status, 
+                            error: errorData 
+                        });
                         answer = `基于文档内容，我找到了以下相关信息：\n\n${context}\n\n建议您查看完整的原始文档获取更多详细信息。`;
                     }
 
-                    confidence = Math.min(sources.reduce((sum, source) => sum + (source.score || 0.5), 0) / sources.length, 1);
+                    // 计算置信度并格式化sources
+                    confidence = Math.min(sources.reduce((sum, source) => sum + (source.score || 0.1), 0) / sources.length, 1);
+                    
+                    // 格式化sources为前端期望的格式
+                    sources = sources.map(record => ({
+                        content: record.segment?.content || '',
+                        score: record.score || 0,
+                        title: record.segment?.document?.name || '未知文档',
+                        metadata: {
+                            document_id: record.segment?.document_id,
+                            segment_id: record.segment?.id,
+                            position: record.segment?.position
+                        }
+                    }));
                 } else {
+                    logger.warn('检索未找到相关文档', { 
+                        question: question.substring(0, 100),
+                        datasetId: knowledgeBase.difyDatasetId 
+                    });
+                    
                     answer = `抱歉，在知识库中没有找到与您问题相关的信息。
 
-建议您：
+可能的原因：
+• 文档可能还在索引处理中
+• 问题与知识库内容不匹配
 • 尝试用不同的关键词重新提问
-• 查看完整的项目文档
-• 确认问题是否与项目相关
+
+建议您：
+• 使用文档中的具体术语或关键词
+• 检查文档名称是否正确
+• 确认文档已成功上传到知识库
 
 有什么其他问题我可以帮您解答吗？`;
                     confidence = 0.1;
                 }
             } else {
-                throw new Error('数据集检索API调用失败');
+                const errorText = await retrievalResponse.text();
+                logger.error('数据集检索API调用失败', { 
+                    status: retrievalResponse.status,
+                    statusText: retrievalResponse.statusText,
+                    error: errorText,
+                    datasetId: knowledgeBase.difyDatasetId
+                });
+                throw new Error(`检索API调用失败: ${retrievalResponse.status} - ${errorText}`);
             }
         } catch (error) {
             logger.error('知识库检索失败', { error });
             throw error;
         }
     } else {
-        throw new Error('没有数据集API密钥');
+        logger.error('知识库检索配置缺失', { 
+            hasDatasetApiKey: !!datasetApiKey,
+            hasDifyDatasetId: !!knowledgeBase.difyDatasetId,
+            knowledgeBaseId: knowledgeBase.id 
+        });
+        
+        // 提供友好的错误信息
+        answer = `抱歉，知识库检索功能暂时不可用。
+
+可能的原因：
+• 知识库还未配置检索服务
+• 系统配置有误
+
+请联系管理员检查：
+• DIFY_DATASET_API_KEY 环境变量配置
+• 知识库的 Dify Dataset ID 设置
+• 网络连接是否正常
+
+您也可以尝试：
+• 稍后重试
+• 联系技术支持
+• 查看项目文档`;
+        
+        confidence = 0.1;
+        sources = [];
     }
     
     return { answer, sources, confidence, method };
@@ -317,7 +449,8 @@ export async function POST(request: NextRequest, {params}: RouteParams) {
             knowledgeBaseId,
             questionType: classification.type,
             confidence: classification.confidence,
-            reasoning: classification.reasoning
+            reasoning: classification.reasoning,
+            question: question.substring(0, 100)
         });
 
         try {

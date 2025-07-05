@@ -23,7 +23,9 @@ import {
   ThumbsUp,
   ThumbsDown,
   Share2,
-  Download
+  Download,
+  Bug,
+  Search
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -61,6 +63,9 @@ export function FloatingChatBot({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentInput, setCurrentInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [feedbackGiven, setFeedbackGiven] = useState<Set<string>>(new Set());
+  const [debugMode, setDebugMode] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -154,6 +159,130 @@ export function FloatingChatBot({
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
+    }
+  };
+
+  // 复制消息内容
+  const handleCopyMessage = async (messageId: string, content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedMessageId(messageId);
+      toast.success('内容已复制到剪贴板');
+      setTimeout(() => setCopiedMessageId(null), 2000);
+    } catch (error) {
+      toast.error('复制失败');
+    }
+  };
+
+  // 处理反馈
+  const handleFeedback = async (messageId: string, isPositive: boolean) => {
+    try {
+      // 这里可以发送反馈到后端
+      setFeedbackGiven(prev => new Set(prev).add(messageId));
+      toast.success(isPositive ? '感谢您的反馈！' : '感谢反馈，我们会继续改进');
+    } catch (error) {
+      toast.error('反馈提交失败');
+    }
+  };
+
+  // 分享消息
+  const handleShare = async (content: string) => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: '知识库助手回答',
+          text: content
+        });
+      } else {
+        await navigator.clipboard.writeText(content);
+        toast.success('内容已复制到剪贴板，可以分享了');
+      }
+    } catch (error) {
+      toast.error('分享失败');
+    }
+  };
+
+  // 导出对话
+  const handleExportConversation = () => {
+    const conversationText = messages.map(msg => {
+      const timestamp = msg.timestamp.toLocaleString();
+      const sender = msg.type === 'user' ? '用户' : 'AI助手';
+      return `[${timestamp}] ${sender}: ${msg.content}`;
+    }).join('\n\n');
+    
+    const blob = new Blob([conversationText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `知识库对话_${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success('对话已导出');
+  };
+
+  // 测试检索功能
+  const handleTestRetrieve = async () => {
+    if (!currentInput.trim()) {
+      toast.error('请输入要测试的查询内容');
+      return;
+    }
+
+    try {
+      setIsTyping(true);
+      const response = await fetch(`/api/knowledge-base/${knowledgeBaseId}/test-retrieve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: currentInput,
+          top_k: 5,
+          score_threshold: 0.1
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        const debugMessage: ChatMessage = {
+          id: `debug-${Date.now()}`,
+          type: 'bot',
+          content: `🔍 **检索测试结果**
+
+查询：${currentInput}
+检索到：${result.data.recordCount} 个相关片段
+响应时间：${result.data.responseTime.toFixed(2)}s
+
+**检索结果：**
+${result.data.records.map((record: any, index: number) => 
+  `${index + 1}. **${record.documentName}** (评分: ${(record.score * 100).toFixed(1)}%)
+  内容预览：${record.contentPreview}`
+).join('\n\n')}
+
+${result.data.recordCount === 0 ? '❌ 未找到相关内容，建议：\n• 尝试不同的关键词\n• 检查文档是否已正确上传\n• 确认文档已完成索引' : '✅ 检索成功'}`,
+          timestamp: new Date(),
+          method: 'debug_retrieve',
+          sources: result.data.records.map((record: any) => ({
+            content: record.content || '',
+            score: record.score || 0,
+            title: record.documentName || '未知文档',
+            metadata: record
+          }))
+        };
+        
+        setMessages(prev => [...prev, debugMessage]);
+        setCurrentInput('');
+        toast.success('检索测试完成');
+      } else {
+        throw new Error(result.error || '检索测试失败');
+      }
+    } catch (error) {
+      console.error('Test retrieve error:', error);
+      toast.error(error instanceof Error ? error.message : '检索测试失败');
+    } finally {
+      setIsTyping(false);
     }
   };
 
@@ -264,6 +393,25 @@ export function FloatingChatBot({
               <Button
                 variant="ghost"
                 size="sm"
+                onClick={() => setDebugMode(!debugMode)}
+                className={cn("h-8 w-8 p-0", debugMode && "bg-yellow-100")}
+                title="调试模式"
+              >
+                <Bug className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleExportConversation}
+                className="h-8 w-8 p-0"
+                title="导出对话"
+                disabled={messages.length === 0}
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setIsMinimized(!isMinimized)}
                 className="h-8 w-8 p-0"
               >
@@ -291,12 +439,12 @@ export function FloatingChatBot({
                       message.type === 'user' ? 'justify-end' : 'justify-start'
                     )}>
                       <div className={cn(
-                        "max-w-[80%] rounded-lg p-3 text-sm",
+                        "max-w-[80%] rounded-lg text-sm relative group",
                         message.type === 'user' 
                           ? 'bg-primary text-primary-foreground' 
                           : 'bg-muted'
                       )}>
-                        <div className="space-y-2">
+                        <div className="p-3 space-y-2">
                           <p className="whitespace-pre-wrap">{message.content}</p>
                           
                           {message.type === 'bot' && (
@@ -307,6 +455,11 @@ export function FloatingChatBot({
                                   {formatQuestionType(message.questionType)}
                                   {formatConfidence(message.confidence)}
                                   {formatResponseTime(message.responseTime)}
+                                  {debugMode && message.method && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {message.method}
+                                    </Badge>
+                                  )}
                                 </div>
                               )}
                               
@@ -342,6 +495,60 @@ export function FloatingChatBot({
                             {message.timestamp.toLocaleTimeString()}
                           </div>
                         </div>
+
+                        {/* 操作按钮 */}
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleCopyMessage(message.id, message.content)}
+                              className="h-6 w-6 p-0 bg-background/80 hover:bg-background"
+                              title="复制"
+                            >
+                              {copiedMessageId === message.id ? (
+                                <Check className="h-3 w-3" />
+                              ) : (
+                                <Copy className="h-3 w-3" />
+                              )}
+                            </Button>
+                            {message.type === 'bot' && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleShare(message.content)}
+                                  className="h-6 w-6 p-0 bg-background/80 hover:bg-background"
+                                  title="分享"
+                                >
+                                  <Share2 className="h-3 w-3" />
+                                </Button>
+                                {!feedbackGiven.has(message.id) && (
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleFeedback(message.id, true)}
+                                      className="h-6 w-6 p-0 bg-background/80 hover:bg-background"
+                                      title="好评"
+                                    >
+                                      <ThumbsUp className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleFeedback(message.id, false)}
+                                      className="h-6 w-6 p-0 bg-background/80 hover:bg-background"
+                                      title="差评"
+                                    >
+                                      <ThumbsDown className="h-3 w-3" />
+                                    </Button>
+                                  </>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -367,13 +574,24 @@ export function FloatingChatBot({
                 <div className="flex gap-2">
                   <Input
                     ref={inputRef}
-                    placeholder="输入您的问题..."
+                    placeholder={debugMode ? "输入要测试检索的内容..." : "输入您的问题..."}
                     value={currentInput}
                     onChange={(e) => setCurrentInput(e.target.value)}
                     onKeyPress={handleKeyPress}
                     disabled={isTyping}
                     className="flex-1"
                   />
+                  {debugMode && (
+                    <Button
+                      onClick={handleTestRetrieve}
+                      disabled={isTyping || !currentInput.trim()}
+                      size="sm"
+                      variant="outline"
+                      title="测试检索"
+                    >
+                      <Search className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button 
                     onClick={handleSendMessage} 
                     disabled={isTyping || !currentInput.trim()}
@@ -387,7 +605,13 @@ export function FloatingChatBot({
                   </Button>
                 </div>
                 <div className="text-xs text-muted-foreground mt-2">
-                  按 Enter 发送，Shift + Enter 换行
+                  {debugMode ? (
+                    <span className="text-yellow-600">
+                      🐛 调试模式：使用 🔍 按钮测试检索，使用 ➤ 按钮正常对话
+                    </span>
+                  ) : (
+                    '按 Enter 发送，Shift + Enter 换行'
+                  )}
                 </div>
               </div>
             </>
