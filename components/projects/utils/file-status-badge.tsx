@@ -20,8 +20,6 @@ export function FileStatusBadge({status}: { status: FileStatus }) {
                 className="h-3 w-3 mr-1 animate-spin"/> 分析中</Badge>;
         case 'analysis_failed':
             return <Badge variant="destructive"><AlertCircle className="h-3 w-3 mr-1"/> 分析失败</Badge>;
-        case 'analyzed':
-            return <Badge className="bg-green-500"><CheckCircle className="h-3 w-3 mr-1"/> 已分析</Badge>;
         default:
             return null;
     }
