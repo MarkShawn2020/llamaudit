@@ -17,7 +17,13 @@ import {
   Clock, 
   Brain, 
   Loader2,
-  Bot
+  Bot,
+  Copy,
+  Check,
+  ThumbsUp,
+  ThumbsDown,
+  Share2,
+  Download
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -42,6 +48,7 @@ interface ChatMessage {
   confidence?: number;
   responseTime?: number;
   method?: string;
+  questionType?: string;
 }
 
 export function FloatingChatBot({ 
@@ -119,6 +126,7 @@ export function FloatingChatBot({
           confidence: result.data.confidence,
           responseTime: result.data.responseTime,
           method: result.data.method,
+          questionType: result.data.questionType,
           timestamp: new Date()
         };
 
@@ -157,6 +165,23 @@ export function FloatingChatBot({
     return <Badge variant={variant} className="text-xs">{percentage}%</Badge>;
   };
 
+  // 格式化问题类型
+  const formatQuestionType = (questionType?: string) => {
+    if (!questionType) return null;
+    const typeMap: Record<string, string> = {
+      'greeting': '问候',
+      'irrelevant': '无关',
+      'project_related': '项目相关',
+      'technical_term': '技术术语',
+      'community': '社区相关'
+    };
+    return (
+      <Badge variant="outline" className="text-xs">
+        {typeMap[questionType] || questionType}
+      </Badge>
+    );
+  };
+
   // 格式化响应时间
   const formatResponseTime = (time?: number) => {
     if (!time) return null;
@@ -174,8 +199,25 @@ export function FloatingChatBot({
       const welcomeMessage: ChatMessage = {
         id: 'welcome',
         type: 'bot',
-        content: `👋 您好！我是${projectName || knowledgeBaseName}的智能助手。\n\n我可以帮您回答关于项目文档的问题。请随时向我提问！`,
-        timestamp: new Date()
+        content: `👋 您好！我是${projectName || knowledgeBaseName}的智能助手。
+
+我可以帮您：
+• 回答项目相关的技术问题
+• 解释代码实现和架构
+• 提供最佳实践建议
+• 解答文档中的内容
+
+一些示例问题：
+• "这个项目是做什么的？"
+• "如何配置开发环境？"
+• "什么是知识库？"
+• "如何部署应用？"
+
+请随时向我提问！`,
+        timestamp: new Date(),
+        questionType: 'greeting',
+        method: 'direct_reply',
+        confidence: 0.9
       };
       setMessages([welcomeMessage]);
     }
@@ -259,9 +301,10 @@ export function FloatingChatBot({
                           
                           {message.type === 'bot' && (
                             <div className="space-y-2">
-                              {/* 置信度和响应时间 */}
-                              {(message.confidence || message.responseTime) && (
-                                <div className="flex items-center gap-2">
+                              {/* 置信度、响应时间和问题类型 */}
+                              {(message.confidence || message.responseTime || message.questionType) && (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {formatQuestionType(message.questionType)}
                                   {formatConfidence(message.confidence)}
                                   {formatResponseTime(message.responseTime)}
                                 </div>
