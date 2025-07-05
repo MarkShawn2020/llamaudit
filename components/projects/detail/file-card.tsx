@@ -193,7 +193,6 @@ export function FileCard({
                             checked={file.syncToKnowledgeBase ?? false}
                             onCheckedChange={(checked) => onSyncToggle?.(file, checked)}
                             disabled={['uploading', 'analyzing'].includes(file.status) || !!file.syncLoading}
-                            size="sm"
                         />
                     </div>
                 </CardFooter>

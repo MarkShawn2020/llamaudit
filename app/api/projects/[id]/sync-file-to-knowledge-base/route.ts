@@ -158,19 +158,19 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         fileName: fileRecord.originalName,
         filePath: fileRecord.filePath,
         metadata: metadata,
-        storageProvider: metadata.storageProvider,
-        difyFileId: metadata.difyFileId
+        storageProvider: (metadata as any).storageProvider,
+        difyFileId: (metadata as any).difyFileId
       });
       
       // 检查是否是Dify存储的文件
       // 方式1: 通过metadata中的storageProvider字段
       // 方式2: 通过filePath是否包含dify API路径
-      const isDifyFile = (metadata.storageProvider === 'dify' && metadata.difyFileId) || 
+      const isDifyFile = ((metadata as any).storageProvider === 'dify' && (metadata as any).difyFileId) || 
                         (fileRecord.filePath && fileRecord.filePath.includes('/api/dify/files'));
       
       if (isDifyFile) {
         // 获取difyFileId，优先从metadata，否则从filePath中提取
-        let difyFileId = metadata.difyFileId;
+        let difyFileId = (metadata as any).difyFileId;
         if (!difyFileId && fileRecord.filePath && fileRecord.filePath.includes('/api/dify/files')) {
           const urlParams = new URLSearchParams(fileRecord.filePath.split('?')[1]);
           difyFileId = urlParams.get('id') || fileRecord.id;
