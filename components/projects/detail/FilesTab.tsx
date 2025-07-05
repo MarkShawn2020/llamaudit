@@ -19,13 +19,21 @@ import {deleteProjectFile, saveFileAnalysisResult} from '@/lib/actions/file-acti
 import {getFilesByProjectId} from '@/lib/db/documents';
 import {logger} from '@/lib/logger';
 import {useAtom} from 'jotai'
-import {BarChart2, RefreshCw, Upload} from 'lucide-react';
+import {BarChart2, RefreshCw, Upload, MoreHorizontal, Settings} from 'lucide-react';
 import {startTransition, useActionState, useCallback, useEffect, useRef, useState} from 'react';
 import { DifyConfigComponent } from '@/components/dify-config';
 import { useDifyConfig } from '@/contexts/dify-config-context';
 import {Switch} from '@/components/ui/switch';
 import {Label} from '@/components/ui/label';
 import {Database} from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useSyncFileToKnowledgeBase, useRemoveFileFromKnowledgeBase, useInvalidateKnowledgeBase } from '@/hooks/use-knowledge-base';
 import { useProjectFiles } from '@/hooks/use-project-files';
 
@@ -450,43 +458,55 @@ export default function FilesTab({
             <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                     <h3 className="text-lg font-medium">项目文档分析</h3>
-
-                    {/* 全局同步设置 - 在小屏幕上显示在标题下方 */}
-                    <div className="flex items-center space-x-2 sm:order-none order-last">
-                        <Database className="h-4 w-4 text-muted-foreground" />
-                        <Label htmlFor="global-sync" className="text-sm font-medium whitespace-nowrap">
-                            默认同步到知识库
-                        </Label>
-                        <Switch
-                            id="global-sync"
-                            checked={globalSyncEnabled}
-                            onCheckedChange={setGlobalSyncEnabled}
-                        />
-                    </div>
+                    
+                    {/* 配置菜单 */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="flex-shrink-0">
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">更多选项</span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuLabel>配置选项</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            
+                            {/* 全局同步设置 */}
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                <div className="flex items-center justify-between w-full">
+                                    <div className="flex items-center space-x-2">
+                                        <Database className="h-4 w-4 text-muted-foreground" />
+                                        <Label htmlFor="global-sync-menu" className="text-sm font-medium cursor-pointer">
+                                            默认同步到知识库
+                                        </Label>
+                                    </div>
+                                    <Switch
+                                        id="global-sync-menu"
+                                        checked={globalSyncEnabled}
+                                        onCheckedChange={setGlobalSyncEnabled}
+                                    />
+                                </div>
+                            </DropdownMenuItem>
+                            
+                            <DropdownMenuSeparator />
+                            
+                            {/* Dify配置 */}
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                <div className="w-full">
+                                    <DifyConfigComponent />
+                                </div>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
                 
-                {/* 操作按钮组 - 在小屏幕上换行 */}
+                {/* 操作按钮组 - 主要操作 */}
                 <div className="flex flex-wrap gap-2 sm:gap-3">
-                    <Dialog open={tiobDialogOpen} onOpenChange={setTiobDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
-                                <BarChart2 className="h-4 w-4 mr-2"/>
-                                <span className="hidden sm:inline">三重一大事项</span>
-                                <span className="sm:hidden">三重一大</span>
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="!max-w-[95vw] sm:!max-w-[90vw] overflow-hidden">
-                            <DialogHeader>
-                                <DialogTitle>三重一大事项分析</DialogTitle>
-                                <DialogDescription>
-                                    从项目文档中提取的重大问题决策、项目安排、资金使用等事项
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="overflow-auto max-h-[70vh] sm:max-h-[80vh]">
-                                <TIOBComp project={{name: projectId}}/>
-                            </div>
-                        </DialogContent>
-                    </Dialog>
+                    <Button onClick={handleUploadClick} size="sm" className="flex-1 sm:flex-none">
+                        <Upload className="h-4 w-4 mr-2"/>
+                        <span className="hidden sm:inline">上传文档</span>
+                        <span className="sm:hidden">上传</span>
+                    </Button>
 
                     <Button
                         variant="outline"
@@ -510,13 +530,26 @@ export default function FilesTab({
                         <span className="sm:hidden">分析</span>
                     </Button>
 
-                    <Button onClick={handleUploadClick} size="sm" className="flex-1 sm:flex-none">
-                        <Upload className="h-4 w-4 mr-2"/>
-                        <span className="hidden sm:inline">上传文档</span>
-                        <span className="sm:hidden">上传</span>
-                    </Button>
-
-                    <DifyConfigComponent />
+                    <Dialog open={tiobDialogOpen} onOpenChange={setTiobDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
+                                <BarChart2 className="h-4 w-4 mr-2"/>
+                                <span className="hidden sm:inline">三重一大事项</span>
+                                <span className="sm:hidden">三重一大</span>
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="!max-w-[95vw] sm:!max-w-[90vw] overflow-hidden">
+                            <DialogHeader>
+                                <DialogTitle>三重一大事项分析</DialogTitle>
+                                <DialogDescription>
+                                    从项目文档中提取的重大问题决策、项目安排、资金使用等事项
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="overflow-auto max-h-[70vh] sm:max-h-[80vh]">
+                                <TIOBComp project={{name: projectId}}/>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
                 </div>
             </div>
 
