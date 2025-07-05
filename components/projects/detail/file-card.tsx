@@ -8,7 +8,7 @@ import {Switch} from "@/components/ui/switch";
 import {Label} from "@/components/ui/label";
 import {formatFileSize} from "@/lib/format-file-size";
 import {getFileIconColor} from "@/lib/get-file-icon-color";
-import {FileIcon, RefreshCw, Trash2, Database, Loader2} from "lucide-react";
+import {FileIcon, RefreshCw, Trash2, Database, Loader2, ChevronDown, ChevronUp} from "lucide-react";
 // import Markdown from "react-markdown";
 // import remarkGfm from "remark-gfm";
 
@@ -20,16 +20,19 @@ export function FileCard({
                              onAnalyze,
                              onRemove,
                              expanded,
+                             onToggleExpanded,
                              onSyncToggle
                          }: {
     file: UIFile;
     onAnalyze: (file: UIFile) => void;
     onRemove: (file: UIFile) => void;
     expanded: boolean;
+    onToggleExpanded: (fileId: string) => void;
     onSyncToggle?: (file: UIFile, syncEnabled: boolean) => void;
 }) {
     const canAnalyze = file.status === 'uploaded' || file.status === 'analysis_failed' || file.status === 'analyzed';
-    const isExpanded = expanded || file.status === 'analyzing' || file.status === 'analyzed';
+    const hasAnalysisResult = file.analysisResult && file.analysisResult.trim().length > 0;
+    const shouldShowAnalyzing = file.status === 'analyzing';
 
     return (
         <Card className="overflow-hidden hover:shadow-md transition-shadow duration-200">
@@ -63,12 +66,34 @@ export function FileCard({
                 </CardContent>
             )}
 
-            {isExpanded && file.analysisResult && (
+            {/* 分析结果展开/收起按钮 */}
+            {(hasAnalysisResult || shouldShowAnalyzing) && (
+                <CardContent className="pt-0 pb-2">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onToggleExpanded(file.id)}
+                        className="w-full h-8 text-xs flex items-center justify-between p-2"
+                    >
+                        <span>
+                            {shouldShowAnalyzing ? '分析中...' : '查看分析结果'}
+                        </span>
+                        {shouldShowAnalyzing ? (
+                            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                            expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />
+                        )}
+                    </Button>
+                </CardContent>
+            )}
+
+            {/* 分析结果内容 - 统一显示区域 */}
+            {expanded && (hasAnalysisResult || shouldShowAnalyzing) && (
                 <CardContent className="pt-0 pb-3">
                     <div className="border rounded-md p-3 bg-muted/30">
                         <ScrollArea className="h-[160px]">
                             <div className="text-xs leading-relaxed whitespace-pre-wrap">
-                                {file.analysisResult}
+                                {file.analysisResult || '正在分析中，请稍候...'}
                             </div>
                         </ScrollArea>
                     </div>

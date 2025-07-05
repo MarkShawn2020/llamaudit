@@ -52,7 +52,30 @@ export default function FilesTab({
         setIsLoading(false);
       }
     }, [queryFiles, queryLoading, setFiles]);
-    const [expandedFileId, setExpandedFileId] = useState<string | null>(null);
+    const [expandedFileIds, setExpandedFileIds] = useState<Set<string>>(new Set());
+    
+    // 切换文件展开状态
+    const toggleFileExpanded = useCallback((fileId: string) => {
+        setExpandedFileIds(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(fileId)) {
+                newSet.delete(fileId);
+            } else {
+                newSet.add(fileId);
+            }
+            return newSet;
+        });
+    }, []);
+
+    // 当文件状态变化时自动管理展开状态
+    useEffect(() => {
+        files.forEach(file => {
+            // 如果文件开始分析，自动展开
+            if (file.status === 'analyzing') {
+                setExpandedFileIds(prev => new Set(prev).add(file.id));
+            }
+        });
+    }, [files]);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const {toast} = useToast();
     const [filesState, getFilesAction] = useActionState(getFilesByProjectId, [])
@@ -424,14 +447,14 @@ export default function FilesTab({
     };
 
     return (<div className="space-y-6 py-4">
-            <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">项目文档分析</h3>
+            <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                    <h3 className="text-lg font-medium">项目文档分析</h3>
 
-                <div className="flex items-center space-x-4">
-                    {/* 全局同步设置 */}
-                    <div className="flex items-center space-x-2">
+                    {/* 全局同步设置 - 在小屏幕上显示在标题下方 */}
+                    <div className="flex items-center space-x-2 sm:order-none order-last">
                         <Database className="h-4 w-4 text-muted-foreground" />
-                        <Label htmlFor="global-sync" className="text-sm font-medium">
+                        <Label htmlFor="global-sync" className="text-sm font-medium whitespace-nowrap">
                             默认同步到知识库
                         </Label>
                         <Switch
@@ -440,23 +463,26 @@ export default function FilesTab({
                             onCheckedChange={setGlobalSyncEnabled}
                         />
                     </div>
-                    
-                    <div className="flex space-x-2">
+                </div>
+                
+                {/* 操作按钮组 - 在小屏幕上换行 */}
+                <div className="flex flex-wrap gap-2 sm:gap-3">
                     <Dialog open={tiobDialogOpen} onOpenChange={setTiobDialogOpen}>
                         <DialogTrigger asChild>
-                            <Button variant="outline">
+                            <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
                                 <BarChart2 className="h-4 w-4 mr-2"/>
-                                三重一大事项
+                                <span className="hidden sm:inline">三重一大事项</span>
+                                <span className="sm:hidden">三重一大</span>
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="!max-w-[90vw] overflow-hidden">
+                        <DialogContent className="!max-w-[95vw] sm:!max-w-[90vw] overflow-hidden">
                             <DialogHeader>
                                 <DialogTitle>三重一大事项分析</DialogTitle>
                                 <DialogDescription>
                                     从项目文档中提取的重大问题决策、项目安排、资金使用等事项
                                 </DialogDescription>
                             </DialogHeader>
-                            <div className="overflow-auto max-h-[80vh]">
+                            <div className="overflow-auto max-h-[70vh] sm:max-h-[80vh]">
                                 <TIOBComp project={{name: projectId}}/>
                             </div>
                         </DialogContent>
@@ -464,6 +490,8 @@ export default function FilesTab({
 
                     <Button
                         variant="outline"
+                        size="sm"
+                        className="flex-1 sm:flex-none"
                         onClick={() => {
                             const filesToAnalyze = files.filter(f => f.status === 'uploaded' || f.status === 'analysis_failed');
                             if (filesToAnalyze.length > 0) {
@@ -478,27 +506,28 @@ export default function FilesTab({
                         }}
                     >
                         <RefreshCw className="h-4 w-4 mr-2"/>
-                        批量分析
+                        <span className="hidden sm:inline">批量分析</span>
+                        <span className="sm:hidden">分析</span>
                     </Button>
 
-                    <Button onClick={handleUploadClick}>
+                    <Button onClick={handleUploadClick} size="sm" className="flex-1 sm:flex-none">
                         <Upload className="h-4 w-4 mr-2"/>
-                        上传文档
+                        <span className="hidden sm:inline">上传文档</span>
+                        <span className="sm:hidden">上传</span>
                     </Button>
 
                     <DifyConfigComponent />
-                    </div>
                 </div>
-
-                <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    onChange={handleFileChange}
-                    multiple
-                    accept=".pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,.ppt,.pptx"
-                />
             </div>
+
+            <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleFileChange}
+                multiple
+                accept=".pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,.ppt,.pptx"
+            />
 
             {isLoading ? (<div className="h-40 flex items-center justify-center">
                     <div className="flex flex-col items-center">
@@ -512,13 +541,14 @@ export default function FilesTab({
                         <p>尚未上传任何文件</p>
                         <p className="text-xs mt-1">点击上传按钮添加文件进行分析</p>
                     </div>
-                </div>) : (<div className="grid gap-4 lg:grid-cols-2">
+                </div>) : (<div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
                     {files.map(file => (<FileCard
                             key={file.id}
                             file={file}
                             onAnalyze={handleAnalyzeFile}
                             onRemove={handleRemoveFile}
-                            expanded={expandedFileId === file.id}
+                            expanded={expandedFileIds.has(file.id)}
+                            onToggleExpanded={toggleFileExpanded}
                             onSyncToggle={handleSyncToggle}
                         />))}
                 </div>)}
