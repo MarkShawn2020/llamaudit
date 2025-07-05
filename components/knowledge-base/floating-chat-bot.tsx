@@ -285,7 +285,7 @@ export function FloatingChatBot({
                                           </Badge>
                                         </div>
                                         <p className="text-muted-foreground line-clamp-2">
-                                          {source.content.substring(0, 100)}...
+                                          {source.content?.substring(0, 100) || '无内容'}...
                                         </p>
                                       </div>
                                     ))}
