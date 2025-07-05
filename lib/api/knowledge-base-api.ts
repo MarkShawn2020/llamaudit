@@ -288,8 +288,36 @@ export class KnowledgeBaseApi {
 
   // === Private Methods ===
 
+  // 获取所有 Dify 数据集
+  private async getDifyDatasets(): Promise<DifyDatasetResponse[]> {
+    const response = await fetch(`${this.difyBaseUrl}/datasets`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${this.difyApiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch Dify datasets: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data || [];
+  }
+
   // 创建 Dify 知识库
   private async createDifyDataset(data: DifyDatasetCreateRequest): Promise<DifyDatasetResponse> {
+    // 先检查是否已存在同名数据集
+    const existingDatasets = await this.getDifyDatasets();
+    const existingDataset = existingDatasets.find(dataset => dataset.name === data.name);
+    
+    if (existingDataset) {
+      console.log(`Found existing dataset: ${data.name}, reusing it`);
+      return existingDataset;
+    }
+
+    // 不存在则创建新的数据集
     const response = await fetch(`${this.difyBaseUrl}/datasets`, {
       method: 'POST',
       headers: {

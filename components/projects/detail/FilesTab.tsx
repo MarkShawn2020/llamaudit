@@ -27,7 +27,7 @@ import {Switch} from '@/components/ui/switch';
 import {Label} from '@/components/ui/label';
 import {Database} from 'lucide-react';
 
-export default function ProjectAnalysis({
+export default function FilesTab({
                                             projectId, initialFiles = [], onFileChange
                                         }: {
     projectId: string, initialFiles?: UIFile[],  // Changed from ProjectFile[] to UIFile[]
