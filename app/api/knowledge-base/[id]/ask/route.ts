@@ -167,10 +167,11 @@ async function performKnowledgeRetrieval(
             });
 
             // 使用数据集检索API，按照Dify文档格式
+            // 使用混合搜索获得最佳效果，通过去重逻辑处理重复问题
             const retrievalPayload = {
                 query: question,
                 retrieval_model: {
-                    search_method: "hybrid_search", // 混合搜索效果更好
+                    search_method: "hybrid_search", // 混合搜索效果最好
                     reranking_enable: false,
                     reranking_mode: null,
                     reranking_model: {
@@ -216,14 +217,61 @@ async function performKnowledgeRetrieval(
                 
                 logger.info('检索结果', {
                     recordCount: sources.length,
-                    records: sources.map(r => ({
+                    records: sources.map((r, index) => ({
+                        index,
                         score: r.score,
                         documentName: r.segment?.document?.name,
-                        contentPreview: r.segment?.content?.substring(0, 100)
+                        documentId: r.segment?.document?.id,
+                        segmentId: r.segment?.id,
+                        segmentPosition: r.segment?.position,
+                        contentPreview: r.segment?.content?.substring(0, 100),
+                        contentLength: r.segment?.content?.length || 0,
+                        wordCount: r.segment?.word_count,
+                        isEnabled: r.segment?.enabled,
+                        status: r.segment?.status
                     }))
                 });
 
                 if (sources.length > 0) {
+                    // 去重：优先保留有score的版本，移除重复segment
+                    const segmentMap = new Map();
+                    
+                    // 第一遍：收集所有segment，优先保留有score的版本
+                    sources.forEach(record => {
+                        const segmentId = record.segment?.id;
+                        if (!segmentId) return;
+                        
+                        const existing = segmentMap.get(segmentId);
+                        if (!existing) {
+                            // 第一次遇到这个segment
+                            segmentMap.set(segmentId, record);
+                        } else {
+                            // 已经存在，比较优先级
+                            const currentHasScore = record.score !== null && record.score !== undefined;
+                            const existingHasScore = existing.score !== null && existing.score !== undefined;
+                            
+                            // 如果当前有score而已存在的没有，替换
+                            if (currentHasScore && !existingHasScore) {
+                                segmentMap.set(segmentId, record);
+                            }
+                            // 如果都有score，保留score更高的
+                            else if (currentHasScore && existingHasScore && record.score > existing.score) {
+                                segmentMap.set(segmentId, record);
+                            }
+                        }
+                    });
+                    
+                    const uniqueSources = Array.from(segmentMap.values());
+                    
+                    logger.info('去重后的检索结果', {
+                        originalCount: sources.length,
+                        uniqueCount: uniqueSources.length,
+                        removedDuplicates: sources.length - uniqueSources.length
+                    });
+                    
+                    // 使用去重后的sources
+                    sources = uniqueSources;
+                    
                     // Dify API返回的数据结构：record.segment.content
                     const context = sources.slice(0, 3).map(record => record.segment?.content || '').filter(Boolean).join('\n\n');
                     

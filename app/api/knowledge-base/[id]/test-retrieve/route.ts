@@ -104,10 +104,36 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
         if (retrievalResponse.ok) {
             const retrievalData = await retrievalResponse.json();
-            const records = retrievalData.records || [];
+            let records = retrievalData.records || [];
+
+            // 去重处理：优先保留有score的版本
+            const segmentMap = new Map();
+            
+            records.forEach((record: any) => {
+                const segmentId = record.segment?.id;
+                if (!segmentId) return;
+                
+                const existing = segmentMap.get(segmentId);
+                if (!existing) {
+                    segmentMap.set(segmentId, record);
+                } else {
+                    const currentHasScore = record.score !== null && record.score !== undefined;
+                    const existingHasScore = existing.score !== null && existing.score !== undefined;
+                    
+                    if (currentHasScore && !existingHasScore) {
+                        segmentMap.set(segmentId, record);
+                    } else if (currentHasScore && existingHasScore && record.score > existing.score) {
+                        segmentMap.set(segmentId, record);
+                    }
+                }
+            });
+            
+            const uniqueRecords = Array.from(segmentMap.values());
 
             logger.info('测试检索结果', {
-                recordCount: records.length,
+                originalRecordCount: records.length,
+                uniqueRecordCount: uniqueRecords.length,
+                removedDuplicates: records.length - uniqueRecords.length,
                 responseTime,
                 query: query.substring(0, 100)
             });
@@ -116,9 +142,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 success: true,
                 data: {
                     query: query,
-                    recordCount: records.length,
+                    originalRecordCount: records.length,
+                    recordCount: uniqueRecords.length,
+                    removedDuplicates: records.length - uniqueRecords.length,
                     responseTime,
-                    records: records.map((record: any) => ({
+                    records: uniqueRecords.map((record: any) => ({
                         score: record.score,
                         documentName: record.segment?.document?.name,
                         documentId: record.segment?.document?.id,
@@ -126,7 +154,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                         content: record.segment?.content,
                         contentPreview: record.segment?.content?.substring(0, 200) + '...',
                         position: record.segment?.position,
-                        wordCount: record.segment?.word_count
+                        wordCount: record.segment?.word_count,
+                        isEnabled: record.segment?.enabled,
+                        status: record.segment?.status
+                    })),
+                    allRecords: records.map((record: any) => ({
+                        score: record.score,
+                        segmentId: record.segment?.id,
+                        contentPreview: record.segment?.content?.substring(0, 100)
                     })),
                     rawResponse: retrievalData
                 }
