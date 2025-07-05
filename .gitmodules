@@ -1,0 +1,3 @@
+[submodule "dify-docs"]
+	path = dify-docs
+	url = git@github.com:langgenius/dify-docs.git
