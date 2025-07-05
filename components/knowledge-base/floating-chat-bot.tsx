@@ -25,7 +25,8 @@ import {
   Share2,
   Download,
   Bug,
-  Search
+  Search,
+  RotateCcw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -183,6 +184,13 @@ export function FloatingChatBot({
     } catch (error) {
       toast.error('反馈提交失败');
     }
+  };
+
+  // 清空聊天记录
+  const handleClearChat = () => {
+    setMessages([]);
+    setFeedbackGiven(new Set());
+    toast.success('聊天记录已清空');
   };
 
   // 分享消息
@@ -566,6 +574,21 @@ ${result.data.recordCount === 0 ? '❌ 未找到相关内容，建议：\n• �
                           AI正在思考...
                         </div>
                       </div>
+                    </div>
+                  )}
+
+                  {/* 清空聊天按钮 */}
+                  {messages.length > 0 && !isTyping && (
+                    <div className="flex justify-center pt-2 pb-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleClearChat}
+                        className="text-xs text-muted-foreground/40 hover:text-muted-foreground/80 h-5 px-1"
+                      >
+                        <RotateCcw className="h-2.5 w-2.5 mr-0.5" />
+                        清空
+                      </Button>
                     </div>
                   )}
                   
