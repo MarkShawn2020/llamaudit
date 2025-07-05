@@ -1,9 +1,10 @@
 import { withConnection } from '../db';
-import { knowledgeBases, qaConversations, files, NewKnowledgeBase, NewQaConversation } from '../db/schema';
+import { knowledgeBases, qaConversations, files, auditUnits, users, NewKnowledgeBase, NewQaConversation } from '../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 
 export interface DifyDatasetCreateRequest {
   name: string;
+  type: string;
   permission?: 'only_me' | 'all_team_members' | 'partial_members';
   indexing_technique?: 'high_quality' | 'economy';
   embedding_model?: string;
@@ -67,9 +68,65 @@ export class KnowledgeBaseApi {
     createdBy: string;
   }) {
     return withConnection(async (db) => {
+      // 获取审计单位信息
+      const [auditUnit] = await db
+        .select()
+        .from(auditUnits)
+        .where(eq(auditUnits.id, auditUnitId))
+        .limit(1);
+
+      if (!auditUnit) {
+        throw new Error('审计单位不存在');
+      }
+
+      // 获取用户信息
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, data.createdBy))
+        .limit(1);
+
+      if (!user) {
+        throw new Error('用户不存在');
+      }
+
+      // 生成知识库名称：llamaudit.userName.auditUnitName
+      const prefix = 'llamaudit';
+      const userName = user.name || 'user';
+      const auditUnitName = auditUnit.name;
+      
+      // 计算可用空间，确保审计单位名称能够完整显示
+      const maxLength = 40;
+      const prefixLength = prefix.length + 1; // +1 for the dot
+      const remainingLength = maxLength - prefixLength;
+      
+      let knowledgeBaseName: string;
+      
+      if (remainingLength >= userName.length + 1 + auditUnitName.length) {
+        // 如果总长度不超过40个字符，使用完整名称
+        knowledgeBaseName = `${prefix}.${userName}.${auditUnitName}`;
+      } else {
+        // 如果超过40个字符，优先保留审计单位名称，截断用户名
+        const maxUserNameLength = remainingLength - 1 - auditUnitName.length; // -1 for the dot between userName and auditUnitName
+        
+        if (maxUserNameLength > 2) {
+          // 如果用户名有足够空间，截断用户名
+          const truncatedUserName = userName.substring(0, maxUserNameLength);
+          knowledgeBaseName = `${prefix}.${truncatedUserName}.${auditUnitName}`;
+        } else {
+          // 如果空间不够，只保留审计单位名称
+          const maxAuditUnitLength = remainingLength;
+          const truncatedAuditUnitName = auditUnitName.length > maxAuditUnitLength 
+            ? auditUnitName.substring(0, maxAuditUnitLength)
+            : auditUnitName;
+          knowledgeBaseName = `${prefix}.${truncatedAuditUnitName}`;
+        }
+      }
+
       // 首先在 Dify 中创建知识库
       const difyDataset = await this.createDifyDataset({
-        name: data.name,
+        name: knowledgeBaseName,
+        type: 'knowledge_base',
         permission: data.permission as any || 'only_me',
         indexing_technique: data.indexingTechnique as any || 'high_quality'
       });
@@ -78,7 +135,7 @@ export class KnowledgeBaseApi {
       const newKnowledgeBase: NewKnowledgeBase = {
         auditUnitId,
         difyDatasetId: difyDataset.id,
-        name: data.name,
+        name: knowledgeBaseName,
         description: data.description,
         indexingTechnique: data.indexingTechnique || 'high_quality',
         permission: data.permission || 'only_me',
