@@ -133,12 +133,50 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // 处理 Dify 存储的文件
     try {
-      // 检查是否是存储在 Dify 的文件
-      const metadata = fileRecord.metadata ? JSON.parse(fileRecord.metadata) : {};
+      // 安全地解析metadata
+      let metadata = {};
+      if (fileRecord.metadata) {
+        try {
+          // 如果metadata是markdown代码块格式，先清理它
+          let metadataStr = fileRecord.metadata.trim();
+          if (metadataStr.startsWith('```json')) {
+            metadataStr = metadataStr.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+          }
+          metadata = JSON.parse(metadataStr);
+        } catch (parseError) {
+          logger.warn('metadata解析失败，使用空对象', { 
+            fileId: fileRecord.id,
+            rawMetadata: fileRecord.metadata,
+            parseError: parseError instanceof Error ? parseError.message : String(parseError)
+          });
+          metadata = {};
+        }
+      }
       
-      if (metadata.storageProvider === 'dify' && metadata.difyFileId) {
+      logger.info('文件存储信息检查', {
+        fileId: fileRecord.id,
+        fileName: fileRecord.originalName,
+        filePath: fileRecord.filePath,
+        metadata: metadata,
+        storageProvider: metadata.storageProvider,
+        difyFileId: metadata.difyFileId
+      });
+      
+      // 检查是否是Dify存储的文件
+      // 方式1: 通过metadata中的storageProvider字段
+      // 方式2: 通过filePath是否包含dify API路径
+      const isDifyFile = (metadata.storageProvider === 'dify' && metadata.difyFileId) || 
+                        (fileRecord.filePath && fileRecord.filePath.includes('/api/dify/files'));
+      
+      if (isDifyFile) {
+        // 获取difyFileId，优先从metadata，否则从filePath中提取
+        let difyFileId = metadata.difyFileId;
+        if (!difyFileId && fileRecord.filePath && fileRecord.filePath.includes('/api/dify/files')) {
+          const urlParams = new URLSearchParams(fileRecord.filePath.split('?')[1]);
+          difyFileId = urlParams.get('id') || fileRecord.id;
+        }
         logger.info('使用已上传的文件创建知识库文档', {
-          difyFileId: metadata.difyFileId,
+          difyFileId: difyFileId,
           datasetId: knowledgeBase.difyDatasetId,
           filename: fileRecord.originalName
         });
@@ -159,7 +197,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             process_rule: {
               mode: 'automatic'
             },
-            upload_file_id: metadata.difyFileId  // 引用已上传的文件
+            upload_file_id: difyFileId  // 引用已上传的文件
           })
         });
 
@@ -277,9 +315,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         throw new Error('无法处理此类型的文件：文件路径格式不支持');
       }
     } catch (syncError) {
-      logger.error('同步文件到知识库失败', { error: syncError });
+      logger.error('同步文件到知识库失败', { 
+        error: syncError instanceof Error ? syncError.message : String(syncError),
+        stack: syncError instanceof Error ? syncError.stack : undefined,
+        fileId: fileRecord?.id,
+        fileName: fileRecord?.originalName
+      });
       return NextResponse.json(
-        { error: '同步文件到知识库失败' },
+        { error: `同步文件到知识库失败: ${syncError instanceof Error ? syncError.message : String(syncError)}` },
         { status: 500 }
       );
     }

@@ -5,13 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Brain, FileText, MessageSquare, Loader2, Settings, Database, RefreshCw, BarChart3 } from 'lucide-react';
+import { Brain, FileText, MessageSquare, Loader2, Settings, Database, BarChart3 } from 'lucide-react';
 import { useChatBot } from '@/components/knowledge-base/chat-bot-provider';
 import {
   useKnowledgeBases,
   useKnowledgeBaseStats,
   useKnowledgeBaseDocuments,
-  useInvalidateKnowledgeBase,
 } from '@/hooks/use-knowledge-base';
 
 interface KnowledgeBaseTabProps {
@@ -20,9 +19,7 @@ interface KnowledgeBaseTabProps {
 }
 
 export function KnowledgeBaseTab({ auditUnitId, auditUnitName }: KnowledgeBaseTabProps) {
-  const [syncingFiles, setSyncingFiles] = useState<Set<string>>(new Set());
   const { showChatBot } = useChatBot();
-  const { invalidateStats, invalidateDocuments } = useInvalidateKnowledgeBase();
 
   // React Query hooks
   const {
@@ -43,57 +40,6 @@ export function KnowledgeBaseTab({ auditUnitId, auditUnitName }: KnowledgeBaseTa
     isLoading: documentsLoading,
   } = useKnowledgeBaseDocuments(auditUnitId, primaryDatasetId);
 
-  // 监听知识库同步事件
-  useEffect(() => {
-    const handleSyncStart = (event: CustomEvent) => {
-      const { projectId: eventProjectId, fileName } = event.detail;
-      if (eventProjectId === auditUnitId) {
-        setSyncingFiles(prev => new Set([...prev, fileName]));
-      }
-    };
-
-    const handleSyncError = (event: CustomEvent) => {
-      const { projectId: eventProjectId, fileName } = event.detail;
-      if (eventProjectId === auditUnitId) {
-        setSyncingFiles(prev => {
-          const updated = new Set(prev);
-          updated.delete(fileName);
-          return updated;
-        });
-      }
-    };
-
-    const handleKnowledgeBaseUpdate = (event: CustomEvent) => {
-      const { projectId: eventProjectId, fileName } = event.detail;
-      
-      if (eventProjectId === auditUnitId) {
-        console.log(`Knowledge base updated - ${fileName}`);
-        
-        setSyncingFiles(prev => {
-          const updated = new Set(prev);
-          updated.delete(fileName);
-          return updated;
-        });
-        
-        // 使用 React Query 的 invalidate 来重新获取数据
-        invalidateStats(auditUnitId);
-        if (primaryDatasetId) {
-          invalidateDocuments(auditUnitId, primaryDatasetId);
-        }
-      }
-    };
-
-    window.addEventListener('knowledgeBaseSyncStart', handleSyncStart as EventListener);
-    window.addEventListener('knowledgeBaseSyncError', handleSyncError as EventListener);
-    window.addEventListener('knowledgeBaseUpdated', handleKnowledgeBaseUpdate as EventListener);
-
-    return () => {
-      window.removeEventListener('knowledgeBaseSyncStart', handleSyncStart as EventListener);
-      window.removeEventListener('knowledgeBaseSyncError', handleSyncError as EventListener);
-      window.removeEventListener('knowledgeBaseUpdated', handleKnowledgeBaseUpdate as EventListener);
-    };
-  }, [auditUnitId, primaryDatasetId, invalidateStats, invalidateDocuments]);
-
   // 自动显示聊天机器人 - 使用稳定的依赖
   useEffect(() => {
     if (knowledgeBases.length > 0 && knowledgeBases[0]) {
@@ -106,13 +52,6 @@ export function KnowledgeBaseTab({ auditUnitId, auditUnitName }: KnowledgeBaseTa
     }
   }, [knowledgeBases.length, auditUnitName, showChatBot]);
 
-  // 刷新数据
-  const handleRefresh = useCallback(() => {
-    invalidateStats(auditUnitId);
-    if (primaryDatasetId) {
-      invalidateDocuments(auditUnitId, primaryDatasetId);
-    }
-  }, [auditUnitId, primaryDatasetId, invalidateStats, invalidateDocuments]);
 
   // 统计数据
   const totalDocuments = Object.values(knowledgeBaseStats).reduce((total, stats) => total + stats.documentCount, 0);
@@ -205,26 +144,19 @@ export function KnowledgeBaseTab({ auditUnitId, auditUnitName }: KnowledgeBaseTa
           </div>
           
           {/* 功能按钮组 */}
-          <div className="flex gap-1">
-            <Button variant="outline" size="sm" onClick={handleRefresh}>
-              <RefreshCw className="h-4 w-4 mr-1"/>
-              刷新
-            </Button>
-            
-            {knowledgeBases.length > 0 && (
-              <>
-                <Button variant="outline" size="sm">
-                  <BarChart3 className="h-4 w-4 mr-1"/>
-                  统计
-                </Button>
-                
-                <Button variant="outline" size="sm">
-                  <Settings className="h-4 w-4 mr-1"/>
-                  设置
-                </Button>
-              </>
-            )}
-          </div>
+          {knowledgeBases.length > 0 && (
+            <div className="flex gap-1">
+              <Button variant="outline" size="sm">
+                <BarChart3 className="h-4 w-4 mr-1"/>
+                统计
+              </Button>
+              
+              <Button variant="outline" size="sm">
+                <Settings className="h-4 w-4 mr-1"/>
+                设置
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -322,38 +254,22 @@ export function KnowledgeBaseTab({ auditUnitId, auditUnitName }: KnowledgeBaseTa
           ) : (
             <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {documents.map((doc: any, index: number) => {
-                const isSyncing = syncingFiles.has(doc.name);
                 return (
                   <Card 
                     key={doc.id || index} 
-                    className={`overflow-hidden hover:shadow-md transition-shadow duration-200 ${
-                      isSyncing 
-                        ? 'ring-2 ring-blue-500 bg-blue-50 border-blue-200' 
-                        : ''
-                    }`}
+                    className="overflow-hidden hover:shadow-md transition-shadow duration-200"
                   >
                     <CardContent className="p-4">
                       <div className="space-y-3">
                         {/* 文件名和状态 */}
                         <div className="flex items-center gap-2">
-                          {isSyncing ? (
-                            <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
-                          ) : (
-                            <FileText className="h-4 w-4 text-muted-foreground" />
-                          )}
+                          <FileText className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium text-sm truncate flex-1" title={doc.name}>
                             {doc.name}
                           </span>
-                          {isSyncing && (
-                            <Badge variant="default" className="bg-blue-600 text-xs animate-pulse">
-                              同步中
-                            </Badge>
-                          )}
-                          {!isSyncing && (
-                            <Badge variant={doc.enabled ? "default" : "secondary"} className="text-xs">
-                              {doc.enabled ? "已启用" : "已禁用"}
-                            </Badge>
-                          )}
+                          <Badge variant={doc.enabled ? "default" : "secondary"} className="text-xs">
+                            {doc.enabled ? "已启用" : "已禁用"}
+                          </Badge>
                         </div>
                         
                         {/* 统计信息 */}

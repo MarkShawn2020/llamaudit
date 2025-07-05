@@ -132,6 +132,72 @@ export function useDeleteKnowledgeBase() {
   });
 }
 
+// Sync file to knowledge base mutation
+export function useSyncFileToKnowledgeBase() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ projectId, fileId }: { projectId: string; fileId: string }) => {
+      const response = await fetch(`/api/projects/${projectId}/sync-file-to-knowledge-base`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || '同步到知识库失败');
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.message || '同步到知识库失败');
+      }
+      
+      return result;
+    },
+    onSuccess: (_, { projectId }) => {
+      // Auto-invalidate all knowledge base related queries
+      queryClient.invalidateQueries({ queryKey: knowledgeBaseKeys.list(projectId) });
+      queryClient.invalidateQueries({ queryKey: knowledgeBaseKeys.stats(projectId) });
+      queryClient.invalidateQueries({ queryKey: knowledgeBaseKeys.documents(projectId) });
+    },
+    onError: (error) => {
+      toast.error(error.message || '同步到知识库失败');
+    },
+  });
+}
+
+// Remove file from knowledge base mutation
+export function useRemoveFileFromKnowledgeBase() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ projectId, fileId }: { projectId: string; fileId: string }) => {
+      const response = await fetch(`/api/projects/${projectId}/remove-file-from-knowledge-base`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('从知识库移除失败');
+      }
+      
+      return await response.json();
+    },
+    onSuccess: (_, { projectId }) => {
+      // Auto-invalidate all knowledge base related queries
+      queryClient.invalidateQueries({ queryKey: knowledgeBaseKeys.list(projectId) });
+      queryClient.invalidateQueries({ queryKey: knowledgeBaseKeys.stats(projectId) });
+      queryClient.invalidateQueries({ queryKey: knowledgeBaseKeys.documents(projectId) });
+    },
+    onError: (error) => {
+      toast.error(error.message || '从知识库移除失败');
+    },
+  });
+}
+
 // Utility hook to invalidate knowledge base data when files are synced
 export function useInvalidateKnowledgeBase() {
   const queryClient = useQueryClient();

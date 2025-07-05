@@ -26,6 +26,7 @@ import { useDifyConfig } from '@/contexts/dify-config-context';
 import {Switch} from '@/components/ui/switch';
 import {Label} from '@/components/ui/label';
 import {Database} from 'lucide-react';
+import { useSyncFileToKnowledgeBase, useRemoveFileFromKnowledgeBase, useInvalidateKnowledgeBase } from '@/hooks/use-knowledge-base';
 
 export default function FilesTab({
                                             projectId, initialFiles = [], onFileChange
@@ -43,6 +44,11 @@ export default function FilesTab({
     const [tiobDialogOpen, setTiobDialogOpen] = useState(false);
     const { config: difyConfig } = useDifyConfig();
     const [globalSyncEnabled, setGlobalSyncEnabled] = useState(true); // 全局同步设置
+    
+    // React Query mutations for knowledge base sync
+    const syncFileToKB = useSyncFileToKnowledgeBase();
+    const removeFileFromKB = useRemoveFileFromKnowledgeBase();
+    const { invalidateAll } = useInvalidateKnowledgeBase();
 
     // 初始化 Jotai atom 状态
     useEffect(() => {
@@ -222,11 +228,11 @@ export default function FilesTab({
                     : `文件 ${file.name} 上传成功`,
             });
 
-            // 如果同步到知识库，触发知识库更新事件
+            // 如果同步到知识库，手动触发知识库数据更新
             if (shouldSync) {
-                window.dispatchEvent(new CustomEvent('knowledgeBaseUpdated', {
-                    detail: { projectId, action: 'fileAdded', fileName: file.name }
-                }));
+                // 文件已通过upload-to-knowledge-base端点上传并同步
+                // 手动刷新知识库相关查询
+                invalidateAll(projectId);
             }
 
             // 返回服务器分配的文件ID
@@ -419,41 +425,24 @@ export default function FilesTab({
             f.id === file.id ? { ...f, syncToKnowledgeBase: syncEnabled, syncLoading: true } : f
         ));
 
-        // 立即通知知识库组件进入loading状态
-        window.dispatchEvent(new CustomEvent('knowledgeBaseSyncStart', {
-            detail: { projectId, fileName: file.originalName, action: syncEnabled ? 'fileAdded' : 'fileRemoved' }
-        }));
-
         try {
             // 如果启用同步且文件已上传，同步到知识库
             if (syncEnabled && (file.status === 'uploaded' || file.status === 'analyzed')) {
-                const response = await fetch(`/api/projects/${projectId}/sync-file-to-knowledge-base`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fileId: file.id }),
+                await syncFileToKB.mutateAsync({ projectId, fileId: file.id });
+                
+                toast({
+                    title: '同步成功',
+                    description: `文件 ${file.originalName} 已同步到知识库`
                 });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || '同步到知识库失败');
-                }
-
-                const result = await response.json();
-                if (!result.success) {
-                    throw new Error(result.message || '同步到知识库失败');
-                }
 
             } else if (!syncEnabled) {
                 // 如果禁用同步，从知识库中移除
-                const response = await fetch(`/api/projects/${projectId}/remove-file-from-knowledge-base`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fileId: file.id }),
+                await removeFileFromKB.mutateAsync({ projectId, fileId: file.id });
+                
+                toast({
+                    title: '移除成功',
+                    description: `文件 ${file.originalName} 已从知识库移除`
                 });
-
-                if (!response.ok) {
-                    throw new Error('从知识库移除失败');
-                }
             }
 
             // 操作成功，移除loading状态
@@ -461,21 +450,11 @@ export default function FilesTab({
                 f.id === file.id ? { ...f, syncLoading: false } : f
             ));
 
-            // 触发知识库更新事件
-            window.dispatchEvent(new CustomEvent('knowledgeBaseUpdated', {
-                detail: { projectId, action: syncEnabled ? 'fileAdded' : 'fileRemoved', fileName: file.originalName }
-            }));
-
         } catch (error) {
             // 如果操作失败，恢复之前的状态并移除loading
             setFiles(prev => prev.map(f => 
                 f.id === file.id ? { ...f, syncToKnowledgeBase: !syncEnabled, syncLoading: false } : f
             ));
-            
-            // 通知知识库组件操作失败
-            window.dispatchEvent(new CustomEvent('knowledgeBaseSyncError', {
-                detail: { projectId, fileName: file.originalName }
-            }));
             
             toast({
                 title: '同步操作失败',

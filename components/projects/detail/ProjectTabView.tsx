@@ -41,9 +41,11 @@ export default function ProjectTabView({
                     <TabsTrigger value="knowledge-base" className="flex items-center gap-2 px-4">
                         <Brain className="h-4 w-4"/>
                         <span>知识库</span>
-                        <Badge variant="secondary" className="ml-1 text-xs">
-                            {knowledgeBaseDocumentCount}
-                        </Badge>
+                        {knowledgeBaseDocumentCount > 0 && (
+                            <Badge variant="secondary" className="ml-1 text-xs">
+                                {knowledgeBaseDocumentCount}
+                            </Badge>
+                        )}
                     </TabsTrigger>
 
                     <TabsTrigger value="documents" className="flex items-center gap-2 px-4">
