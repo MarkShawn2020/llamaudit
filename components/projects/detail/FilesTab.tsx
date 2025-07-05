@@ -27,6 +27,7 @@ import {Switch} from '@/components/ui/switch';
 import {Label} from '@/components/ui/label';
 import {Database} from 'lucide-react';
 import { useSyncFileToKnowledgeBase, useRemoveFileFromKnowledgeBase, useInvalidateKnowledgeBase } from '@/hooks/use-knowledge-base';
+import { useProjectFiles } from '@/hooks/use-project-files';
 
 export default function FilesTab({
                                             projectId, initialFiles = [], onFileChange
@@ -34,9 +35,23 @@ export default function FilesTab({
     projectId: string, initialFiles?: UIFile[],  // Changed from ProjectFile[] to UIFile[]
     onFileChange?: (files: UIFile[]) => void
 }) {
+    // 使用React Query获取文件数据
+    const { data: queryFiles = [], isLoading: queryLoading } = useProjectFiles(projectId);
+    
     // Use project-specific atom instead of global atom
     const [files, setFiles] = useAtom(projectFilesAtomFamily(projectId));
     const [isLoading, setIsLoading] = useState(true);
+    
+    // 同步React Query数据到Jotai atom
+    useEffect(() => {
+      if (queryFiles.length > 0) {
+        setFiles(queryFiles);
+      }
+      // 无论是否有文件，都标记加载完成
+      if (!queryLoading) {
+        setIsLoading(false);
+      }
+    }, [queryFiles, queryLoading, setFiles]);
     const [expandedFileId, setExpandedFileId] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const {toast} = useToast();
@@ -50,65 +65,9 @@ export default function FilesTab({
     const removeFileFromKB = useRemoveFileFromKnowledgeBase();
     const { invalidateAll } = useInvalidateKnowledgeBase();
 
-    // 初始化 Jotai atom 状态
-    useEffect(() => {
-        if (initialFiles.length > 0) {
-            setFiles(initialFiles);
-        }
-    }, [initialFiles, setFiles]);
 
-    // 加载项目文档列表
-    const loadFiles = useCallback(() => {
-        logger.info("load documents..", {projectId})
-        try {
-            setIsLoading(true);
-            // 使用startTransition包裹action调用
-            startTransition(() => {
-                // 只触发action，不使用返回值
-                const formData = new FormData();
-                formData.append('projectId', projectId);
-                getFilesAction(formData);
-            });
-        } catch (error) {
-            console.error('启动transition失败:', error);
-            setIsLoading(false);
-        }
-    }, [projectId, getFilesAction]);
 
-    // 监听filesState变化，处理数据 - 只在初始文件为空时加载
-    useEffect(() => {
-        if (filesState && initialFiles.length === 0) {
-            try {
-                if (Array.isArray(filesState)) {
-                    const uiFiles = filesState.map((file: any) => ({
-                        ...file, status: file.isAnalyzed ? 'analyzed' : 'uploaded', // 确保分析结果数据存在，使用metadata字段作为分析结果
-                        analysisResult: file.metadata || file.analysisResult || ''
-                    }));
-                    setFiles(uiFiles);
-                } else {
-                    console.warn('文件数据返回格式不正确:', filesState);
-                    setFiles([]);
-                }
-            } catch (error) {
-                console.error('处理文件数据失败:', error);
-                toast({
-                    title: '加载失败', description: '无法加载项目文档，请稍后重试', variant: 'destructive'
-                });
-            } finally {
-                setIsLoading(false);
-            }
-        }
-    }, [filesState, initialFiles.length, setFiles]);
 
-    // 初始加载 - 只在没有初始文件时才从服务器加载
-    useEffect(() => {
-        // 如果已有初始文件数据，则不需要再加载
-        if (initialFiles.length === 0) {
-            loadFiles();
-        } else {
-            setIsLoading(false); // 直接设置加载完成
-        }
-    }, [initialFiles.length, loadFiles]);
 
     // 触发文件选择对话框
     const handleUploadClick = () => {

@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { projectFileKeys } from './use-project-files';
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import {
@@ -161,6 +162,8 @@ export function useSyncFileToKnowledgeBase() {
       queryClient.invalidateQueries({ queryKey: knowledgeBaseKeys.list(projectId) });
       queryClient.invalidateQueries({ queryKey: knowledgeBaseKeys.stats(projectId) });
       queryClient.invalidateQueries({ queryKey: knowledgeBaseKeys.documents(projectId) });
+      // Also invalidate project files to update sync status
+      queryClient.invalidateQueries({ queryKey: projectFileKeys.list(projectId) });
     },
     onError: (error) => {
       toast.error(error.message || '同步到知识库失败');
@@ -191,6 +194,8 @@ export function useRemoveFileFromKnowledgeBase() {
       queryClient.invalidateQueries({ queryKey: knowledgeBaseKeys.list(projectId) });
       queryClient.invalidateQueries({ queryKey: knowledgeBaseKeys.stats(projectId) });
       queryClient.invalidateQueries({ queryKey: knowledgeBaseKeys.documents(projectId) });
+      // Also invalidate project files to update sync status
+      queryClient.invalidateQueries({ queryKey: projectFileKeys.list(projectId) });
     },
     onError: (error) => {
       toast.error(error.message || '从知识库移除失败');

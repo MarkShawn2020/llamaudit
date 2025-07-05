@@ -36,6 +36,7 @@ import {
   projectFilesAtomFamily, 
   projectTiobItemsAtomFamily
 } from '@/components/projects/detail/project-atoms';
+import { useProjectFiles, useProjectFileStats } from '@/hooks/use-project-files';
 
 interface Project extends BaseProject {
     fileCount?: number; // 兼容新命名
@@ -48,11 +49,20 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [showProjectInfo, setShowProjectInfo] = useState(false);
-    // 使用项目特定的原子化状态
-    const [files] = useAtom(projectFilesAtomFamily(projectId));
+    // 使用React Query获取文件数据
+    const { data: files = [], isLoading: filesLoading } = useProjectFiles(projectId);
+    const { documentCount } = useProjectFileStats(projectId);
+    
+    // 使用项目特定的原子化状态，并同步React Query数据
+    const [filesAtom, setFilesAtom] = useAtom(projectFilesAtomFamily(projectId));
     const [tiobItems] = useAtom(projectTiobItemsAtomFamily(projectId));
-    // 文件计数基于原子状态
-    const fileCount = files.length;
+    
+    // 同步React Query数据到Jotai atom
+    useEffect(() => {
+      if (files.length > 0 && filesAtom.length === 0) {
+        setFilesAtom(files);
+      }
+    }, [files, filesAtom.length, setFilesAtom]);
     const router = useRouter();
 
     // logger.info('ProjectDetail', {projectId, project});
@@ -86,12 +96,12 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
         }
     };
 
-    // 更新项目对象中的文件数 - 使用Jotai状态
+    // 更新项目对象中的文件数 - 使用React Query状态
     useEffect(() => {
-        if (project && fileCount !== project.fileCount) {
-            setProject({...project, fileCount});
+        if (project && documentCount !== project.fileCount) {
+            setProject({...project, fileCount: documentCount});
         }
-    }, [fileCount, project]);
+    }, [documentCount, project]);
 
     const handleProjectUpdate = (updated: Partial<Project>) => {
         if (!project) return;
@@ -190,7 +200,7 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
                         </div>
                         <div>
                             <div className="text-sm font-medium text-muted-foreground">文件数量</div>
-                            <div>{fileCount}</div>
+                            <div>{filesLoading ? '...' : documentCount}</div>
                         </div>
                         <div>
                             <div className="text-sm font-medium text-muted-foreground">分析任务</div>

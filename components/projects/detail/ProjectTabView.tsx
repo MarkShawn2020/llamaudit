@@ -8,6 +8,7 @@ import {KnowledgeBaseTab} from './KnowledgeBaseTab';
 import {UIFile} from '@/components/projects/utils/ui-file';
 import {Badge} from '@/components/ui/badge';
 import {useKnowledgeBases, useKnowledgeBaseStats} from '@/hooks/use-knowledge-base';
+import {useProjectFileStats} from '@/hooks/use-project-files';
 
 interface ProjectTabViewProps {
     projectId: string;
@@ -25,9 +26,8 @@ export default function ProjectTabView({
     const {data: knowledgeBases = []} = useKnowledgeBases(projectId);
     const {data: knowledgeBaseStats = {}} = useKnowledgeBaseStats(projectId, knowledgeBases);
 
-    // 统计信息
-    const documentCount = initialFiles?.length || 0;
-    const analyzedCount = initialFiles?.filter(f => f.status === 'analyzed')?.length || 0;
+    // 使用React Query获取项目文件统计信息，而不是依赖initialFiles
+    const { documentCount, analyzedCount, syncedCount } = useProjectFileStats(projectId);
 
     // 知识库文档数量
     const knowledgeBaseDocumentCount = Object.values(knowledgeBaseStats).reduce((total, stats) => total + stats.documentCount, 0);
