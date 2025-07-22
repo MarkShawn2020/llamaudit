@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Settings, Cloud, Server } from 'lucide-react';
+import { Settings, Cloud, Server, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { DifyConfig, DEFAULT_DIFY_CONFIGS } from '@/types/dify-config';
 import { useDifyConfig } from '@/contexts/dify-config-context';
@@ -25,8 +25,13 @@ export function DifyConfigComponent() {
   const [customConfig, setCustomConfig] = useState<DifyConfig>({
     baseUrl: '',
     apiKey: '',
+    datasetApiKey: '',
     environment: 'custom' as any
   });
+  const [testingApiKey, setTestingApiKey] = useState(false);
+  const [testingDatasetKey, setTestingDatasetKey] = useState(false);
+  const [apiKeyTestResult, setApiKeyTestResult] = useState<{success: boolean; message: string} | null>(null);
+  const [datasetKeyTestResult, setDatasetKeyTestResult] = useState<{success: boolean; message: string} | null>(null);
   const { toast } = useToast();
 
   const handlePresetChange = (environment: 'local' | 'cloud') => {
@@ -66,10 +71,10 @@ export function DifyConfigComponent() {
     }
 
     // 验证配置
-    if (!finalConfig.baseUrl || !finalConfig.apiKey) {
+    if (!finalConfig.baseUrl || !finalConfig.apiKey || !finalConfig.datasetApiKey) {
       toast({
         title: "配置错误",
-        description: "请填写完整的 API URL 和 API Key",
+        description: "请填写完整的 API URL、API Key 和 Dataset API Key",
         variant: "destructive",
       });
       return;
@@ -82,6 +87,8 @@ export function DifyConfigComponent() {
       description: `已切换到 ${finalConfig.environment === 'local' ? '本地' : finalConfig.environment === 'cloud' ? '云端' : '自定义'} Dify 服务`,
     });
     
+    setApiKeyTestResult(null);
+    setDatasetKeyTestResult(null);
     setIsOpen(false);
   };
 
@@ -89,6 +96,104 @@ export function DifyConfigComponent() {
     if (config.environment === 'local') return '本地部署';
     if (config.environment === 'cloud') return '云端服务';
     return '自定义配置';
+  };
+
+  const testApiConnection = async (type: 'app' | 'dataset') => {
+    const configToTest = workingConfig.environment === 'custom' ? customConfig : workingConfig;
+    
+    if (!configToTest.baseUrl) {
+      toast({
+        title: "测试失败",
+        description: "请先填写 API URL",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (type === 'app' && !configToTest.apiKey) {
+      toast({
+        title: "测试失败",
+        description: "请先填写 API Key",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (type === 'dataset' && !configToTest.datasetApiKey) {
+      toast({
+        title: "测试失败",
+        description: "请先填写 Dataset API Key",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (type === 'app') {
+      setTestingApiKey(true);
+      setApiKeyTestResult(null);
+    } else {
+      setTestingDatasetKey(true);
+      setDatasetKeyTestResult(null);
+    }
+
+    try {
+      const response = await fetch('/api/dify/test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          baseUrl: configToTest.baseUrl,
+          apiKey: configToTest.apiKey,
+          datasetApiKey: configToTest.datasetApiKey,
+          type,
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (type === 'app') {
+        setApiKeyTestResult(result);
+      } else {
+        setDatasetKeyTestResult(result);
+      }
+
+      if (result.success) {
+        toast({
+          title: "测试成功",
+          description: result.message,
+        });
+      } else {
+        toast({
+          title: "测试失败",
+          description: result.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      const errorResult = {
+        success: false,
+        message: '网络错误，请检查网络连接'
+      };
+      
+      if (type === 'app') {
+        setApiKeyTestResult(errorResult);
+      } else {
+        setDatasetKeyTestResult(errorResult);
+      }
+
+      toast({
+        title: "测试失败",
+        description: errorResult.message,
+        variant: "destructive",
+      });
+    } finally {
+      if (type === 'app') {
+        setTestingApiKey(false);
+      } else {
+        setTestingDatasetKey(false);
+      }
+    }
   };
 
   return (
@@ -178,13 +283,87 @@ export function DifyConfigComponent() {
               </div>
               <div>
                 <Label htmlFor="custom-key">API Key</Label>
-                <Input
-                  id="custom-key"
-                  placeholder="app-xxxxxxxxxx"
-                  value={customConfig.apiKey}
-                  onChange={(e) => handleCustomConfigChange('apiKey', e.target.value)}
-                  className="mt-1"
-                />
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    id="custom-key"
+                    placeholder="app-xxxxxxxxxx"
+                    value={customConfig.apiKey}
+                    onChange={(e) => {
+                      handleCustomConfigChange('apiKey', e.target.value);
+                      setApiKeyTestResult(null);
+                    }}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => testApiConnection('app')}
+                    disabled={testingApiKey || !customConfig.baseUrl || !customConfig.apiKey}
+                    className="shrink-0"
+                  >
+                    {testingApiKey ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : apiKeyTestResult ? (
+                      apiKeyTestResult.success ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-red-500" />
+                      )
+                    ) : (
+                      "测试"
+                    )}
+                  </Button>
+                </div>
+                {apiKeyTestResult && (
+                  <p className={`text-xs mt-1 ${
+                    apiKeyTestResult.success ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {apiKeyTestResult.message}
+                  </p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="custom-dataset-key">Dataset API Key</Label>
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    id="custom-dataset-key"
+                    placeholder="dataset-xxxxxxxxxx"
+                    value={customConfig.datasetApiKey}
+                    onChange={(e) => {
+                      handleCustomConfigChange('datasetApiKey', e.target.value);
+                      setDatasetKeyTestResult(null);
+                    }}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => testApiConnection('dataset')}
+                    disabled={testingDatasetKey || !customConfig.baseUrl || !customConfig.datasetApiKey}
+                    className="shrink-0"
+                  >
+                    {testingDatasetKey ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : datasetKeyTestResult ? (
+                      datasetKeyTestResult.success ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-red-500" />
+                      )
+                    ) : (
+                      "测试"
+                    )}
+                  </Button>
+                </div>
+                {datasetKeyTestResult && (
+                  <p className={`text-xs mt-1 ${
+                    datasetKeyTestResult.success ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {datasetKeyTestResult.message}
+                  </p>
+                )}
               </div>
             </div>
           )}
