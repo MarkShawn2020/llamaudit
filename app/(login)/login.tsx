@@ -105,17 +105,20 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
                 className="appearance-none rounded-full relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-orange-500 focus:border-orange-500 focus:z-10 sm:text-sm"
                 placeholder="请输入您的密码"
               />
-              <button
-                type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                onClick={() => setShowPassword(!showPassword)}
+              <div
+                className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowPassword(!showPassword);
+                }}
               >
                 {showPassword ? (
                   <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600" />
                 ) : (
                   <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600" />
                 )}
-              </button>
+              </div>
             </div>
           </div>
 
