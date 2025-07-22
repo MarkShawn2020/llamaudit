@@ -17,6 +17,7 @@ export interface Project {
   phone: string;
   email: string;
   description: string;
+  datasetId?: string; // Dify知识库ID
   createdAt: string;
   updatedAt: string;
   createdBy?: string;
@@ -63,6 +64,7 @@ export async function getProjects(): Promise<Project[]> {
         phone: true,
         email: true,
         description: true,
+        datasetId: true,
         createdAt: true,
         updatedAt: true,
         createdBy: true
@@ -95,6 +97,7 @@ export async function getProjects(): Promise<Project[]> {
       phone: project.phone || '',
       email: project.email || '',
       description: project.description || '',
+      datasetId: project.datasetId || undefined,
       createdAt: project.createdAt?.toISOString().split('T')[0] || '',
       updatedAt: project.updatedAt?.toISOString().split('T')[0] || '',
       createdBy: project.createdBy || '',
@@ -136,6 +139,7 @@ export async function getProject(id: string): Promise<Project | null> {
         phone: true,
         email: true,
         description: true,
+        datasetId: true,
         createdAt: true,
         updatedAt: true,
         createdBy: true
@@ -174,6 +178,7 @@ export async function getProject(id: string): Promise<Project | null> {
       phone: project.phone || '',
       email: project.email || '',
       description: project.description || '',
+      datasetId: project.datasetId || undefined,
       createdAt: project.createdAt?.toISOString().split('T')[0] || '',
       updatedAt: project.updatedAt?.toISOString().split('T')[0] || '',
       createdBy: project.createdBy || '',
@@ -320,6 +325,7 @@ export async function updateProject(id: string, projectData: Partial<Project>): 
     if (projectData.phone !== undefined) updateData.phone = projectData.phone;
     if (projectData.email !== undefined) updateData.email = projectData.email;
     if (projectData.description !== undefined) updateData.description = projectData.description;
+    if (projectData.datasetId !== undefined) updateData.datasetId = projectData.datasetId;
     updateData.updatedAt = new Date();
 
     const updatedProject = await db.update(auditUnits)
@@ -347,6 +353,7 @@ export async function updateProject(id: string, projectData: Partial<Project>): 
       phone: updatedProject[0].phone || '',
       email: updatedProject[0].email || '',
       description: updatedProject[0].description || '',
+      datasetId: updatedProject[0].datasetId || undefined,
       createdAt: updatedProject[0].createdAt?.toISOString().split('T')[0] || '',
       updatedAt: updatedProject[0].updatedAt?.toISOString().split('T')[0] || '',
       documentCount: projectFiles.length,
@@ -480,6 +487,44 @@ export async function deleteProjectFile(projectId: string, fileId: string): Prom
     revalidatePath(`/projects/${projectId}`);
   } catch (error) {
     console.error('删除文件失败:', error);
+    throw error;
+  }
+}
+
+/**
+ * 更新项目的知识库ID
+ * @param projectId 项目ID
+ * @param datasetId 知识库ID
+ */
+export async function updateProjectDatasetId(projectId: string, datasetId: string): Promise<void> {
+  try {
+    const user = await getUser();
+    
+    if (!user) {
+      throw new Error('未授权访问');
+    }
+
+    // 检查项目是否存在
+    const project = await db.query.auditUnits.findFirst({
+      where: eq(auditUnits.id, projectId)
+    });
+
+    if (!project) {
+      throw new Error('项目不存在');
+    }
+
+    // 更新知识库ID
+    await db.update(auditUnits)
+      .set({ 
+        datasetId,
+        updatedAt: new Date()
+      })
+      .where(eq(auditUnits.id, projectId));
+
+    // 重新验证项目详情页
+    revalidatePath(`/projects/${projectId}`);
+  } catch (error) {
+    console.error(`更新项目知识库ID失败:`, error);
     throw error;
   }
 }

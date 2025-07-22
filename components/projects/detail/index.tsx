@@ -32,9 +32,11 @@ import {useEffect, useState} from 'react';
 import {toast} from 'sonner';
 import {useAtom} from 'jotai';
 import {
-  projectFilesAtomFamily, 
   projectTiobItemsAtomFamily
 } from '@/components/projects/detail/project-atoms';
+import { useDatasetDetails, useProjectDataset } from '@/hooks/use-dify-dataset';
+import { updateProjectDatasetId } from '@/lib/api/project-api';
+import { Badge } from '@/components/ui/badge';
 
 interface Project extends BaseProject {
     fileCount?: number; // 兼容新命名
@@ -48,11 +50,18 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [showProjectInfo, setShowProjectInfo] = useState(false);
     // 使用项目特定的原子化状态
-    const [files] = useAtom(projectFilesAtomFamily(projectId));
     const [tiobItems] = useAtom(projectTiobItemsAtomFamily(projectId));
-    // 文件计数基于原子状态
-    const fileCount = files.length;
     const router = useRouter();
+
+    // 知识库管理
+    const { ensureDataset, isCreating } = useProjectDataset(projectId, project?.name || '');
+    
+    // 查询知识库详情
+    const { 
+        data: dataset, 
+        error: datasetError, 
+        isLoading: isLoadingDataset
+    } = useDatasetDetails(project?.datasetId, !!project?.datasetId);
 
     // logger.info('ProjectDetail', {projectId, project});
 
@@ -85,12 +94,26 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
         }
     };
 
-    // 更新项目对象中的文件数 - 使用Jotai状态
+
+    // 确保知识库存在
     useEffect(() => {
-        if (project && fileCount !== project.fileCount) {
-            setProject({...project, fileCount});
-        }
-    }, [fileCount, project]);
+        const initializeDataset = async () => {
+            if (project && (!project.datasetId || datasetError)) {
+                try {
+                    const datasetId = await ensureDataset(project.datasetId);
+                    if (datasetId !== project.datasetId) {
+                        // 更新项目的知识库ID
+                        await updateProjectDatasetId(project.id, datasetId);
+                        handleProjectUpdate({ datasetId });
+                    }
+                } catch (error) {
+                    console.error('初始化知识库失败:', error);
+                }
+            }
+        };
+
+        initializeDataset();
+    }, [project, datasetError, ensureDataset]);
 
     const handleProjectUpdate = (updated: Partial<Project>) => {
         if (!project) return;
@@ -186,8 +209,21 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
                     <div>{project.type}</div>
                 </div>
                 <div>
-                    <div className="text-sm font-medium text-muted-foreground">文件数量</div>
-                    <div>{fileCount}</div>
+                    <div className="text-sm font-medium text-muted-foreground">知识库状态</div>
+                    <div className="flex items-center gap-2">
+                        {isCreating || isLoadingDataset ? (
+                            <Badge variant="secondary">初始化中</Badge>
+                        ) : dataset ? (
+                            <>
+                                <Badge variant="default">已连接</Badge>
+                                <span className="text-sm">{dataset.document_count} 文档</span>
+                            </>
+                        ) : datasetError ? (
+                            <Badge variant="destructive">连接失败</Badge>
+                        ) : (
+                            <Badge variant="outline">未配置</Badge>
+                        )}
+                    </div>
                 </div>
                 <div>
                     <div className="text-sm font-medium text-muted-foreground">分析任务</div>
@@ -196,7 +232,11 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
             </CardContent>
         </Card>
 
-        <ProjectAnalysis projectId={projectId} initialFiles={files}/>
+        <ProjectAnalysis 
+            projectId={projectId} 
+            project={project}
+            onProjectUpdate={handleProjectUpdate}
+        />
 
         {/* 删除项目 */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

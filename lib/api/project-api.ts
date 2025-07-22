@@ -8,6 +8,7 @@ import {
   uploadProjectFile as uploadProjectFileAction,
   deleteProjectFile as deleteProjectFileAction,
   getProjectFiles as getProjectFilesAction,
+  updateProjectDatasetId as updateProjectDatasetIdAction,
   type Project,
   type ProjectFile
 } from '@/lib/actions/project-actions';
@@ -106,6 +107,19 @@ export const deleteProjectFile = async (projectId: string, fileId: string): Prom
   } catch (error) {
     console.error('删除文件失败:', error);
     toast.error('删除文件失败');
+    throw error;
+  }
+};
+
+/**
+ * 更新项目的知识库ID
+ */
+export const updateProjectDatasetId = async (projectId: string, datasetId: string): Promise<void> => {
+  try {
+    await updateProjectDatasetIdAction(projectId, datasetId);
+  } catch (error) {
+    console.error('更新项目知识库ID失败:', error);
+    toast.error('更新项目知识库ID失败');
     throw error;
   }
 };

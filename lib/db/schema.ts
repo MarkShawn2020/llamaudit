@@ -196,6 +196,7 @@ export const auditUnits = pgTable('audit_units', {
   phone: varchar('phone', { length: 50 }),
   email: varchar('email', { length: 255 }),
   description: text('description'),
+  datasetId: varchar('dataset_id', { length: 255 }), // Dify知识库ID
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
   createdBy: uuid('created_by').references(() => users.id)

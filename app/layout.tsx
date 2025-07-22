@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/theme-provider';
 import { UserProvider } from '@/components/user-provider';
 import { DifyConfigProvider } from '@/contexts/dify-config-context';
+import { QueryProvider } from '@/components/query-provider';
 import { GlobalNavbar } from '@/components/GlobalNavbar';
 import { CozeChat } from '@/components/CozeChat';
 import { getUser } from '@/lib/db/queries';
@@ -49,11 +50,13 @@ export default async function RootLayout({
         >
           <UserProvider initialUser={initialUser}>
             <DifyConfigProvider>
-              <div className="flex min-h-screen flex-col">
-                <GlobalNavbar />
-                <main className="flex-1">{children}</main>
-              </div>
-              <DevFloat />
+              <QueryProvider>
+                <div className="flex min-h-screen flex-col">
+                  <GlobalNavbar />
+                  <main className="flex-1">{children}</main>
+                </div>
+                <DevFloat />
+              </QueryProvider>
             </DifyConfigProvider>
           </UserProvider>
         </ThemeProvider>
