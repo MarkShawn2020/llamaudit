@@ -60,7 +60,6 @@ export default function ProjectAnalysis({
 }) {
     const [tiobDialogOpen, setTiobDialogOpen] = useState(false);
     const [uploadingToKnowledgeBase, setUploadingToKnowledgeBase] = useState(false);
-    const [selectedKbFiles, setSelectedKbFiles] = useState<FileList | null>(null);
 
     // 知识库相关hooks
     const { 
@@ -85,13 +84,19 @@ export default function ProjectAnalysis({
     const deleteDocument = useDeleteDocument();
 
 
-    // 文件上传处理
-    const handleFileUpload = async () => {
-        if (!selectedKbFiles || !project?.datasetId) return;
+    // 触发文件选择
+    const triggerFileUpload = () => {
+        document.getElementById('file-upload')?.click();
+    };
+
+    // 文件选择后处理
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files || files.length === 0 || !project?.datasetId) return;
 
         setUploadingToKnowledgeBase(true);
         try {
-            const uploadPromises = Array.from(selectedKbFiles).map(file =>
+            const uploadPromises = Array.from(files).map(file =>
                 createDocument.mutateAsync({
                     datasetId: project.datasetId!,
                     file,
@@ -103,12 +108,15 @@ export default function ProjectAnalysis({
             );
 
             await Promise.all(uploadPromises);
-            setSelectedKbFiles(null);
+            
             // 重置文件输入
             const fileInput = document.getElementById('file-upload') as HTMLInputElement;
             if (fileInput) fileInput.value = '';
+            
+            toast.success(`成功上传 ${files.length} 个文件`);
         } catch (error) {
             console.error('文件上传失败:', error);
+            toast.error('文件上传失败，请重试');
         } finally {
             setUploadingToKnowledgeBase(false);
         }
@@ -188,17 +196,8 @@ export default function ProjectAnalysis({
                         </Dialog>
 
                         <Button
-                            onClick={() => refetchDocuments()}
-                            variant="ghost"
-                            size="sm"
-                            disabled={isLoadingDocuments}
-                        >
-                            <RefreshCw className={`h-4 w-4 ${isLoadingDocuments ? 'animate-spin' : ''}`} />
-                        </Button>
-
-                        <Button
-                            onClick={handleFileUpload}
-                            disabled={!selectedKbFiles || uploadingToKnowledgeBase || !project?.datasetId}
+                            onClick={triggerFileUpload}
+                            disabled={uploadingToKnowledgeBase || !project?.datasetId}
                             size="sm"
                         >
                             {uploadingToKnowledgeBase ? (
@@ -217,7 +216,7 @@ export default function ProjectAnalysis({
                     type="file"
                     multiple
                     accept=".txt,.pdf,.doc,.docx,.md"
-                    onChange={(e) => setSelectedKbFiles(e.target.files)}
+                    onChange={handleFileChange}
                     className="hidden"
                 />
 
@@ -237,15 +236,12 @@ export default function ProjectAnalysis({
                     // 空状态：整个区域都是上传区域
                     <div 
                         className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-12 cursor-pointer hover:border-primary/50 hover:bg-muted/25 transition-all"
-                        onClick={() => document.getElementById('file-upload')?.click()}
+                        onClick={triggerFileUpload}
                     >
                         <div className="text-center">
                             <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                             <div className="text-lg font-medium mb-2">
-                                {selectedKbFiles && selectedKbFiles.length > 0 
-                                    ? `已选择 ${selectedKbFiles.length} 个文件` 
-                                    : '上传您的第一个文档'
-                                }
+                                {uploadingToKnowledgeBase ? '正在上传...' : '上传您的第一个文档'}
                             </div>
                             <div className="text-sm text-muted-foreground">
                                 支持 PDF, DOC, DOCX, TXT, MD 格式
@@ -253,14 +249,8 @@ export default function ProjectAnalysis({
                         </div>
                     </div>
                 ) : (
-                    // 有文档状态：显示列表 + 顶部上传提示
+                    // 有文档状态：显示列表 + 底部上传提示
                     <div className="space-y-4">
-                        {selectedKbFiles && selectedKbFiles.length > 0 && (
-                            <div className="p-3 bg-muted/50 rounded-lg text-sm">
-                                已选择 {selectedKbFiles.length} 个文件，点击上传按钮添加到知识库
-                            </div>
-                        )}
-                        
                         <div className="space-y-2">
                             {documentsResponse.data.map((doc) => (
                                 <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/20">
@@ -298,13 +288,13 @@ export default function ProjectAnalysis({
                             ))}
                         </div>
 
-                        {/* 继续上传提示 */}
+                        {/* 继续上传区域 */}
                         <div 
                             className="border border-dashed border-muted-foreground/20 rounded-lg p-4 cursor-pointer hover:bg-muted/10 transition-colors"
-                            onClick={() => document.getElementById('file-upload')?.click()}
+                            onClick={triggerFileUpload}
                         >
                             <div className="text-center text-sm text-muted-foreground">
-                                点击添加更多文档
+                                {uploadingToKnowledgeBase ? '正在上传...' : '点击添加更多文档'}
                             </div>
                         </div>
                     </div>
