@@ -136,21 +136,46 @@ export default function ProjectAnalysis({
         }
     };
 
-    // 获取状态徽章
+    // 获取状态徽章 - 统一设计系统
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'completed':
-                return <Badge variant="default" className="bg-green-100 text-green-800"><CheckCircle2 className="w-3 h-3 mr-1" />已完成</Badge>;
+                return (
+                    <Badge variant="default" className="text-xs bg-green-100 text-green-800 border-green-200">
+                        <div className="w-2 h-2 bg-green-500 rounded-full mr-1" />
+                        已完成
+                    </Badge>
+                );
             case 'waiting':
             case 'queuing':
-                return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />等待中</Badge>;
+                return (
+                    <Badge variant="secondary" className="text-xs">
+                        <div className="w-2 h-2 bg-yellow-500 rounded-full mr-1" />
+                        等待中
+                    </Badge>
+                );
             case 'indexing':
             case 'processing':
-                return <Badge variant="secondary"><RefreshCw className="w-3 h-3 mr-1 animate-spin" />处理中</Badge>;
+                return (
+                    <Badge variant="secondary" className="text-xs">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mr-1 animate-pulse" />
+                        处理中
+                    </Badge>
+                );
             case 'error':
-                return <Badge variant="destructive"><AlertCircle className="w-3 h-3 mr-1" />错误</Badge>;
+                return (
+                    <Badge variant="destructive" className="text-xs">
+                        <div className="w-2 h-2 bg-current rounded-full mr-1" />
+                        错误
+                    </Badge>
+                );
             default:
-                return <Badge variant="outline">{status}</Badge>;
+                return (
+                    <Badge variant="outline" className="text-xs">
+                        <div className="w-2 h-2 bg-muted-foreground rounded-full mr-1" />
+                        {status}
+                    </Badge>
+                );
         }
     };
 
@@ -160,8 +185,21 @@ export default function ProjectAnalysis({
                 <div className="flex justify-between items-center">
                     <div>
                         <CardTitle className="text-lg">文档</CardTitle>
-                        <CardDescription>
-                            {dataset ? `${dataset.document_count} 个文档` : '知识库初始化中...'}
+                        <CardDescription className="flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            {dataset ? (
+                                <span className="flex items-center gap-2">
+                                    <span>{dataset.document_count} 个文档</span>
+                                    {dataset.document_count > 0 && (
+                                        <div className="w-2 h-2 bg-green-500 rounded-full" />
+                                    )}
+                                </span>
+                            ) : (
+                                <span className="flex items-center gap-2">
+                                    知识库初始化中...
+                                    <div className="w-2 h-2 bg-current rounded-full animate-pulse" />
+                                </span>
+                            )}
                         </CardDescription>
                     </div>
                     <div className="flex gap-2">
@@ -235,29 +273,46 @@ export default function ProjectAnalysis({
                 ) : !documentsResponse?.data.length ? (
                     // 空状态：整个区域都是上传区域
                     <div 
-                        className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-12 cursor-pointer hover:border-primary/50 hover:bg-muted/25 transition-all"
+                        className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-12 cursor-pointer hover:border-primary/50 hover:bg-muted/25 transition-all group"
                         onClick={triggerFileUpload}
                     >
-                        <div className="text-center">
-                            <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                            <div className="text-lg font-medium mb-2">
-                                {uploadingToKnowledgeBase ? '正在上传...' : '上传您的第一个文档'}
+                        <div className="text-center space-y-4">
+                            <div className="mx-auto w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                                <Upload className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
                             </div>
-                            <div className="text-sm text-muted-foreground">
-                                支持 PDF, DOC, DOCX, TXT, MD 格式
+                            <div className="space-y-2">
+                                <div className="text-lg font-semibold">
+                                    {uploadingToKnowledgeBase ? '正在上传文档...' : '开始上传文档'}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                    支持 PDF, DOC, DOCX, TXT, MD 格式文件
+                                </div>
+                                {uploadingToKnowledgeBase && (
+                                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                                        文档正在处理中，请稍候...
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
                 ) : (
                     // 有文档状态：显示列表 + 底部上传提示
                     <div className="space-y-4">
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                             {documentsResponse.data.map((doc) => (
-                                <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/20">
-                                    <div className="flex-1 min-w-0">
-                                        <div className="font-medium truncate">{doc.name}</div>
-                                        <div className="text-sm text-muted-foreground">
-                                            {getStatusBadge(doc.indexing_status)} · {doc.word_count.toLocaleString()} 字
+                                <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/20 transition-colors">
+                                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                                        <FileText className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                        <div className="flex-1 min-w-0 space-y-2">
+                                            <div className="font-medium truncate text-sm">{doc.name}</div>
+                                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                                {getStatusBadge(doc.indexing_status)}
+                                                <span className="flex items-center gap-1">
+                                                    <span>字数：</span>
+                                                    <span className="font-mono">{doc.word_count.toLocaleString()}</span>
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                     <AlertDialog>
@@ -290,11 +345,19 @@ export default function ProjectAnalysis({
 
                         {/* 继续上传区域 */}
                         <div 
-                            className="border border-dashed border-muted-foreground/20 rounded-lg p-4 cursor-pointer hover:bg-muted/10 transition-colors"
+                            className="border border-dashed border-muted-foreground/20 rounded-lg p-4 cursor-pointer hover:bg-muted/10 transition-colors group"
                             onClick={triggerFileUpload}
                         >
-                            <div className="text-center text-sm text-muted-foreground">
-                                {uploadingToKnowledgeBase ? '正在上传...' : '点击添加更多文档'}
+                            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                                <Upload className="h-4 w-4 group-hover:text-primary transition-colors" />
+                                {uploadingToKnowledgeBase ? (
+                                    <span className="flex items-center gap-2">
+                                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                                        正在上传文档...
+                                    </span>
+                                ) : (
+                                    '点击添加更多文档'
+                                )}
                             </div>
                         </div>
                     </div>

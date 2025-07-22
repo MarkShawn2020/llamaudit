@@ -25,7 +25,7 @@ import {deleteProject, getProject, Project as BaseProject} from '@/lib/api/proje
 import {logger} from '@/lib/logger';
 import ProjectAnalysis from 'components/projects/detail/ProjectAnalysis';
 import ProjectInfo from 'components/projects/detail/ProjectInfo';
-import {PencilIcon, TrashIcon} from 'lucide-react';
+import {PencilIcon, TrashIcon, Building2, Database, FileText, MapPin, Phone, Mail, Calendar} from 'lucide-react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {useEffect, useState} from 'react';
@@ -203,32 +203,100 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
                     </div>
                 </div>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <div className="text-sm font-medium text-muted-foreground">单位类型</div>
-                    <div>{project.type}</div>
-                </div>
-                <div>
-                    <div className="text-sm font-medium text-muted-foreground">知识库状态</div>
-                    <div className="flex items-center gap-2">
-                        {isCreating || isLoadingDataset ? (
-                            <Badge variant="secondary">初始化中</Badge>
-                        ) : dataset ? (
-                            <>
-                                <Badge variant="default">已连接</Badge>
-                                <span className="text-sm">{dataset.document_count} 文档</span>
-                            </>
-                        ) : datasetError ? (
-                            <Badge variant="destructive">连接失败</Badge>
-                        ) : (
-                            <Badge variant="outline">未配置</Badge>
-                        )}
+            <CardContent className="space-y-6">
+                {/* 基本信息区域 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                            <Building2 className="h-4 w-4" />
+                            单位类型
+                        </div>
+                        <div className="text-lg font-semibold">{project.type}</div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                            <Database className="h-4 w-4" />
+                            知识库状态
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {isCreating || isLoadingDataset ? (
+                                <Badge variant="secondary" className="text-xs">
+                                    <div className="w-2 h-2 bg-current rounded-full animate-pulse mr-1" />
+                                    初始化中
+                                </Badge>
+                            ) : dataset ? (
+                                <>
+                                    <Badge variant="default" className="text-xs bg-green-100 text-green-800 border-green-200">
+                                        <div className="w-2 h-2 bg-green-500 rounded-full mr-1" />
+                                        已连接
+                                    </Badge>
+                                    <span className="text-sm font-medium text-muted-foreground">
+                                        {dataset.document_count} 文档
+                                    </span>
+                                </>
+                            ) : datasetError ? (
+                                <Badge variant="destructive" className="text-xs">
+                                    <div className="w-2 h-2 bg-current rounded-full mr-1" />
+                                    连接失败
+                                </Badge>
+                            ) : (
+                                <Badge variant="outline" className="text-xs">
+                                    <div className="w-2 h-2 bg-muted-foreground rounded-full mr-1" />
+                                    未配置
+                                </Badge>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                            <FileText className="h-4 w-4" />
+                            分析任务
+                        </div>
+                        <div className="text-lg font-semibold">{project.taskCount}</div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                            <Calendar className="h-4 w-4" />
+                            创建时间
+                        </div>
+                        <div className="text-sm text-muted-foreground">{project.createdAt}</div>
                     </div>
                 </div>
-                <div>
-                    <div className="text-sm font-medium text-muted-foreground">分析任务</div>
-                    <div>{project.taskCount}</div>
-                </div>
+
+                {/* 联系信息区域 */}
+                {(project.address || project.contact || project.phone || project.email) && (
+                    <div className="pt-4 border-t border-border/40">
+                        <h4 className="text-sm font-medium text-muted-foreground mb-3">联系信息</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            {project.address && (
+                                <div className="flex items-start gap-2">
+                                    <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                                    <span className="text-muted-foreground">{project.address}</span>
+                                </div>
+                            )}
+                            {project.contact && (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-muted-foreground">联系人：{project.contact}</span>
+                                </div>
+                            )}
+                            {project.phone && (
+                                <div className="flex items-center gap-2">
+                                    <Phone className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-muted-foreground">{project.phone}</span>
+                                </div>
+                            )}
+                            {project.email && (
+                                <div className="flex items-center gap-2">
+                                    <Mail className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-muted-foreground">{project.email}</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </CardContent>
         </Card>
 
