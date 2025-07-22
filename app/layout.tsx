@@ -8,6 +8,7 @@ import { DifyConfigProvider } from '@/contexts/dify-config-context';
 import { GlobalNavbar } from '@/components/GlobalNavbar';
 import { CozeChat } from '@/components/CozeChat';
 import { getUser } from '@/lib/db/queries';
+import { DevFloat } from '@/components/dev-float';
 
 const fontSans = FontSans({
   subsets: ['latin'],
@@ -52,6 +53,7 @@ export default async function RootLayout({
                 <GlobalNavbar />
                 <main className="flex-1">{children}</main>
               </div>
+              <DevFloat />
             </DifyConfigProvider>
           </UserProvider>
         </ThemeProvider>
