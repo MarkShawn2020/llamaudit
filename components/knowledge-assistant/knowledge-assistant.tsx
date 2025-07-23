@@ -61,6 +61,7 @@ export function KnowledgeAssistant({
         onClose={assistant.closeAssistant}
         messages={assistant.messages}
         onSendMessage={assistant.sendMessage}
+        onClearMessages={assistant.clearMessages}
         isLoading={assistant.isLoading}
         error={assistant.error}
       />

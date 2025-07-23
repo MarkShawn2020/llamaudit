@@ -197,6 +197,10 @@ export const auditUnits = pgTable('audit_units', {
   email: varchar('email', { length: 255 }),
   description: text('description'),
   datasetId: varchar('dataset_id', { length: 255 }), // Dify知识库ID
+  // Dify配置字段 - 支持用户自定义配置
+  difyBaseUrl: varchar('dify_base_url', { length: 500 }).default('https://api.dify.ai/v1'), // Dify API基础URL
+  difyDatasetApiKey: text('dify_dataset_api_key'), // Dify数据集API密钥(加密存储)
+  difyConfigUpdatedAt: timestamp('dify_config_updated_at', { withTimezone: true }), // 配置更新时间
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
   createdBy: uuid('created_by').references(() => users.id)

@@ -19,6 +19,7 @@ export function AssistantSidebar({
   onClose,
   messages,
   onSendMessage,
+  onClearMessages,
   isLoading,
   error,
 }: AssistantSidebarProps) {
@@ -63,7 +64,7 @@ export function AssistantSidebar({
 
   // 清空对话
   const handleClearChat = () => {
-    // TODO: 实现清空对话功能
+    onClearMessages();
     setShowQuickQuestions(true);
   };
 

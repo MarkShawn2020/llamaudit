@@ -275,6 +275,10 @@ function DiagnosticKnowledgeAssistant({config}: { config: AssistantConfig }) {
                     console.log('📤 发送消息:', message);
                     await assistant.sendMessage(message);
                 }}
+                onClearMessages={() => {
+                    console.log('🗑️ 清空对话被调用');
+                    assistant.clearMessages();
+                }}
                 isLoading={assistant.isLoading}
                 error={assistant.error}
             />

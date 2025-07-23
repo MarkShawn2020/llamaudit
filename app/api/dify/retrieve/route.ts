@@ -1,24 +1,30 @@
 /**
- * Dify知识库检索API路由 - 服务端安全代理
- * 为客户端提供安全的知识库检索接口
+ * Dify知识库检索API路由 - 服务端安全代理（动态配置版本）
+ * 为客户端提供安全的知识库检索接口，支持项目级别的Dify配置
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { DifyRetrievalRequest, DifyRetrievalResponse } from '@/components/knowledge-assistant/types';
-
-const DIFY_API_URL = process.env.NEXT_PUBLIC_DIFY_API_URL || 'https://api.dify.ai/v1';
-const DIFY_DATASET_API_KEY = process.env.DIFY_DATASET_API_KEY;
+import { getProjectDifyConfig, validateDifyConfig } from '@/lib/project-dify-config';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { datasetId, query, retrieval_model } = body as {
+    const { datasetId, query, retrieval_model, projectId } = body as {
       datasetId: string;
       query: string;
       retrieval_model?: any;
+      projectId: string;
     };
 
-    // 验证参数
+    // 验证必需参数
+    if (!projectId) {
+      return NextResponse.json(
+        { error: '项目ID不能为空' },
+        { status: 400 }
+      );
+    }
+
     if (!datasetId) {
       return NextResponse.json(
         { error: '数据集ID不能为空' },
@@ -33,12 +39,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!DIFY_DATASET_API_KEY) {
+    // 获取项目的Dify配置
+    console.log(`🔧 获取项目[${projectId}]的Dify配置...`);
+    const difyConfig = await getProjectDifyConfig(projectId);
+    const configValidation = validateDifyConfig(difyConfig);
+    
+    if (!configValidation.isValid) {
+      console.error(`❌ 项目[${projectId}]Dify配置无效:`, {
+        errors: configValidation.errors,
+        configSource: difyConfig.configSource
+      });
+      
       return NextResponse.json(
-        { error: 'Dify数据集API密钥未配置' },
+        { 
+          error: 'Dify配置无效',
+          details: configValidation.errors,
+          configSource: difyConfig.configSource,
+          suggestion: difyConfig.configSource === 'none' 
+            ? '请在项目设置中配置Dify API信息' 
+            : '请检查Dify配置的有效性'
+        },
         { status: 500 }
       );
     }
+
+    console.log('🔍 开始Dify知识库检索（动态配置）:', {
+      projectId,
+      datasetId: datasetId.substring(0, 8) + '...',
+      query: query.substring(0, 100),
+      configSource: difyConfig.configSource,
+      difyBaseUrl: difyConfig.difyBaseUrl
+    });
 
     // 构建检索请求
     const retrievalRequest: DifyRetrievalRequest = {
@@ -53,10 +84,10 @@ export async function POST(request: NextRequest) {
     };
 
     // 调用Dify API
-    const response = await fetch(`${DIFY_API_URL}/datasets/${datasetId}/retrieve`, {
+    const response = await fetch(`${difyConfig.difyBaseUrl}/datasets/${datasetId}/retrieve`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${DIFY_DATASET_API_KEY}`,
+        'Authorization': `Bearer ${difyConfig.difyDatasetApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(retrievalRequest),
@@ -64,11 +95,25 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('Dify API error:', {
+      
+      console.error('❌ Dify API错误:', {
         status: response.status,
         statusText: response.statusText,
         error: errorData,
+        projectId,
+        configSource: difyConfig.configSource
       });
+
+      // 特殊处理401错误
+      if (response.status === 401) {
+        console.error('🚨 Dify API认证失败:', {
+          projectId,
+          configSource: difyConfig.configSource,
+          suggestion: difyConfig.configSource === 'database' 
+            ? '请检查项目Dify配置中的API密钥' 
+            : '请检查环境变量中的API密钥'
+        });
+      }
 
       throw new Error(
         errorData.message || 
@@ -81,18 +126,38 @@ export async function POST(request: NextRequest) {
 
     // 过滤和验证结果
     if (!data.records || !Array.isArray(data.records)) {
-      console.warn('Dify API returned invalid data structure:', data);
+      console.warn('⚠️ Dify API返回格式异常:', data);
       return NextResponse.json({
         query: { content: query },
         records: [],
+        metadata: {
+          configSource: difyConfig.configSource,
+          projectId
+        }
       });
     }
 
-    // 返回结果
-    return NextResponse.json(data);
+    // 增强响应数据
+    const enhancedResult = {
+      ...data,
+      metadata: {
+        configSource: difyConfig.configSource,
+        projectId,
+        recordCount: data.records.length,
+        timestamp: new Date().toISOString()
+      }
+    };
+
+    console.log('✅ Dify知识库检索完成:', {
+      projectId,
+      recordCount: data.records.length,
+      configSource: difyConfig.configSource
+    });
+
+    return NextResponse.json(enhancedResult);
 
   } catch (error) {
-    console.error('Dify retrieve API error:', error);
+    console.error('❌ Dify检索API错误:', error);
     
     const errorMessage = error instanceof Error 
       ? error.message 

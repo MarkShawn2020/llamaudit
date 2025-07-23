@@ -15,6 +15,12 @@ export interface DifyRetrievalRequest {
       reranking_provider_name: string;
       reranking_model_name: string;
     };
+    reranking_mode?: {
+      reranking_provider_name: string;
+      reranking_model_name: string;
+    };
+    weights?: number;
+    metadata_filtering_conditions?: any;
   };
 }
 
@@ -100,6 +106,17 @@ export interface ChatMessage {
   context?: DifyRetrievalRecord[];
   error?: string;
   isLoading?: boolean;
+  isStreaming?: boolean;
+  metadata?: {
+    intentResult?: {
+      isKnowledgeBaseRelated: boolean;
+      confidence: number;
+      reasoning: string;
+    };
+    retrievalTime?: number;
+    streamingChunks?: number;
+    [key: string]: any;
+  };
 }
 
 // 助手状态类型
@@ -149,6 +166,7 @@ export interface AssistantSidebarProps {
   onClose: () => void;
   messages: ChatMessage[];
   onSendMessage: (message: string) => Promise<void>;
+  onClearMessages: () => void;
   isLoading: boolean;
   error?: string | null;
 }

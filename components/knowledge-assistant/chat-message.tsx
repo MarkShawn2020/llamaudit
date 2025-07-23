@@ -85,11 +85,27 @@ export function ChatMessage({
           }
           ${message.error ? 'border border-red-200 bg-red-50 text-red-700' : ''}
         `}>
-          {/* 加载状态 */}
-          {message.isLoading ? (
+          {/* 增强的加载和流式状态 */}
+          {message.isLoading && !message.isStreaming ? (
             <div className="flex items-center gap-2">
               <AssistantThinkingWave />
-              <span className="text-sm">正在思考...</span>
+              <span className="text-sm">正在分析问题...</span>
+            </div>
+          ) : message.isStreaming ? (
+            <div className="space-y-2">
+              {/* 显示已有内容 */}
+              <div className="whitespace-pre-wrap break-words">
+                <MessageContent content={message.content} />
+              </div>
+              {/* 流式指示器 */}
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="flex gap-1">
+                  <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse"></div>
+                  <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
+                  <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
+                </div>
+                <span>正在实时生成...</span>
+              </div>
             </div>
           ) : (
             <div className="whitespace-pre-wrap break-words">
@@ -100,6 +116,18 @@ export function ChatMessage({
               ) : (
                 <MessageContent content={message.content} />
               )}
+            </div>
+          )}
+
+          {/* 意图检测和检索状态指示 */}
+          {!isUser && message.metadata?.intentResult && (
+            <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Badge variant={message.metadata.intentResult.isKnowledgeBaseRelated ? "default" : "secondary"}>
+                  {message.metadata.intentResult.isKnowledgeBaseRelated ? "知识库检索" : "通用回答"}
+                </Badge>
+                <span>置信度: {(message.metadata.intentResult.confidence * 100).toFixed(1)}%</span>
+              </div>
             </div>
           )}
         </div>

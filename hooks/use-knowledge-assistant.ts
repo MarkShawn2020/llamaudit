@@ -90,7 +90,7 @@ export function useKnowledgeAssistant(config: AssistantConfig): UseKnowledgeAssi
     return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }, []);
 
-  // 发送消息
+  // 增强的流式消息发送逻辑
   const sendMessage = useCallback(async (messageContent: string): Promise<void> => {
     if (!messageContent.trim() || isLoading) {
       return;
@@ -108,86 +108,304 @@ export function useKnowledgeAssistant(config: AssistantConfig): UseKnowledgeAssi
     setIsLoading(true);
     setError(null);
 
-    // 创建加载中的助手消息
-    const loadingMessage: ChatMessage = {
+    // 创建流式助手消息
+    const streamingMessage: ChatMessage = {
       id: generateMessageId(),
       type: 'assistant',
       content: '',
       timestamp: new Date(),
       isLoading: true,
+      isStreaming: true,
     };
 
-    setMessages(prev => [...prev, loadingMessage]);
+    setMessages(prev => [...prev, streamingMessage]);
 
     try {
-      // 1. 检索知识库
-      console.log('🔍 开始检索知识库...');
-      const retrievalResult = await knowledgeRetrieval.retrieveKnowledge(messageContent);
-      
-      if (!retrievalResult.records || retrievalResult.records.length === 0) {
-        throw new Error('没有找到相关的知识内容，请尝试换个问题。');
+      console.log('🎯 === 开始增强流式对话处理 ===');
+      console.log('📝 用户问题:', messageContent.substring(0, 100));
+
+      // 第一步：意图检测
+      console.log('🎯 步骤1: 意图检测...');
+      const conversationContext = messages
+        .slice(-4) // 最近4条消息作为上下文
+        .map(msg => `${msg.type}: ${msg.content}`)
+        .join('\n');
+
+      const intentResponse = await fetch('/api/assistant/intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: messageContent.trim(),
+          conversationContext,
+          projectId: config.datasetId?.split('-')[0] || 'unknown'
+        })
+      });
+
+      if (!intentResponse.ok) {
+        const errorData = await intentResponse.json();
+        throw new Error(errorData.error || '意图检测失败');
       }
 
-      console.log('✅ 知识检索完成，找到', retrievalResult.records.length, '条相关内容');
+      const { intent } = await intentResponse.json();
+      console.log('✅ 意图检测完成:', intent);
 
-      // 2. 生成AI回复
-      console.log('🤖 正在生成AI回复...');
-      const aiResponse = await smartChat.generateResponse(
-        messageContent,
-        retrievalResult,
-        {
-          stream: false, // 可以改为true启用流式回复
+      // 更新消息状态显示意图检测结果
+      setMessages(prev => prev.map(msg => 
+        msg.id === streamingMessage.id 
+          ? { 
+              ...msg, 
+              content: `🎯 意图分析: ${intent.isKnowledgeBaseRelated ? '需要知识库检索' : '直接回答'} (置信度: ${(intent.confidence * 100).toFixed(1)}%)\n`,
+              metadata: { ...msg.metadata, intentResult: intent }
+            }
+          : msg
+      ));
+
+      let knowledgeContext: any = null;
+
+      // 第二步：条件处理
+      if (intent.isKnowledgeBaseRelated && intent.confidence > 0.3) {
+        console.log('🔍 步骤2: 知识库检索...');
+        
+        // 更新状态显示检索进度
+        setMessages(prev => prev.map(msg => 
+          msg.id === streamingMessage.id 
+            ? { 
+                ...msg, 
+                content: msg.content + '\n🔍 正在检索相关知识...',
+              }
+            : msg
+        ));
+
+        try {
+          const retrievalResponse = await fetch('/api/assistant/knowledge/retrieve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              datasetId: config.datasetId,
+              projectId: config.datasetId?.split('-')[0] || 'unknown',
+              retrievalRequest: {
+                query: messageContent.trim(),
+                retrieval_model: {
+                  search_method: 'hybrid_search',
+                  top_k: config.retrievalTopK || 5,
+                  score_threshold: config.scoreThreshold || 0.3,
+                  score_threshold_enabled: true,
+                  reranking_enable: true
+                }
+              }
+            })
+          });
+
+          if (retrievalResponse.ok) {
+            knowledgeContext = await retrievalResponse.json();
+            console.log('✅ 知识库检索完成:', {
+              recordCount: knowledgeContext.records?.length || 0,
+              responseTime: knowledgeContext.metadata?.responseTime
+            });
+
+            // 更新状态显示检索结果
+            const resultSummary = knowledgeContext.records?.length > 0 
+              ? `找到 ${knowledgeContext.records.length} 条相关信息`
+              : '未找到相关信息，将使用通用知识回答';
+            
+            setMessages(prev => prev.map(msg => 
+              msg.id === streamingMessage.id 
+                ? { 
+                    ...msg, 
+                    content: msg.content + `\n✅ ${resultSummary}`,
+                    context: knowledgeContext.records
+                  }
+                : msg
+            ));
+          } else {
+            console.warn('⚠️ 知识库检索失败，将使用直接回答模式');
+            setMessages(prev => prev.map(msg => 
+              msg.id === streamingMessage.id 
+                ? { 
+                    ...msg, 
+                    content: msg.content + '\n⚠️ 知识库检索失败，使用通用模式回答',
+                  }
+                : msg
+            ));
+          }
+        } catch (retrievalError) {
+          console.error('知识库检索错误:', retrievalError);
         }
-      );
+      } else {
+        console.log('💬 步骤2: 直接回答模式');
+        setMessages(prev => prev.map(msg => 
+          msg.id === streamingMessage.id 
+            ? { 
+                ...msg, 
+                content: msg.content + '\n💬 使用通用知识直接回答',
+              }
+            : msg
+        ));
+      }
 
-      console.log('✅ AI回复生成完成');
+      // 第三步：流式响应生成
+      console.log('🌊 步骤3: 开始流式响应生成...');
+      setMessages(prev => prev.map(msg => 
+        msg.id === streamingMessage.id 
+          ? { 
+              ...msg, 
+              content: msg.content + '\n\n🌊 正在生成回答...\n\n',
+            }
+          : msg
+      ));
 
-      // 3. 更新助手消息
-      const assistantMessage: ChatMessage = {
-        id: loadingMessage.id,
-        type: 'assistant',
-        content: aiResponse,
-        timestamp: new Date(),
-        context: retrievalResult.records,
-        isLoading: false,
-      };
+      const streamResponse = await fetch('/api/assistant/stream-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: messageContent.trim(),
+          conversationHistory: messages.slice(-6).map(msg => ({
+            role: msg.type === 'user' ? 'user' : 'assistant',
+            content: msg.content
+          })),
+          knowledgeContext,
+          projectId: config.datasetId?.split('-')[0] || 'unknown',
+          options: {
+            model: config.aiModel || 'deepseek/deepseek-chat',
+            temperature: 0.7,
+            maxTokens: 2000
+          }
+        })
+      });
 
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === loadingMessage.id ? assistantMessage : msg
-        )
-      );
+      if (!streamResponse.ok) {
+        throw new Error(`流式响应失败: ${streamResponse.status}`);
+      }
 
-      lastMessageRef.current = assistantMessage;
+      // 处理流式响应
+      const reader = streamResponse.body?.getReader();
+      if (!reader) {
+        throw new Error('无法读取流式响应');
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let streamedContent = '';
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          // 处理完整的SSE事件
+          while (true) {
+            const lineEnd = buffer.indexOf('\n\n');
+            if (lineEnd === -1) break;
+
+            const eventData = buffer.slice(0, lineEnd);
+            buffer = buffer.slice(lineEnd + 2);
+
+            if (eventData.startsWith('data: ')) {
+              const data = eventData.slice(6);
+              
+              if (data === '[DONE]') {
+                console.log('✅ 流式响应完成');
+                break;
+              }
+
+              try {
+                const parsed = JSON.parse(data);
+                
+                if (parsed.type === 'content' && parsed.content) {
+                  streamedContent += parsed.content;
+                  
+                  // 实时更新消息内容
+                  setMessages(prev => prev.map(msg => 
+                    msg.id === streamingMessage.id 
+                      ? { 
+                          ...msg, 
+                          content: streamedContent,
+                          isLoading: false,
+                          isStreaming: true
+                        }
+                      : msg
+                  ));
+                } else if (parsed.type === 'complete') {
+                  console.log('🎉 流式响应完成:', {
+                    totalChunks: parsed.totalChunks,
+                    responseLength: parsed.responseLength
+                  });
+                  
+                  // 标记流式完成
+                  setMessages(prev => prev.map(msg => 
+                    msg.id === streamingMessage.id 
+                      ? { 
+                          ...msg, 
+                          isStreaming: false,
+                          isLoading: false
+                        }
+                      : msg
+                  ));
+                  break;
+                } else if (parsed.type === 'error') {
+                  throw new Error(parsed.error || '流式响应处理错误');
+                }
+              } catch (parseError) {
+                console.warn('解析SSE数据失败:', parseError);
+              }
+            }
+          }
+        }
+
+        // 确保最终状态正确
+        setMessages(prev => prev.map(msg => 
+          msg.id === streamingMessage.id 
+            ? { 
+                ...msg, 
+                content: streamedContent || '抱歉，未能生成有效回答。',
+                isStreaming: false,
+                isLoading: false,
+                timestamp: new Date()
+              }
+            : msg
+        ));
+
+        lastMessageRef.current = {
+          id: streamingMessage.id,
+          type: 'assistant',
+          content: streamedContent,
+          timestamp: new Date(),
+          context: knowledgeContext?.records,
+          isLoading: false,
+        };
+
+      } finally {
+        reader.cancel();
+      }
+
     } catch (error) {
-      console.error('❌ 智能助手错误:', error);
+      console.error('❌ 增强流式对话错误:', error);
       
       const errorMessage = error instanceof Error ? error.message : '处理消息时出现未知错误';
       setError(errorMessage);
 
-      // 更新加载中的消息为错误消息
-      const errorAssistantMessage: ChatMessage = {
-        id: loadingMessage.id,
-        type: 'assistant',
-        content: '',
-        timestamp: new Date(),
-        error: errorMessage,
-        isLoading: false,
-      };
-
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === loadingMessage.id ? errorAssistantMessage : msg
-        )
-      );
+      // 更新为错误状态
+      setMessages(prev => prev.map(msg => 
+        msg.id === streamingMessage.id 
+          ? { 
+              ...msg, 
+              content: '',
+              error: errorMessage,
+              isLoading: false,
+              isStreaming: false
+            }
+          : msg
+      ));
     } finally {
       setIsLoading(false);
     }
   }, [
     isLoading,
     generateMessageId,
-    knowledgeRetrieval,
-    smartChat
+    messages,
+    config
   ]);
 
   // 重试最后一条消息
