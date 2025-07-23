@@ -276,16 +276,16 @@ function SegmentItem({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>
+              <DropdownMenuItem disabled className="text-muted-foreground">
                 <Eye className="h-4 w-4 mr-2" />
                 查看详情
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem disabled className="text-muted-foreground">
                 <Hash className="h-4 w-4 mr-2" />
                 复制ID
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem disabled className="text-muted-foreground">
                 {segment.enabled ? (
                   <><EyeOff className="h-4 w-4 mr-2" />禁用</>
                 ) : (
