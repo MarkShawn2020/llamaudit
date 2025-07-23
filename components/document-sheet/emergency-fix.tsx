@@ -345,7 +345,7 @@ import { DocumentSheetProvider } from '@/components/document-sheet';
 
   const getStatusVariant = (status: string) => {
     switch (status) {
-      case 'pass': return 'success' as const;
+      case 'pass': return 'default' as const;
       case 'fail': return 'destructive' as const;
       case 'fixed': return 'default' as const;
       case 'checking': return 'secondary' as const;

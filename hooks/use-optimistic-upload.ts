@@ -111,15 +111,15 @@ export function useOptimisticFileUpload(datasetId: string) {
 
     // 添加有效文件到乐观更新管理器
     if (validFiles.length > 0) {
-      const fileListObj = {
+      const fileListObj = Object.assign(validFiles, {
         length: validFiles.length,
-        ...validFiles,
+        item: (index: number) => validFiles[index] || null,
         [Symbol.iterator]: function* () {
           for (let i = 0; i < validFiles.length; i++) {
             yield validFiles[i];
           }
         }
-      } as FileList;
+      }) as FileList;
 
       const localIds = optimisticUploadManager.addFiles(fileListObj, datasetId);
       

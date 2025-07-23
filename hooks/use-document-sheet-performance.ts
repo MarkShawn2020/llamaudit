@@ -5,7 +5,27 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { debounce } from 'lodash-es';
+// Simple debounce implementation with cancel method
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  delay: number
+): ((...args: Parameters<T>) => void) & { cancel: () => void } {
+  let timeoutId: NodeJS.Timeout | undefined;
+  
+  const debouncedFn = (...args: Parameters<T>) => {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  };
+  
+  debouncedFn.cancel = () => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = undefined;
+    }
+  };
+  
+  return debouncedFn;
+}
 import { DocumentSegment } from '@/lib/api/dify-dataset-api-extended';
 
 // 虚拟滚动配置
@@ -151,7 +171,7 @@ export function useDebouncedSearch(
 export function usePreloadManager() {
   const queryClient = useQueryClient();
   const preloadedItems = useRef<Set<string>>(new Set());
-  const preloadQueue = useRef<Array<{ datasetId: string; documentId: string }>>([]]);
+  const preloadQueue = useRef<Array<{ datasetId: string; documentId: string }>>([]);
   const isProcessingQueue = useRef(false);
 
   // 添加到预加载队列

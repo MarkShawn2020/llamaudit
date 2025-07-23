@@ -120,9 +120,9 @@ export function QuickDebugTool() {
               };
 
               const statusVariant = {
-                pass: 'success' as const,
+                pass: 'default' as const,
                 fail: 'destructive' as const,
-                warning: 'warning' as const,
+                warning: 'outline' as const,
               };
 
               return (

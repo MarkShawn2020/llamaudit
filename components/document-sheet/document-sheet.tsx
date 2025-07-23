@@ -38,9 +38,11 @@ import {
   useDocumentSegments, 
   useSearchDocumentSegments,
   useRefreshDocumentData,
-  useUpdateSegmentsStatus
+  useUpdateSegmentsStatus,
+  useDocumentUploadFile
 } from '@/hooks/use-document-details';
 import { useDocumentSheetSearch, useDocumentSheetBatchActions } from '@/contexts/document-sheet-context';
+import { useDifyConfig } from '@/contexts/dify-config-context';
 
 import DocumentMeta from './document-meta';
 import DocumentSegments from './document-segments';
@@ -101,7 +103,62 @@ function DocumentSheetHeaderContent() {
  */
 function DocumentActions() {
   const { datasetId, documentId } = useDocumentSheet();
-  const { data: document } = useDocumentDetails(datasetId, documentId);
+  const { data: document } = useDocumentDetails(datasetId || undefined, documentId || undefined);
+  const { data: uploadFile, isLoading: isLoadingUploadFile } = useDocumentUploadFile(datasetId || undefined, documentId || undefined);
+  const { config } = useDifyConfig();
+  
+  // 查看原文
+  const handleViewOriginal = () => {
+    console.log('Upload file data:', uploadFile);
+    console.log('Config baseUrl:', config.baseUrl);
+    
+    if (uploadFile?.url) {
+      let previewUrl = uploadFile.url;
+      
+      // 调试日志
+      console.log('Original URL:', previewUrl);
+      
+      // 如果URL是相对路径，需要拼接文件服务的base URL
+      if (previewUrl.startsWith('/')) {
+        // 从API baseUrl提取文件服务的baseUrl
+        // 例如: https://api.dify.ai/v1 -> https://api.dify.ai
+        // 或者: http://dify.cs-magic.cn/v1 -> http://dify.cs-magic.cn
+        const fileBaseUrl = config.baseUrl.replace('/v1', '');
+        previewUrl = `${fileBaseUrl}${previewUrl}`;
+        console.log('File service URL:', previewUrl);
+      }
+      
+      // 尝试打开URL
+      console.log('Opening URL:', previewUrl);
+      window.open(previewUrl, '_blank');
+    } else {
+      console.error('Upload file URL not available:', uploadFile);
+      alert('原文链接不可用');
+    }
+  };
+  
+  // 下载文档
+  const handleDownload = () => {
+    if (uploadFile?.download_url) {
+      // 确保下载URL是完整的
+      let downloadUrl = uploadFile.download_url;
+      if (downloadUrl.startsWith('/')) {
+        // 从API baseUrl提取文件服务的baseUrl
+        const fileBaseUrl = config.baseUrl.replace('/v1', '');
+        downloadUrl = `${fileBaseUrl}${downloadUrl}`;
+      }
+      
+      // 创建隐藏的下载链接
+      const link = window.document.createElement('a');
+      link.href = downloadUrl;
+      link.download = uploadFile.name || '文档';
+      window.document.body.appendChild(link);
+      link.click();
+      window.document.body.removeChild(link);
+    } else {
+      alert('下载链接不可用');
+    }
+  };
   
   return (
     <div className="flex items-center gap-2 p-4 border-b bg-muted/50">
@@ -111,15 +168,32 @@ function DocumentActions() {
             {document.doc_form || 'Unknown'}
           </Badge>
         )}
+        {uploadFile && (
+          <Badge variant="outline" className="text-xs">
+            {uploadFile.extension.toUpperCase()} • {(uploadFile.size / 1024).toFixed(1)}KB
+          </Badge>
+        )}
       </div>
       
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" className="h-8">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="h-8"
+          onClick={handleViewOriginal}
+          disabled={isLoadingUploadFile || !uploadFile?.url}
+        >
           <ExternalLink className="h-3 w-3 mr-1" />
           查看原文
         </Button>
         
-        <Button variant="ghost" size="sm" className="h-8">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="h-8"
+          onClick={handleDownload}
+          disabled={isLoadingUploadFile || !uploadFile?.download_url}
+        >
           <Download className="h-3 w-3 mr-1" />
           导出
         </Button>
@@ -152,7 +226,7 @@ function DocumentTabsContent() {
     data: document,
     isLoading: isDocumentLoading,
     error: documentError,
-  } = useDocumentDetails(datasetId, documentId);
+  } = useDocumentDetails(datasetId || undefined, documentId || undefined);
 
   // 获取分段数据（普通模式）
   const {
@@ -163,8 +237,8 @@ function DocumentTabsContent() {
     isFetchingNextPage,
     fetchNextPage,
   } = useDocumentSegments(
-    datasetId, 
-    documentId, 
+    datasetId || undefined, 
+    documentId || undefined, 
     !searchKeyword // 只在没有搜索时启用
   );
 
@@ -177,8 +251,8 @@ function DocumentTabsContent() {
     isFetchingNextPage: searchIsFetchingNextPage,
     fetchNextPage: searchFetchNextPage,
   } = useSearchDocumentSegments(
-    datasetId,
-    documentId,
+    datasetId || undefined,
+    documentId || undefined,
     searchKeyword,
     !!searchKeyword // 只在有搜索词时启用
   );

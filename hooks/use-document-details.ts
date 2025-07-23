@@ -9,7 +9,8 @@ import {
   ExtendedDifyDatasetAPI, 
   ExtendedDocumentDetails, 
   DocumentSegment, 
-  DocumentSegmentListResponse 
+  DocumentSegmentListResponse,
+  DocumentUploadFile
 } from '@/lib/api/dify-dataset-api-extended';
 
 // 查询键定义
@@ -22,6 +23,8 @@ const DOCUMENT_QUERY_KEYS = {
     ['dify', 'dataset', datasetId, 'document', documentId, 'segment', segmentId] as const,
   searchSegments: (datasetId: string, documentId: string, keyword: string) => 
     ['dify', 'dataset', datasetId, 'document', documentId, 'segments', 'search', keyword] as const,
+  uploadFile: (datasetId: string, documentId: string) => 
+    ['dify', 'dataset', datasetId, 'document', documentId, 'upload-file'] as const,
 } as const;
 
 // API实例Hook
@@ -267,5 +270,36 @@ export function useRefreshDocumentData() {
       queryKey: ['dify', 'dataset', datasetId, 'document', documentId, 'segments', 'search'],
       type: 'all'
     });
+    
+    // 刷新上传文件信息
+    queryClient.invalidateQueries({
+      queryKey: DOCUMENT_QUERY_KEYS.uploadFile(datasetId, documentId)
+    });
   };
+}
+
+/**
+ * 获取文档上传文件信息（用于查看原文和下载）
+ */
+export function useDocumentUploadFile(
+  datasetId: string | undefined,
+  documentId: string | undefined,
+  enabled = true
+) {
+  const api = useExtendedDifyDatasetAPI();
+
+  return useQuery({
+    queryKey: DOCUMENT_QUERY_KEYS.uploadFile(datasetId || '', documentId || ''),
+    queryFn: () => api.getDocumentUploadFile(datasetId!, documentId!),
+    enabled: enabled && !!datasetId && !!documentId,
+    staleTime: 10 * 60 * 1000, // 10分钟缓存（文件信息相对稳定）
+    gcTime: 30 * 60 * 1000, // 30分钟垃圾回收
+    retry: (failureCount, error) => {
+      // 404错误不重试（文件可能不存在）
+      if ((error as any)?.status === 404) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+  });
 }

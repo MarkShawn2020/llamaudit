@@ -31,7 +31,7 @@ const QUERY_KEYS = {
 export function useSmartCacheInvalidation() {
   const queryClient = useQueryClient();
   const pendingInvalidations = useRef<Set<string>>(new Set());
-  const invalidationTimer = useRef<NodeJS.Timeout>();
+  const invalidationTimer = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // 批量失效的防抖机制
   const scheduleInvalidation = useCallback((datasetId: string) => {
@@ -115,13 +115,14 @@ export function useSmartCacheInvalidation() {
   }, [queryClient]);
 
   // 主要的智能失效方法
-  const smartInvalidate = useCallback(({
-    datasetId,
-    operation,
-    documentData,
-    isDuplicate = false,
-    batchSize = 1
-  }: SmartInvalidationOptions) => {
+  const smartInvalidate = useCallback((options: SmartInvalidationOptions) => {
+    const {
+      datasetId,
+      operation,
+      documentData,
+      isDuplicate = false,
+      batchSize = 1
+    } = options;
     
     // 策略1：重复文件不触发任何更新
     if (isDuplicate) {

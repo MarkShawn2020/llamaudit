@@ -252,6 +252,8 @@ export function useDocumentSheetBatchActions() {
   const {
     selectedSegmentIds,
     isBatchMode,
+    selectSegment,
+    deselectSegment,
     selectAllSegments,
     clearSelectedSegments,
     enterBatchMode,
@@ -266,6 +268,8 @@ export function useDocumentSheetBatchActions() {
     selectedCount,
     hasSelection,
     isBatchMode,
+    selectSegment,
+    deselectSegment,
     selectAllSegments,
     clearSelectedSegments,
     enterBatchMode,

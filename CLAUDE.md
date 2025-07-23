@@ -1,1 +1,2 @@
 - 本地已经在运行dev
+- 请不要build，使用typecheck即可

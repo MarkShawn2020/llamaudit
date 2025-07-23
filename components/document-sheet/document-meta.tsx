@@ -11,7 +11,7 @@ import {
   FileText, 
   Clock, 
   Hash, 
-  FileSize, 
+  HardDrive, 
   Activity, 
   CheckCircle2, 
   AlertCircle, 
@@ -32,8 +32,17 @@ interface DocumentMetaProps {
   error: Error | null;
 }
 
+// 状态配置类型
+interface StatusConfig {
+  label: string;
+  icon: React.ComponentType<any>;
+  variant: 'default' | 'secondary' | 'outline' | 'destructive';
+  color: string;
+  animate?: boolean;
+}
+
 // 状态配置
-const STATUS_CONFIG = {
+const STATUS_CONFIG: Record<string, StatusConfig> = {
   waiting: {
     label: '等待处理',
     icon: Clock,
@@ -70,7 +79,7 @@ const STATUS_CONFIG = {
   completed: {
     label: '已完成',
     icon: CheckCircle2,
-    variant: 'success' as const,
+    variant: 'default' as const,
     color: 'text-green-600',
   },
   error: {

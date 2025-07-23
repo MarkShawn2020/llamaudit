@@ -99,7 +99,7 @@ export function DocumentSheetDiagnostics() {
       const providerExists = document.querySelector('[data-document-sheet-provider]') !== null;
       checks.push({
         name: 'DocumentSheetProvider 存在性',
-        status: providerExists ? 'pass' : 'fail' as const,
+        status: providerExists ? ('pass' as const) : ('fail' as const),
         message: providerExists 
           ? 'DocumentSheetProvider 已正确配置' 
           : 'DocumentSheetProvider 未找到',
@@ -122,7 +122,7 @@ export default function RootLayout({ children }) {
     } catch (error) {
       checks.push({
         name: 'DocumentSheetProvider 检查',
-        status: 'fail',
+        status: 'fail' as const,
         message: '无法检查 Provider 状态',
         solution: '请确保 Provider 正确导入和使用',
       });
@@ -133,7 +133,7 @@ export default function RootLayout({ children }) {
       // 这里应该检查 useDocumentSheet hook 是否可用
       checks.push({
         name: 'Context 可用性',
-        status: 'info',
+        status: 'info' as const,
         message: '需要在组件内部检查 useDocumentSheet hook',
         solution: `
 在使用 DocumentSheetTrigger 的组件中添加调试代码：
@@ -157,7 +157,7 @@ function DebugComponent() {
     } catch (error) {
       checks.push({
         name: 'Context 可用性',
-        status: 'fail',
+        status: 'fail' as const,
         message: 'Context 不可用',
         solution: '确保组件在 DocumentSheetProvider 内部使用',
       });
@@ -174,7 +174,7 @@ function DebugComponent() {
     const sheetExists = document.querySelector('[data-document-sheet]') !== null;
     checks.push({
       name: 'DocumentSheet 组件渲染',
-      status: sheetExists ? 'pass' : 'fail' as const,
+      status: sheetExists ? ('pass' as const) : ('fail' as const),
       message: sheetExists 
         ? 'DocumentSheet 组件已渲染' 
         : 'DocumentSheet 组件未找到',
@@ -206,7 +206,7 @@ export default function App() {
       
       checks.push({
         name: 'Radix Sheet 组件',
-        status: 'info',
+        status: 'info' as const,
         message: 'Radix Sheet 组件状态需要在运行时检查',
         solution: `
 确保已安装 @radix-ui/react-dialog：
@@ -230,7 +230,7 @@ import {
     } catch (error) {
       checks.push({
         name: 'Radix Sheet 组件',
-        status: 'fail',
+        status: 'fail' as const,
         message: '无法检查 Radix Sheet 组件',
         solution: '检查 @radix-ui/react-dialog 是否正确安装',
       });
@@ -248,7 +248,7 @@ import {
       const queryClientExists = window && (window as any).__REACT_QUERY_DEVTOOLS__;
       checks.push({
         name: 'React Query 集成',
-        status: queryClientExists ? 'pass' : 'info' as const,
+        status: queryClientExists ? ('pass' as const) : ('info' as const),
         message: queryClientExists 
           ? 'React Query DevTools 已启用' 
           : 'React Query 状态需要检查',
@@ -275,7 +275,7 @@ export default function App() {
     } catch (error) {
       checks.push({
         name: 'React Query 集成',
-        status: 'warning',
+        status: 'warning' as const,
         message: '无法检查 React Query 状态',
         solution: '确保 @tanstack/react-query 正确安装和配置',
       });
@@ -291,7 +291,7 @@ export default function App() {
     // 检查点击事件
     checks.push({
       name: '点击事件绑定',
-      status: 'info',
+      status: 'info' as const,
       message: '需要检查 DocumentSheetTrigger 的点击事件',
       solution: `
 添加调试代码检查点击事件：
@@ -316,7 +316,7 @@ export default function App() {
     // 检查事件传播
     checks.push({
       name: '事件传播检查',
-      status: 'info',
+      status: 'info' as const,
       message: '检查是否有其他元素阻止了点击事件',
       solution: `
 添加事件调试代码：
@@ -351,7 +351,7 @@ function DebugWrapper({ children }) {
     // 检查 CSS 样式
     checks.push({
       name: 'CSS 样式检查',
-      status: 'info',
+      status: 'info' as const,
       message: '检查是否有样式冲突影响 Sheet 显示',
       solution: `
 检查以下可能的样式问题：
@@ -391,7 +391,7 @@ function DebugWrapper({ children }) {
     // 检查 Tailwind CSS
     checks.push({
       name: 'Tailwind CSS 配置',
-      status: 'info',
+      status: 'info' as const,
       message: '检查 Tailwind CSS 是否正确配置',
       solution: `
 确保 Tailwind CSS 正确配置：
@@ -426,7 +426,7 @@ module.exports = {
     // 检查数据传递
     checks.push({
       name: '数据参数检查',
-      status: 'info',
+      status: 'info' as const,
       message: '检查传递给 DocumentSheetTrigger 的参数',
       solution: `
 添加参数验证：
@@ -454,7 +454,7 @@ module.exports = {
     // 检查 API 配置
     checks.push({
       name: 'API 配置检查',
-      status: 'info',
+      status: 'info' as const,
       message: '检查 Dify API 配置是否正确',
       solution: `
 检查 DifyConfig Context：
@@ -498,9 +498,9 @@ function DebugApiConfig() {
           };
 
           const statusVariant = {
-            pass: 'success' as const,
+            pass: 'default' as const,
             fail: 'destructive' as const,
-            warning: 'warning' as const,
+            warning: 'outline' as const,
             info: 'secondary' as const,
           };
 

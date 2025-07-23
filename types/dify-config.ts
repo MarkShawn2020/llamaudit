@@ -7,7 +7,7 @@ export interface DifyConfig {
 
 export const DEFAULT_DIFY_CONFIGS: Record<'local' | 'cloud', DifyConfig> = {
   local: {
-    baseUrl: 'http://localhost/v1',
+    baseUrl: 'http://dify.cs-magic.cn/v1',
     apiKey: 'app-A3TJJe9ZCWfDyMUoudlDD2R5',
     datasetApiKey: 'dataset-A3TJJe9ZCWfDyMUoudlDD2R5',
     environment: 'local'

@@ -66,6 +66,19 @@ export interface ExtendedDocumentDetails extends DifyDocument {
   vector_store_type?: string;
 }
 
+// 文档上传文件信息接口
+export interface DocumentUploadFile {
+  id: string;
+  name: string;
+  size: number;
+  extension: string;
+  url: string;
+  download_url: string;
+  mime_type: string;
+  created_by: string;
+  created_at: number;
+}
+
 /**
  * 扩展的Dify数据集API类
  */
@@ -222,6 +235,33 @@ export class ExtendedDifyDatasetAPI extends DifyDatasetAPI {
       return data;
     } catch (error) {
       console.error('Error updating segments status:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取文档的上传文件信息（用于查看原文和下载）
+   */
+  async getDocumentUploadFile(
+    datasetId: string,
+    documentId: string
+  ): Promise<DocumentUploadFile> {
+    try {
+      const response = await this.makeRequest(
+        `/datasets/${datasetId}/documents/${documentId}/upload-file`,
+        {
+          method: 'GET',
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch document upload file: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching document upload file:', error);
       throw error;
     }
   }

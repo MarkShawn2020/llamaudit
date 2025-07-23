@@ -103,7 +103,7 @@ const STATUS_CONFIG = {
   },
   completed: {
     label: '已完成',
-    variant: 'success' as const,
+    variant: 'default' as const,
     color: 'text-green-600',
   },
   error: {

@@ -46,6 +46,15 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { DocumentSegment } from '@/lib/api/dify-dataset-api-extended';
 import { useDocumentSheetSearch, useDocumentSheetBatchActions } from '@/contexts/document-sheet-context';
 
+// 分段状态配置类型
+interface SegmentStatusConfig {
+  label: string;
+  icon: React.ComponentType<any>;
+  variant: 'default' | 'secondary' | 'outline' | 'destructive';
+  color: string;
+  animate?: boolean;
+}
+
 interface DocumentSegmentsProps {
   segments: DocumentSegment[];
   isLoading: boolean;
@@ -57,7 +66,7 @@ interface DocumentSegmentsProps {
 }
 
 // 分段状态配置
-const SEGMENT_STATUS_CONFIG = {
+const SEGMENT_STATUS_CONFIG: Record<string, SegmentStatusConfig> = {
   waiting: {
     label: '等待中',
     icon: Loader2,
@@ -74,7 +83,7 @@ const SEGMENT_STATUS_CONFIG = {
   completed: {
     label: '已完成',
     icon: CheckCircle2,
-    variant: 'success' as const,
+    variant: 'default' as const,
     color: 'text-green-600',
   },
   error: {
@@ -412,7 +421,6 @@ function SegmentsList({
           <div className="flex items-center gap-2">
             <Checkbox
               checked={selectedSegmentIds.length === segments.length && segments.length > 0}
-              indeterminate={selectedSegmentIds.length > 0 && selectedSegmentIds.length < segments.length}
               onCheckedChange={handleSelectAll}
             />
             <span className="text-sm text-muted-foreground">

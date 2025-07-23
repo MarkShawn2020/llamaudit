@@ -92,7 +92,7 @@ class DifyDatasetAPI {
     this.config = config;
   }
 
-  private async makeRequest(
+  protected async makeRequest(
     endpoint: string,
     options: RequestInit = {},
     useDatasetKey = true
