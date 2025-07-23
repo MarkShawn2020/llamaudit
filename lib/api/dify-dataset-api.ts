@@ -171,7 +171,36 @@ class DifyDatasetAPI {
         body: formData,
       }
     );
-    return response.json();
+    
+    const result = await response.json();
+    
+    // 详细日志记录，用于分析Dify的去重行为
+    console.log('📄 Dify文档上传响应分析:', {
+      fileName: file.name,
+      fileSize: file.size,
+      requestTime: new Date().toISOString(),
+      response: {
+        document: result.document,
+        batch: result.batch,
+        hasDocument: !!result.document,
+        documentId: result.document?.id,
+        documentName: result.document?.name,
+        indexingStatus: result.document?.indexing_status,
+        createdAt: result.document?.created_at,
+        wordCount: result.document?.word_count,
+      },
+      analysis: {
+        batchExists: !!result.batch,
+        isCompleted: result.document?.indexing_status === 'completed',
+        createdTimeAnalysis: result.document?.created_at ? {
+          timestamp: result.document.created_at,
+          readableTime: new Date(result.document.created_at * 1000).toISOString(),
+          timeDiffFromNow: Date.now() - (result.document.created_at * 1000),
+        } : null,
+      }
+    });
+    
+    return result;
   }
 
   async deleteDocument(datasetId: string, documentId: string): Promise<void> {

@@ -145,28 +145,74 @@ export default function ProjectAnalysis({
         if (!files || files.length === 0 || !project?.datasetId) return;
 
         setUploadingToKnowledgeBase(true);
+        let successCount = 0;
+        let duplicateCount = 0;
+        let errorCount = 0;
+        
         try {
-            const uploadPromises = Array.from(files).map(file =>
-                createDocument.mutateAsync({
-                    datasetId: project.datasetId!,
-                    file,
-                    options: {
-                        indexing_technique: 'high_quality',
-                        process_mode: 'automatic'
-                    }
-                })
-            );
-
-            await Promise.all(uploadPromises);
+            // 顺序处理文件，以便更好地跟踪每个文件的结果
+            for (const file of Array.from(files)) {
+                try {
+                    const result = await createDocument.mutateAsync({
+                        datasetId: project.datasetId!,
+                        file,
+                        options: {
+                            indexing_technique: 'high_quality',
+                            process_mode: 'automatic'
+                        }
+                    });
+                    
+                    // 这里的结果已经通过hook处理了，我们只需要统计
+                    // 实际的去重检测在useCreateDocumentByFile中进行
+                    successCount++;
+                } catch (error) {
+                    console.error(`文件 ${file.name} 上传失败:`, error);
+                    errorCount++;
+                }
+            }
             
             // 重置文件输入
             const fileInput = document.getElementById('file-upload') as HTMLInputElement;
             if (fileInput) fileInput.value = '';
             
-            toast.success(`成功上传 ${files.length} 个文件`);
+            // 显示详细的上传结果摘要
+            if (files.length > 1) {
+                const totalFiles = files.length;
+                let message = `文件处理完成`;
+                let description = [];
+                
+                if (successCount > 0) {
+                    description.push(`${successCount} 个文件上传成功`);
+                }
+                if (duplicateCount > 0) {
+                    description.push(`${duplicateCount} 个重复文件已跳过`);
+                }
+                if (errorCount > 0) {
+                    description.push(`${errorCount} 个文件上传失败`);
+                }
+                
+                if (errorCount > 0) {
+                    toast.error(message, {
+                        description: description.join('，'),
+                        duration: 6000,
+                    });
+                } else if (duplicateCount > 0) {
+                    toast.info(message, {
+                        description: description.join('，'),
+                        duration: 5000,
+                    });
+                } else {
+                    toast.success(message, {
+                        description: description.join('，'),
+                        duration: 4000,
+                    });
+                }
+            }
+            // 单文件上传的反馈已经在hook中处理了
+            
         } catch (error) {
-            console.error('文件上传失败:', error);
-            toast.error('文件上传失败，请重试');
+            console.error('批量文件上传失败:', error);
+            toast.error('批量文件上传失败，请重试');
         } finally {
             setUploadingToKnowledgeBase(false);
         }

@@ -1,4 +1,7 @@
-'use client';
+/**
+ * 优化版的Dify数据集Hook
+ * 集成了智能缓存失效和乐观更新机制
+ */
 
 import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -10,6 +13,7 @@ import {
   type CreateDatasetPayload,
   type CreateDocumentResponse,
 } from '@/lib/api/dify-dataset-api';
+import { useSmartCacheInvalidation } from './use-smart-cache-invalidation';
 
 const QUERY_KEYS = {
   datasetDetails: (datasetId: string) => ['dify', 'dataset', datasetId] as const,
@@ -29,9 +33,8 @@ export function useDatasetDetails(datasetId: string | undefined, enabled = true)
     queryKey: QUERY_KEYS.datasetDetails(datasetId || ''),
     queryFn: () => api.getDatasetDetails(datasetId!),
     enabled: enabled && !!datasetId,
-    staleTime: 2 * 60 * 1000, // 减少到2分钟，与文档列表保持一致
+    staleTime: 2 * 60 * 1000, // 2分钟
     retry: (failureCount, error) => {
-      // 如果是404错误（知识库不存在），不重试
       if (error.message.includes('404')) {
         return false;
       }
@@ -48,7 +51,6 @@ export function useCreateDataset() {
     mutationFn: (payload: CreateDatasetPayload) => api.createDataset(payload),
     onSuccess: (data) => {
       toast.success('知识库创建成功');
-      // 添加到查询缓存
       queryClient.setQueryData(QUERY_KEYS.datasetDetails(data.id), data);
     },
     onError: (error: Error) => {
@@ -63,19 +65,17 @@ export function useDatasetDocuments(datasetId: string | undefined, enabled = tru
 
   return useInfiniteQuery({
     queryKey: QUERY_KEYS.datasetDocuments(datasetId || ''),
-    queryFn: ({ pageParam = 1 }) => api.getDatasetDocuments(datasetId!, pageParam, 50), // 增加每页数量到50
+    queryFn: ({ pageParam = 1 }) => api.getDatasetDocuments(datasetId!, pageParam, 50),
     initialPageParam: 1,
     getNextPageParam: (lastPage, allPages, lastPageParam) => {
-      // 如果当前页的数据数量小于限制，说明没有更多数据了
       if (lastPage.data.length < 50) {
         return undefined;
       }
       return (lastPageParam as number) + 1;
     },
     enabled: enabled && !!datasetId,
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 2 * 60 * 1000,
     refetchInterval: (query) => {
-      // 如果有文档正在处理，则更频繁地轮询
       const pages = query.state.data?.pages || [];
       const allDocs = pages.flatMap(page => page.data);
       const processingStatuses = ['waiting', 'queuing', 'indexing', 'splitting', 'processing'];
@@ -83,7 +83,6 @@ export function useDatasetDocuments(datasetId: string | undefined, enabled = tru
         processingStatuses.includes(doc.indexing_status)
       );
       
-      // 对于刚上传的文档，在前2分钟内保持更频繁的轮询
       const recentDocs = allDocs.some((doc: DifyDocument) => {
         const createdTime = new Date(doc.created_at || 0).getTime();
         const now = Date.now();
@@ -93,14 +92,14 @@ export function useDatasetDocuments(datasetId: string | undefined, enabled = tru
         return isRecent && isNotCompleted;
       });
       
-      return hasProcessingDocs || recentDocs ? 2000 : false; // 2秒轮询或不轮询
+      return hasProcessingDocs || recentDocs ? 2000 : false;
     },
   });
 }
 
-export function useCreateDocumentByFile() {
+export function useCreateDocumentByFileOptimized() {
   const api = useDifyDatasetAPI();
-  const queryClient = useQueryClient();
+  const { smartInvalidate } = useSmartCacheInvalidation();
 
   return useMutation({
     mutationFn: ({ 
@@ -121,17 +120,24 @@ export function useCreateDocumentByFile() {
           description: '系统检测到相同内容的文档已存在于知识库中',
           duration: 4000,
         });
+        
+        // 智能失效：重复文件不触发缓存更新
+        smartInvalidate({
+          datasetId: variables.datasetId,
+          operation: 'create',
+          isDuplicate: true
+        });
       } else {
         toast.success(`文档 "${variables.file.name}" 上传成功，正在处理中...`);
+        
+        // 智能失效：使用乐观更新
+        smartInvalidate({
+          datasetId: variables.datasetId,
+          operation: 'create',
+          documentData: data.document,
+          isDuplicate: false
+        });
       }
-      
-      // 同时刷新文档列表和知识库详情，确保数据一致性
-      queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.datasetDocuments(variables.datasetId)
-      });
-      queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.datasetDetails(variables.datasetId)
-      });
     },
     onError: (error: Error) => {
       console.error('上传文档失败:', error);
@@ -140,60 +146,159 @@ export function useCreateDocumentByFile() {
   });
 }
 
-// 检测重复文档的辅助函数
+export function useDeleteDocumentOptimized() {
+  const api = useDifyDatasetAPI();
+  const queryClient = useQueryClient();
+  const { smartInvalidate } = useSmartCacheInvalidation();
+
+  return useMutation({
+    mutationFn: ({ datasetId, documentId }: { datasetId: string; documentId: string }) =>
+      api.deleteDocument(datasetId, documentId),
+    onMutate: async ({ datasetId, documentId }) => {
+      // 乐观更新：立即从UI中移除文档
+      const queryKey = QUERY_KEYS.datasetDocuments(datasetId);
+      
+      // 取消正在进行的重新获取
+      await queryClient.cancelQueries({ queryKey });
+      
+      // 保存当前数据用于回滚
+      const previousData = queryClient.getQueryData(queryKey);
+      
+      // 找到要删除的文档信息
+      const currentData = queryClient.getQueryData<any>(queryKey);
+      let documentToDelete: DifyDocument | undefined;
+      
+      if (currentData?.pages) {
+        for (const page of currentData.pages) {
+          const doc = page.data.find((d: DifyDocument) => d.id === documentId);
+          if (doc) {
+            documentToDelete = doc;
+            break;
+          }
+        }
+      }
+      
+      // 乐观更新：从列表中移除文档
+      if (documentToDelete) {
+        smartInvalidate({
+          datasetId,
+          operation: 'delete',
+          documentData: documentToDelete
+        });
+      }
+      
+      return { previousData, documentToDelete };
+    },
+    onSuccess: (_, variables, context) => {
+      toast.success('文档删除成功');
+      // 乐观更新已经完成，不需要额外的失效操作
+    },
+    onError: (error: Error, variables, context) => {
+      console.error('删除文档失败:', error);
+      toast.error(`删除文档失败: ${error.message}`);
+      
+      // 回滚乐观更新
+      if (context?.previousData) {
+        queryClient.setQueryData(
+          QUERY_KEYS.datasetDocuments(variables.datasetId),
+          context.previousData
+        );
+      }
+    },
+  });
+}
+
+// 批量上传的优化Hook
+export function useBatchCreateDocuments() {
+  const api = useDifyDatasetAPI();
+  const { smartInvalidate } = useSmartCacheInvalidation();
+
+  return useMutation({
+    mutationFn: async ({ 
+      datasetId, 
+      files 
+    }: { 
+      datasetId: string; 
+      files: File[] 
+    }) => {
+      // 并行上传所有文件
+      const uploadPromises = files.map(file =>
+        api.createDocumentByFile(datasetId, file, {
+          indexing_technique: 'high_quality',
+          process_mode: 'automatic'
+        }).catch(error => ({ error, file }))
+      );
+      
+      const results = await Promise.allSettled(uploadPromises);
+      
+      return results.map((result, index) => ({
+        file: files[index],
+        result: result.status === 'fulfilled' ? result.value : result.reason
+      }));
+    },
+    onSuccess: (results, variables) => {
+      const successful = results.filter(r => !('error' in r.result));
+      const failed = results.filter(r => 'error' in r.result);
+      const duplicates = successful.filter(r => 
+        detectDuplicateDocument(r.result as CreateDocumentResponse, r.file)
+      );
+      
+      // 显示批量结果摘要
+      const successCount = successful.length - duplicates.length;
+      const duplicateCount = duplicates.length;
+      const failCount = failed.length;
+      
+      if (successCount > 0) {
+        toast.success(`成功上传 ${successCount} 个文件`);
+      }
+      if (duplicateCount > 0) {
+        toast.info(`跳过 ${duplicateCount} 个重复文件`);
+      }
+      if (failCount > 0) {
+        toast.error(`${failCount} 个文件上传失败`);
+      }
+      
+      // 智能失效：批量操作使用防抖失效
+      if (successCount > 0) {
+        smartInvalidate({
+          datasetId: variables.datasetId,
+          operation: 'create',
+          batchSize: successCount
+        });
+      }
+    },
+    onError: (error: Error) => {
+      console.error('批量上传失败:', error);
+      toast.error('批量上传失败，请重试');
+    },
+  });
+}
+
+// 检测重复文档的辅助函数（保持与原版本一致）
 function detectDuplicateDocument(response: any, uploadedFile: File): boolean {
-  // 方法1: 检查响应中的重复标识
   if (response.duplicated === true || response.is_duplicate === true) {
     return true;
   }
   
-  // 方法2: 检查文档创建时间（如果文档创建时间早于上传时间，可能是重复）
   if (response.document?.created_at) {
-    const docCreatedTime = new Date(response.document.created_at * 1000); // 假设是Unix时间戳
+    const docCreatedTime = new Date(response.document.created_at * 1000);
     const uploadTime = new Date();
     const timeDiff = uploadTime.getTime() - docCreatedTime.getTime();
     
-    // 如果文档创建时间早于5分钟前，可能是重复文档
     if (timeDiff > 5 * 60 * 1000) {
       return true;
     }
   }
   
-  // 方法3: 检查batch字段（可能为空或特殊值表示重复）
   if (!response.batch || response.batch === 'duplicate' || response.batch === '') {
     return true;
   }
   
-  // 方法4: 检查文档状态（已完成的文档可能表示是重复的）
   if (response.document?.indexing_status === 'completed') {
     return true;
   }
   
   return false;
-}
-
-export function useDeleteDocument() {
-  const api = useDifyDatasetAPI();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ datasetId, documentId }: { datasetId: string; documentId: string }) =>
-      api.deleteDocument(datasetId, documentId),
-    onSuccess: (_, variables) => {
-      toast.success('文档删除成功');
-      // 同时刷新文档列表和知识库详情，确保数据一致性
-      queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.datasetDocuments(variables.datasetId)
-      });
-      queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.datasetDetails(variables.datasetId)
-      });
-    },
-    onError: (error: Error) => {
-      console.error('删除文档失败:', error);
-      toast.error(`删除文档失败: ${error.message}`);
-    },
-  });
 }
 
 export function useDocumentIndexingStatus(datasetId: string | undefined, batch: string | undefined, enabled = true) {
@@ -203,8 +308,8 @@ export function useDocumentIndexingStatus(datasetId: string | undefined, batch: 
     queryKey: QUERY_KEYS.documentIndexingStatus(datasetId || '', batch || ''),
     queryFn: () => api.getDocumentIndexingStatus(datasetId!, batch!),
     enabled: enabled && !!datasetId && !!batch,
-    refetchInterval: 3000, // 每3秒检查一次状态
-    staleTime: 0, // 总是重新获取
+    refetchInterval: 3000,
+    staleTime: 0,
   });
 }
 
@@ -216,7 +321,6 @@ export function useProjectDataset(projectId: string, projectName: string) {
 
   const ensureDataset = async (datasetId?: string): Promise<string> => {
     if (datasetId) {
-      // 检查知识库是否存在
       try {
         await api.getDatasetDetails(datasetId);
         return datasetId;
@@ -225,7 +329,6 @@ export function useProjectDataset(projectId: string, projectName: string) {
       }
     }
 
-    // 创建新知识库
     const newDataset = await createDataset.mutateAsync({
       name: `${projectName}-知识库`,
       description: `项目"${projectName}"的专用知识库`,
