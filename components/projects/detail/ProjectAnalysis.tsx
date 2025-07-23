@@ -172,51 +172,51 @@ export default function ProjectAnalysis({
         }
     };
 
-    // 获取状态徽章 - 统一设计系统（包含splitting状态支持）
+    // 获取状态徽章 - 紧凑设计系统
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'completed':
                 return (
-                    <Badge variant="default" className="text-xs bg-green-100 text-green-800 border-green-200">
-                        <span className="w-2 h-2 bg-green-500 rounded-full mr-1 inline-block" />
+                    <Badge variant="default" className="text-xs bg-green-100 text-green-800 border-green-200 h-5">
+                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1 inline-block" />
                         已完成
                     </Badge>
                 );
             case 'waiting':
             case 'queuing':
                 return (
-                    <Badge variant="secondary" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
-                        <span className="w-2 h-2 bg-yellow-500 rounded-full mr-1 inline-block" />
-                        等待中
+                    <Badge variant="secondary" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200 h-5">
+                        <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full mr-1 animate-pulse inline-block" />
+                        等待处理
                     </Badge>
                 );
             case 'splitting':
                 return (
-                    <Badge variant="secondary" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
-                        <span className="w-2 h-2 bg-purple-500 rounded-full mr-1 animate-pulse inline-block" />
-                        分段处理
+                    <Badge variant="secondary" className="text-xs bg-purple-50 text-purple-700 border-purple-200 h-5">
+                        <span className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-1 animate-pulse inline-block" />
+                        分段中
                     </Badge>
                 );
             case 'indexing':
             case 'processing':
                 return (
-                    <Badge variant="secondary" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                        <span className="w-2 h-2 bg-blue-500 rounded-full mr-1 animate-pulse inline-block" />
+                    <Badge variant="secondary" className="text-xs bg-blue-50 text-blue-700 border-blue-200 h-5">
+                        <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1 animate-pulse inline-block" />
                         索引中
                     </Badge>
                 );
             case 'error':
             case 'failed':
                 return (
-                    <Badge variant="destructive" className="text-xs">
-                        <span className="w-2 h-2 bg-current rounded-full mr-1 inline-block" />
-                        处理失败
+                    <Badge variant="destructive" className="text-xs h-5">
+                        <span className="w-1.5 h-1.5 bg-current rounded-full mr-1 inline-block" />
+                        失败
                     </Badge>
                 );
             default:
                 return (
-                    <Badge variant="outline" className="text-xs">
-                        <span className="w-2 h-2 bg-muted-foreground rounded-full mr-1 inline-block" />
+                    <Badge variant="outline" className="text-xs h-5">
+                        <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full mr-1 inline-block" />
                         {status}
                     </Badge>
                 );
@@ -292,7 +292,7 @@ export default function ProjectAnalysis({
                 </div>
             </CardHeader>
 
-            <CardContent>
+            <CardContent className="w-full">
                 <input
                     id="file-upload"
                     type="file"
@@ -317,57 +317,55 @@ export default function ProjectAnalysis({
                 ) : !documentsResponse?.data?.length ? (
                     // 空状态：整个区域都是上传区域
                     <div 
-                        className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-12 cursor-pointer hover:border-primary/50 hover:bg-muted/25 transition-all group"
+                        className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 cursor-pointer hover:border-primary/50 hover:bg-muted/25 transition-all group"
                         onClick={triggerFileUpload}
                     >
-                        <div className="text-center space-y-4">
-                            <div className="mx-auto w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                                <Upload className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <div className="text-center space-y-3">
+                            <div className="mx-auto w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                                <Upload className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
                             </div>
-                            <div className="space-y-2">
-                                <div className="text-lg font-semibold">
+                            <div className="space-y-1">
+                                <div className="text-base font-semibold">
                                     {uploadingToKnowledgeBase ? '正在上传文档...' : '开始上传文档'}
                                 </div>
                                 <div className="text-sm text-muted-foreground">
-                                    支持 PDF, DOC, DOCX, TXT, MD 格式文件
+                                    支持 PDF, DOC, DOCX, TXT, MD 格式
                                 </div>
                                 {uploadingToKnowledgeBase && (
-                                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                        <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse inline-block" />
-                                        文档正在处理中，请稍候...
+                                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground mt-2">
+                                        <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse inline-block" />
+                                        处理中，请稍候...
                                     </div>
                                 )}
                             </div>
                         </div>
                     </div>
                 ) : (
-                    // 有文档状态：显示列表 + 底部上传提示
-                    <div className="space-y-4">
-                        <div className="space-y-3">
+                    // 有文档状态：显示网格列表 + 底部上传提示
+                    <div className="space-y-4 w-full">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 w-full">
                             {documentsResponse?.data?.map((doc) => (
-                                <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/20 transition-colors">
-                                    <div className="flex items-start gap-3 flex-1 min-w-0">
-                                        <FileText className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                <div key={doc.id} className="relative group border rounded-lg p-3 hover:bg-muted/20 transition-colors min-w-0">
+                                    <div className="flex items-start gap-3">
+                                        <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
                                         <div className="flex-1 min-w-0 space-y-2">
-                                            <div className="font-medium truncate text-sm">{doc.name}</div>
-                                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                            <div className="font-medium text-sm leading-tight pr-6 truncate">{doc.name}</div>
+                                            <div className="space-y-1.5">
                                                 {getStatusBadge(doc.indexing_status)}
-                                                <span className="flex items-center gap-1">
-                                                    <span>字数：</span>
-                                                    <span className="font-mono">{doc.word_count.toLocaleString()}</span>
-                                                </span>
-                                                {['waiting', 'queuing', 'indexing', 'splitting', 'processing'].includes(doc.indexing_status) && (
-                                                    <span className="text-xs text-blue-600 animate-pulse">
-                                                        处理中，请稍候...
-                                                    </span>
-                                                )}
+                                                <div className="text-xs text-muted-foreground font-mono">
+                                                    {doc.word_count.toLocaleString()} 字
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="sm">
-                                                <Trash2 className="h-4 w-4" />
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 transition-opacity"
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
                                             </Button>
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
