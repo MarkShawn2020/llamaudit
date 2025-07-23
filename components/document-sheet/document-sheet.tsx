@@ -161,47 +161,63 @@ function DocumentActions() {
   };
   
   return (
-    <div className="flex items-center gap-2 p-4 border-b bg-muted/50">
-      <div className="flex items-center gap-2 flex-1">
-        {document && (
-          <Badge variant="outline" className="text-xs">
-            {document.doc_form || 'Unknown'}
-          </Badge>
-        )}
-        {uploadFile && (
-          <Badge variant="outline" className="text-xs">
-            {uploadFile.extension.toUpperCase()} • {(uploadFile.size / 1024).toFixed(1)}KB
-          </Badge>
-        )}
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border-b bg-muted/50 gap-3 sm:gap-0" id={"doc-actions"}>
+      {/* Document title/status indicator */}
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          {document && (
+            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <FileText className="h-3 w-3" />
+              <span className="truncate">{document.doc_form || 'Document'}</span>
+            </div>
+          )}
+          {uploadFile && (
+            <div className="text-xs text-muted-foreground">
+              {uploadFile.extension.toUpperCase()} • {(uploadFile.size / 1024).toFixed(1)}KB
+            </div>
+          )}
+        </div>
       </div>
       
-      <div className="flex items-center gap-2">
+      {/* Action buttons - responsive layout */}
+      <div className="flex items-center justify-between sm:justify-end gap-3">
+        {/* Primary action - always visible */}
         <Button 
-          variant="ghost" 
+          variant="default" 
           size="sm" 
-          className="h-8"
+          className="h-9 px-4 flex-1 sm:flex-none"
           onClick={handleViewOriginal}
           disabled={isLoadingUploadFile || !uploadFile?.url}
         >
-          <ExternalLink className="h-3 w-3 mr-1" />
-          查看原文
+          <ExternalLink className="h-4 w-4 mr-2" />
+          <span className="hidden xs:inline">查看原文</span>
+          <span className="xs:hidden">查看</span>
         </Button>
         
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="h-8"
-          onClick={handleDownload}
-          disabled={isLoadingUploadFile || !uploadFile?.download_url}
-        >
-          <Download className="h-3 w-3 mr-1" />
-          导出
-        </Button>
-        
-        <Button variant="ghost" size="sm" className="h-8 text-red-600 hover:text-red-700">
-          <Trash2 className="h-3 w-3 mr-1" />
-          删除
-        </Button>
+        {/* Secondary actions - adaptive layout */}
+        <div className="flex items-center gap-1">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-9 px-3 text-muted-foreground hover:text-foreground"
+            onClick={handleDownload}
+            disabled={isLoadingUploadFile || !uploadFile?.download_url}
+            title="导出文档"
+          >
+            <Download className="h-4 w-4" />
+            <span className="hidden sm:ml-2 sm:inline">导出</span>
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-9 px-3 text-muted-foreground hover:text-red-600"
+            title="删除文档"
+          >
+            <Trash2 className="h-4 w-4" />
+            <span className="hidden sm:ml-2 sm:inline">删除</span>
+          </Button>
+        </div>
       </div>
     </div>
   );

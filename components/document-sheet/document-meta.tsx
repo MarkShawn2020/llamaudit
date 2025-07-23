@@ -18,13 +18,21 @@ import {
   Loader2,
   Calendar,
   BarChart3,
-  Zap
+  Zap,
+  ExternalLink,
+  Download,
+  Copy,
+  Eye
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { ExtendedDocumentDetails } from '@/lib/api/dify-dataset-api-extended';
+import { useDocumentUploadFile } from '@/hooks/use-document-details';
+import { useDocumentSheet } from '@/contexts/document-sheet-context';
+import { useDifyConfig } from '@/contexts/dify-config-context';
 
 interface DocumentMetaProps {
   document: ExtendedDocumentDetails | undefined;
@@ -130,12 +138,92 @@ function calculateProcessingDuration(startTime?: number, endTime?: number): stri
  * 基础信息卡片
  */
 function BasicInfoCard({ document }: { document: ExtendedDocumentDetails }) {
+  const { datasetId, documentId } = useDocumentSheet();
+  const { data: uploadFile, isLoading: isLoadingUploadFile } = useDocumentUploadFile(datasetId || undefined, documentId || undefined);
+  const { config } = useDifyConfig();
+  
+  // 查看原文
+  const handleViewOriginal = () => {
+    if (uploadFile?.url) {
+      let previewUrl = uploadFile.url;
+      if (previewUrl.startsWith('/')) {
+        const fileBaseUrl = config.baseUrl.replace('/v1', '');
+        previewUrl = `${fileBaseUrl}${previewUrl}`;
+      }
+      window.open(previewUrl, '_blank');
+    }
+  };
+  
+  // 下载文档
+  const handleDownload = () => {
+    if (uploadFile?.download_url) {
+      let downloadUrl = uploadFile.download_url;
+      if (downloadUrl.startsWith('/')) {
+        const fileBaseUrl = config.baseUrl.replace('/v1', '');
+        downloadUrl = `${fileBaseUrl}${downloadUrl}`;
+      }
+      
+      const link = window.document.createElement('a');
+      link.href = downloadUrl;
+      link.download = uploadFile.name || '文档';
+      window.document.body.appendChild(link);
+      link.click();
+      window.document.body.removeChild(link);
+    }
+  };
+  
+  // 复制文档ID
+  const handleCopyId = async () => {
+    try {
+      await navigator.clipboard.writeText(document.id);
+      // TODO: Add toast notification
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+  
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <FileText className="h-4 w-4" />
-          基础信息
+        <CardTitle className="flex items-center justify-between text-base">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            基础信息
+          </div>
+          {/* Quick actions for file operations */}
+          {uploadFile && (
+            <div className="flex items-center gap-1" >
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                onClick={handleViewOriginal}
+                disabled={isLoadingUploadFile || !uploadFile?.url}
+                title="查看原文"
+              >
+                <Eye className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                onClick={handleDownload}
+                disabled={isLoadingUploadFile || !uploadFile?.download_url}
+                title="下载文档"
+              >
+                <Download className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                onClick={handleCopyId}
+                title="复制文档ID"
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -147,24 +235,77 @@ function BasicInfoCard({ document }: { document: ExtendedDocumentDetails }) {
           </span>
         </div>
         
-        {/* 文件信息 */}
+        {/* 文档ID */}
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">文档ID</span>
+          <div className="flex items-center gap-2">
+            <code className="text-xs bg-muted px-2 py-1 rounded font-mono">
+              {document.id.slice(0, 8)}...{document.id.slice(-4)}
+            </code>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+              onClick={handleCopyId}
+              title="复制完整ID"
+            >
+              <Copy className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+        
+        {/* 文件信息 - 增强版 */}
         {document.upload_file && (
           <>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">文件类型</span>
-              <Badge variant="outline" className="text-xs">
-                {document.upload_file.extension?.toUpperCase() || document.doc_form}
-              </Badge>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">文件大小</span>
-              <span className="text-sm font-medium">
-                {formatFileSize(document.upload_file.size)}
-              </span>
+            <Separator className="my-3" />
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-foreground">文件信息</span>
+                {uploadFile && (
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={handleViewOriginal}
+                      disabled={isLoadingUploadFile || !uploadFile?.url}
+                    >
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      查看原文
+                    </Button>
+                  </div>
+                )}
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">文件类型</span>
+                  <Badge variant="outline" className="text-xs">
+                    {document.upload_file.extension?.toUpperCase() || document.doc_form}
+                  </Badge>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">文件大小</span>
+                  <span className="text-sm font-medium">
+                    {formatFileSize(document.upload_file.size)}
+                  </span>
+                </div>
+                
+                {uploadFile && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">MIME类型</span>
+                    <code className="text-xs bg-muted px-2 py-1 rounded">
+                      {uploadFile.mime_type}
+                    </code>
+                  </div>
+                )}
+              </div>
             </div>
           </>
         )}
+        
+        <Separator className="my-3" />
         
         {/* 创建时间 */}
         <div className="flex items-center justify-between">
