@@ -141,29 +141,6 @@ export function ProjectAwareKnowledgeAssistant() {
         <div className="project-aware-knowledge-assistant">
             <DiagnosticKnowledgeAssistant config={config}/>
 
-            {/* 开发模式下显示项目信息 */}
-            {process.env.NODE_ENV === 'development' && projectInfo && (
-                <div
-                    className="fixed top-4 right-4 max-w-xs p-2 bg-gray-900 text-green-400 rounded text-xs font-mono z-[9999] max-h-96 overflow-y-auto">
-                    <div className="font-bold mb-1">🔧 智能助手调试</div>
-                    <div>项目: {projectInfo.name}</div>
-                    <div>数据集: {config.datasetId}</div>
-                    <div>AI模型: {config.aiModel}</div>
-                    <div>配置状态:
-                        <span className="text-yellow-400">
-              {config.datasetId ? '✅' : '❌'}
-            </span>
-                    </div>
-                    <div className="mt-2 text-xs">
-                        <details>
-                            <summary className="cursor-pointer">详细配置</summary>
-                            <pre className="mt-1 text-[10px] whitespace-pre-wrap">
-                {JSON.stringify(config, null, 2)}
-              </pre>
-                        </details>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
@@ -189,7 +166,7 @@ export function SimpleProjectAwareAssistant() {
  */
 function DiagnosticKnowledgeAssistant({config}: { config: AssistantConfig }) {
     console.log('🔍 DiagnosticKnowledgeAssistant 渲染开始，config:', config);
-    
+
     // 配置管理
     const {config: processedConfig, validateConfig} = useAssistantConfig(config);
     console.log('🔍 processedConfig:', processedConfig);
@@ -269,53 +246,18 @@ function DiagnosticKnowledgeAssistant({config}: { config: AssistantConfig }) {
     // 正常渲染智能助手，带额外调试功能
     return (
         <div className="diagnostic-knowledge-assistant">
-            {/* 悬浮按钮 - 增强调试版本 */}
+            {/* 悬浮按钮 - 修复pointer-events问题 */}
             <FloatingAssistantButton
                 onClick={() => {
-                    console.log('🖱️ === 悬浮按钮点击事件开始 ===');
-                    console.log('🖱️ 点击时间:', new Date().toISOString());
-                    console.log('🖱️ 事件触发位置: FloatingAssistantButton onClick');
-                    
-                    console.log('📊 点击前助手状态:', {
-                        isOpen: assistant.isOpen,
-                        isLoading: assistant.isLoading,
-                        error: assistant.error,
-                        messagesLength: assistant.messages.length
-                    });
-                    
-                    console.log('🔧 openAssistant函数信息:', {
-                        type: typeof assistant.openAssistant,
-                        function: assistant.openAssistant.toString(),
-                        isCallable: typeof assistant.openAssistant === 'function'
-                    });
-                    
-                    try {
-                        console.log('🚀 开始调用 assistant.openAssistant()');
-                        const result = assistant.openAssistant();
-                        console.log('🚀 openAssistant 调用完成，返回值:', result);
-                        
-                        // 使用 setTimeout 检查异步状态更新
-                        setTimeout(() => {
-                            console.log('📝 延迟检查状态 (10ms后):', {
-                                isOpen: assistant.isOpen,
-                                isLoading: assistant.isLoading,
-                                error: assistant.error
-                            });
-                        }, 10);
-                        
-                        setTimeout(() => {
-                            console.log('📝 延迟检查状态 (100ms后):', {
-                                isOpen: assistant.isOpen,
-                                isLoading: assistant.isLoading,
-                                error: assistant.error
-                            });
-                        }, 100);
-                        
-                    } catch (error) {
-                        console.error('❌ openAssistant 调用异常:', error);
-                    }
-                    
-                    console.log('🖱️ === 悬浮按钮点击事件结束 ===');
+                    console.log('🖱️ 悬浮按钮点击 - pointer-events修复版本');
+                    console.log('📊 点击前状态:', {isOpen: assistant.isOpen});
+
+                    assistant.openAssistant();
+
+                    // 验证状态更新
+                    setTimeout(() => {
+                        console.log('📝 点击后状态:', {isOpen: assistant.isOpen});
+                    }, 10);
                 }}
                 hasNotification={false}
                 disabled={assistant.isLoading}
@@ -352,26 +294,26 @@ function DiagnosticKnowledgeAssistant({config}: { config: AssistantConfig }) {
                         onClick={() => {
                             console.log('🧪 === 手动测试按钮点击开始 ===');
                             console.log('🧪 手动触发 openAssistant');
-                            console.log('🧪 调用前状态:', { isOpen: assistant.isOpen });
-                            
+                            console.log('🧪 调用前状态:', {isOpen: assistant.isOpen});
+
                             try {
                                 assistant.openAssistant();
                                 console.log('🧪 调用成功');
-                                
+
                                 setTimeout(() => {
-                                    console.log('🧪 手动测试延迟检查:', { isOpen: assistant.isOpen });
+                                    console.log('🧪 手动测试延迟检查:', {isOpen: assistant.isOpen});
                                 }, 50);
                             } catch (error) {
                                 console.error('🧪 手动测试调用错误:', error);
                             }
-                            
+
                             console.log('🧪 === 手动测试按钮点击结束 ===');
                         }}
                         className="mt-2 px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-white text-xs w-full"
                     >
                         🧪 测试打开
                     </button>
-                    
+
                     {/* 新增状态强制切换按钮 */}
                     <button
                         onClick={() => {

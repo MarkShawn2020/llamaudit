@@ -15,42 +15,20 @@ export function FloatingAssistantButton({
   hasNotification = false,
   disabled = false,
 }: FloatingButtonProps) {
-  console.log('🔵 FloatingAssistantButton 渲染:', { 
-    onClickType: typeof onClick, 
-    hasNotification, 
-    disabled,
-    onClickFunction: onClick?.toString?.()?.substring(0, 100) + '...'
-  });
-  
   const handleClick = (e: React.MouseEvent) => {
-    console.log('🖱️ === FloatingButton handleClick 开始 ===');
-    console.log('🖱️ 事件对象:', e);
-    console.log('🖱️ disabled 状态:', disabled);
-    console.log('🖱️ onClick 函数:', typeof onClick, onClick);
-    
-    // 阻止事件冒泡和默认行为
-    e.preventDefault();
-    e.stopPropagation();
+    console.log('🖱️ FloatingButton 点击事件 - pointer-events修复版本');
     
     if (disabled) {
-      console.log('⚠️ 按钮被禁用，不执行点击');
+      console.log('⚠️ 按钮被禁用');
       return;
     }
     
-    if (typeof onClick !== 'function') {
-      console.error('❌ onClick 不是一个函数!', typeof onClick);
-      return;
+    if (typeof onClick === 'function') {
+      onClick();
+      console.log('🚀 onClick 调用完成');
+    } else {
+      console.error('❌ onClick 不是函数');
     }
-    
-    try {
-      console.log('🚀 即将调用 onClick 函数...');
-      const result = onClick();
-      console.log('🚀 onClick 调用完成，返回值:', result);
-    } catch (error) {
-      console.error('❌ onClick 调用异常:', error);
-    }
-    
-    console.log('🖱️ === FloatingButton handleClick 结束 ===');
   };
   
   return (
@@ -109,12 +87,13 @@ export function FloatingAssistantButton({
         </div>
       </div>
 
-      {/* 背景光晕效果 */}
+      {/* 背景光晕效果 - 修复点击阻塞问题 */}
       <div 
         className={`
           absolute inset-0 rounded-full
           bg-gradient-to-r from-blue-400 to-purple-500
           opacity-20 blur-xl transition-all duration-300
+          pointer-events-none
           ${hasNotification ? 'animate-pulse scale-110' : ''}
         `}
       />
