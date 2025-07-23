@@ -69,10 +69,22 @@ export function useDatasetDocuments(datasetId: string | undefined, enabled = tru
     refetchInterval: (query) => {
       // 如果有文档正在处理，则更频繁地轮询
       const data = query.state.data;
-      const hasProcessingDocs = data?.data?.some(doc => 
-        doc.indexing_status === 'waiting' || doc.indexing_status === 'indexing'
+      const processingStatuses = ['waiting', 'queuing', 'indexing', 'splitting', 'processing'];
+      const hasProcessingDocs = data?.data?.some((doc: DifyDocument) => 
+        processingStatuses.includes(doc.indexing_status)
       );
-      return hasProcessingDocs ? 3000 : false; // 3秒轮询或不轮询
+      
+      // 对于刚上传的文档，在前2分钟内保持更频繁的轮询
+      const recentDocs = data?.data?.some((doc: DifyDocument) => {
+        const createdTime = new Date(doc.created_at || 0).getTime();
+        const now = Date.now();
+        const twoMinutesAgo = now - 2 * 60 * 1000;
+        const isRecent = createdTime > twoMinutesAgo;
+        const isNotCompleted = doc.indexing_status !== 'completed';
+        return isRecent && isNotCompleted;
+      });
+      
+      return hasProcessingDocs || recentDocs ? 2000 : false; // 2秒轮询或不轮询
     },
   });
 }

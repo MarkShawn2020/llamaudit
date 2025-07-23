@@ -46,7 +46,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 
 export default function ProjectAnalysis({
@@ -83,6 +83,42 @@ export default function ProjectAnalysis({
     // 删除知识库文档
     const deleteDocument = useDeleteDocument();
 
+    // 用于跟踪文档状态变化的ref
+    const previousDocsRef = useRef<any[]>([]);
+
+    // 监听文档状态变化，显示完成通知
+    useEffect(() => {
+        if (documentsResponse?.data) {
+            const currentDocs = documentsResponse.data;
+            const previousDocs = previousDocsRef.current;
+
+            // 检查状态变化
+            currentDocs.forEach((currentDoc) => {
+                const prevDoc = previousDocs.find(doc => doc.id === currentDoc.id);
+                if (prevDoc) {
+                    // 从处理中变为已完成
+                    if (['waiting', 'queuing', 'indexing', 'splitting', 'processing'].includes(prevDoc.indexing_status) &&
+                        currentDoc.indexing_status === 'completed') {
+                        toast.success(`文档 "${currentDoc.name}" 处理完成`, {
+                            description: `${currentDoc.word_count.toLocaleString()} 字，可以开始分析`,
+                            duration: 5000,
+                        });
+                    }
+                    // 从正常状态变为错误状态
+                    if (!['error', 'failed'].includes(prevDoc.indexing_status) &&
+                        ['error', 'failed'].includes(currentDoc.indexing_status)) {
+                        toast.error(`文档 "${currentDoc.name}" 处理失败`, {
+                            description: '请重新上传或检查文档格式',
+                            duration: 8000,
+                        });
+                    }
+                }
+            });
+
+            // 更新previous docs
+            previousDocsRef.current = currentDocs;
+        }
+    }, [documentsResponse?.data]);
 
     // 触发文件选择
     const triggerFileUpload = () => {
@@ -136,43 +172,51 @@ export default function ProjectAnalysis({
         }
     };
 
-    // 获取状态徽章 - 统一设计系统
+    // 获取状态徽章 - 统一设计系统（包含splitting状态支持）
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'completed':
                 return (
                     <Badge variant="default" className="text-xs bg-green-100 text-green-800 border-green-200">
-                        <div className="w-2 h-2 bg-green-500 rounded-full mr-1" />
+                        <span className="w-2 h-2 bg-green-500 rounded-full mr-1 inline-block" />
                         已完成
                     </Badge>
                 );
             case 'waiting':
             case 'queuing':
                 return (
-                    <Badge variant="secondary" className="text-xs">
-                        <div className="w-2 h-2 bg-yellow-500 rounded-full mr-1" />
+                    <Badge variant="secondary" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
+                        <span className="w-2 h-2 bg-yellow-500 rounded-full mr-1 inline-block" />
                         等待中
+                    </Badge>
+                );
+            case 'splitting':
+                return (
+                    <Badge variant="secondary" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                        <span className="w-2 h-2 bg-purple-500 rounded-full mr-1 animate-pulse inline-block" />
+                        分段处理
                     </Badge>
                 );
             case 'indexing':
             case 'processing':
                 return (
-                    <Badge variant="secondary" className="text-xs">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full mr-1 animate-pulse" />
-                        处理中
+                    <Badge variant="secondary" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                        <span className="w-2 h-2 bg-blue-500 rounded-full mr-1 animate-pulse inline-block" />
+                        索引中
                     </Badge>
                 );
             case 'error':
+            case 'failed':
                 return (
                     <Badge variant="destructive" className="text-xs">
-                        <div className="w-2 h-2 bg-current rounded-full mr-1" />
-                        错误
+                        <span className="w-2 h-2 bg-current rounded-full mr-1 inline-block" />
+                        处理失败
                     </Badge>
                 );
             default:
                 return (
                     <Badge variant="outline" className="text-xs">
-                        <div className="w-2 h-2 bg-muted-foreground rounded-full mr-1" />
+                        <span className="w-2 h-2 bg-muted-foreground rounded-full mr-1 inline-block" />
                         {status}
                     </Badge>
                 );
@@ -191,13 +235,13 @@ export default function ProjectAnalysis({
                                 <span className="flex items-center gap-2">
                                     <span>{dataset.document_count} 个文档</span>
                                     {dataset.document_count > 0 && (
-                                        <div className="w-2 h-2 bg-green-500 rounded-full" />
+                                        <span className="w-2 h-2 bg-green-500 rounded-full inline-block" />
                                     )}
                                 </span>
                             ) : (
                                 <span className="flex items-center gap-2">
                                     知识库初始化中...
-                                    <div className="w-2 h-2 bg-current rounded-full animate-pulse" />
+                                    <span className="w-2 h-2 bg-current rounded-full animate-pulse inline-block" />
                                 </span>
                             )}
                         </CardDescription>
@@ -270,7 +314,7 @@ export default function ProjectAnalysis({
                     <div className="text-center py-12 text-destructive">
                         加载失败，请重试
                     </div>
-                ) : !documentsResponse?.data.length ? (
+                ) : !documentsResponse?.data?.length ? (
                     // 空状态：整个区域都是上传区域
                     <div 
                         className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-12 cursor-pointer hover:border-primary/50 hover:bg-muted/25 transition-all group"
@@ -289,7 +333,7 @@ export default function ProjectAnalysis({
                                 </div>
                                 {uploadingToKnowledgeBase && (
                                     <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                                        <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse inline-block" />
                                         文档正在处理中，请稍候...
                                     </div>
                                 )}
@@ -300,7 +344,7 @@ export default function ProjectAnalysis({
                     // 有文档状态：显示列表 + 底部上传提示
                     <div className="space-y-4">
                         <div className="space-y-3">
-                            {documentsResponse.data.map((doc) => (
+                            {documentsResponse?.data?.map((doc) => (
                                 <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/20 transition-colors">
                                     <div className="flex items-start gap-3 flex-1 min-w-0">
                                         <FileText className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
@@ -312,6 +356,11 @@ export default function ProjectAnalysis({
                                                     <span>字数：</span>
                                                     <span className="font-mono">{doc.word_count.toLocaleString()}</span>
                                                 </span>
+                                                {['waiting', 'queuing', 'indexing', 'splitting', 'processing'].includes(doc.indexing_status) && (
+                                                    <span className="text-xs text-blue-600 animate-pulse">
+                                                        处理中，请稍候...
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -352,7 +401,7 @@ export default function ProjectAnalysis({
                                 <Upload className="h-4 w-4 group-hover:text-primary transition-colors" />
                                 {uploadingToKnowledgeBase ? (
                                     <span className="flex items-center gap-2">
-                                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                                        <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse inline-block" />
                                         正在上传文档...
                                     </span>
                                 ) : (

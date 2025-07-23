@@ -25,7 +25,7 @@ import {deleteProject, getProject, Project as BaseProject} from '@/lib/api/proje
 import {logger} from '@/lib/logger';
 import ProjectAnalysis from 'components/projects/detail/ProjectAnalysis';
 import ProjectInfo from 'components/projects/detail/ProjectInfo';
-import {PencilIcon, TrashIcon, Building2, Database, FileText, MapPin, Phone, Mail, Calendar} from 'lucide-react';
+import {PencilIcon, TrashIcon, Building2, Database, FileText, MapPin, Phone, Mail, Calendar, User} from 'lucide-react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {useEffect, useState} from 'react';
@@ -167,17 +167,18 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
     return (<div className="container mx-auto py-6 space-y-6">
         <Card className="mb-6">
             <CardHeader className="pb-2">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <CardTitle className="text-lg">项目概览（{project.name}）</CardTitle>
-                        <CardDescription>单位代码: {project.code}</CardDescription>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                    <div className="min-w-0 flex-1">
+                        <CardTitle className="text-lg truncate">项目概览（{project.name}）</CardTitle>
+                        <CardDescription className="font-mono text-xs sm:text-sm">单位代码: {project.code}</CardDescription>
                     </div>
-                    <div className='flex justify-end gap-2'>
+                    <div className='flex justify-end gap-2 flex-shrink-0'>
                         <Dialog open={showProjectInfo} onOpenChange={setShowProjectInfo}>
                             <DialogTrigger asChild>
                                 <Button variant="outline" size="sm" className="gap-1">
                                     <PencilIcon className="h-4 w-4"/>
-                                    编辑基本信息
+                                    <span className="hidden sm:inline">编辑基本信息</span>
+                                    <span className="sm:hidden">编辑</span>
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="max-w-3xl">
@@ -198,7 +199,8 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
                             onClick={() => setDeleteDialogOpen(true)}
                         >
                             <TrashIcon className="h-4 w-4"/>
-                            删除项目
+                            <span className="hidden sm:inline">删除项目</span>
+                            <span className="sm:hidden">删除</span>
                         </Button>
                     </div>
                 </div>
@@ -222,13 +224,13 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
                         <div className="flex items-center gap-2">
                             {isCreating || isLoadingDataset ? (
                                 <Badge variant="secondary" className="text-xs">
-                                    <div className="w-2 h-2 bg-current rounded-full animate-pulse mr-1" />
+                                    <span className="w-2 h-2 bg-current rounded-full animate-pulse mr-1 inline-block" />
                                     初始化中
                                 </Badge>
                             ) : dataset ? (
                                 <>
                                     <Badge variant="default" className="text-xs bg-green-100 text-green-800 border-green-200">
-                                        <div className="w-2 h-2 bg-green-500 rounded-full mr-1" />
+                                        <span className="w-2 h-2 bg-green-500 rounded-full mr-1 inline-block" />
                                         已连接
                                     </Badge>
                                     <span className="text-sm font-medium text-muted-foreground">
@@ -237,12 +239,12 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
                                 </>
                             ) : datasetError ? (
                                 <Badge variant="destructive" className="text-xs">
-                                    <div className="w-2 h-2 bg-current rounded-full mr-1" />
+                                    <span className="w-2 h-2 bg-current rounded-full mr-1 inline-block" />
                                     连接失败
                                 </Badge>
                             ) : (
                                 <Badge variant="outline" className="text-xs">
-                                    <div className="w-2 h-2 bg-muted-foreground rounded-full mr-1" />
+                                    <span className="w-2 h-2 bg-muted-foreground rounded-full mr-1 inline-block" />
                                     未配置
                                 </Badge>
                             )}
@@ -270,28 +272,29 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
                 {(project.address || project.contact || project.phone || project.email) && (
                     <div className="pt-4 border-t border-border/40">
                         <h4 className="text-sm font-medium text-muted-foreground mb-3">联系信息</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                             {project.address && (
-                                <div className="flex items-start gap-2">
+                                <div className="flex items-start gap-2 sm:col-span-2">
                                     <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                                    <span className="text-muted-foreground">{project.address}</span>
+                                    <span className="text-muted-foreground break-words">{project.address}</span>
                                 </div>
                             )}
                             {project.contact && (
                                 <div className="flex items-center gap-2">
-                                    <span className="text-muted-foreground">联系人：{project.contact}</span>
+                                    <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                    <span className="text-muted-foreground truncate">{project.contact}</span>
                                 </div>
                             )}
                             {project.phone && (
                                 <div className="flex items-center gap-2">
-                                    <Phone className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-muted-foreground">{project.phone}</span>
+                                    <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                    <span className="text-muted-foreground font-mono">{project.phone}</span>
                                 </div>
                             )}
                             {project.email && (
-                                <div className="flex items-center gap-2">
-                                    <Mail className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-muted-foreground">{project.email}</span>
+                                <div className="flex items-center gap-2 sm:col-span-2">
+                                    <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                    <span className="text-muted-foreground font-mono break-all">{project.email}</span>
                                 </div>
                             )}
                         </div>
