@@ -238,8 +238,8 @@ function SegmentItem({
   }, [segment.id, isSelected, onSelect]);
 
   return (
-    <Card className={`transition-colors ${isSelected ? 'ring-2 ring-blue-500 bg-blue-50/30' : ''}`}>
-      <CardContent className="p-4">
+    <Card className={`transition-colors overflow-hidden ${isSelected ? 'ring-2 ring-blue-500 bg-blue-50/30' : ''}`}>
+      <CardContent className="p-4 min-w-0">
         {/* 头部信息 */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
@@ -297,9 +297,9 @@ function SegmentItem({
         </div>
 
         {/* 分段内容 */}
-        <div className="space-y-3">
-          <div className="text-sm leading-relaxed">
-            <div className="whitespace-pre-wrap break-words">
+        <div className="space-y-3 min-w-0">
+          <div className="text-sm leading-relaxed min-w-0">
+            <div className="whitespace-pre-wrap break-words overflow-wrap-anywhere min-w-0 max-w-full">
               {displayContent}
             </div>
             
@@ -326,7 +326,7 @@ function SegmentItem({
           </div>
 
           {/* 统计信息 */}
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap min-w-0">
             <div className="flex items-center gap-1">
               <Type className="h-3 w-3" />
               {formatNumber(segment.word_count)} 词
@@ -431,8 +431,8 @@ function SegmentsList({
       )}
 
       {/* 分段列表 */}
-      <ScrollArea className="h-[600px]" onScrollCapture={handleScroll}>
-        <div className="space-y-3 pr-4">
+      <ScrollArea className="h-[600px] w-full" onScrollCapture={handleScroll}>
+        <div className="space-y-3 pr-4 min-w-0 max-w-full">
           {segments.map((segment, index) => (
             <SegmentItem
               key={segment.id}

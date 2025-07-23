@@ -5,7 +5,7 @@
 'use client';
 
 import React, {useEffect, useMemo} from 'react';
-import {AlertCircle, Download, ExternalLink, FileText, Hash, Loader2, Trash2} from 'lucide-react';
+import {AlertCircle, ExternalLink, FileText, Hash, Loader2, Trash2} from 'lucide-react';
 
 import {Sheet, SheetContent, SheetHeader, SheetTitle,} from '@/components/ui/sheet';
 import {Button} from '@/components/ui/button';
@@ -112,19 +112,7 @@ function DocumentBottomActions() {
                 查看原文
             </Button>
 
-            {/* 导出文档 - 第二行 */}
-            <Button
-                variant="outline"
-                size="lg"
-                className="w-full h-11 text-base font-medium"
-                onClick={handleDownload}
-                disabled={isLoadingUploadFile || !uploadFile?.download_url}
-            >
-                <Download className="h-4 w-4 mr-2"/>
-                导出文档
-            </Button>
-
-            {/* 删除文档 - 第三行 */}
+            {/* 删除文档 - 第二行 */}
             <Button
                 variant="outline"
                 size="lg"
