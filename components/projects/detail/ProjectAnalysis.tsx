@@ -49,6 +49,7 @@ import { zhCN } from 'date-fns/locale';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import { DocumentSheetTrigger, DocumentSheet } from '@/components/document-sheet';
 
 export default function ProjectAnalysis({
     projectId, 
@@ -284,9 +285,10 @@ export default function ProjectAnalysis({
     };
 
     return (
-        <Card>
-            <CardHeader>
-                <div className="flex justify-between items-center">
+        <>
+            <Card>
+                <CardHeader>
+                    <div className="flex justify-between items-center">
                     <div>
                         <CardTitle className="text-lg">文档</CardTitle>
                         <CardDescription className="flex items-center gap-2">
@@ -405,48 +407,56 @@ export default function ProjectAnalysis({
                     <div className="space-y-4 w-full">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 w-full">
                             {allDocuments.map((doc) => (
-                                <div key={doc.id} className="relative group border rounded-lg p-3 hover:bg-muted/20 transition-colors min-w-0">
-                                    <div className="flex items-start gap-3">
-                                        <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                                        <div className="flex-1 min-w-0 space-y-2">
-                                            <div className="font-medium text-sm leading-tight pr-6 truncate">{doc.name}</div>
-                                            <div className="space-y-1.5">
-                                                {getStatusBadge(doc.indexing_status)}
-                                                <div className="text-xs text-muted-foreground font-mono">
-                                                    {doc.word_count.toLocaleString()} 字
+                                <DocumentSheetTrigger
+                                    key={doc.id}
+                                    datasetId={project?.datasetId || 'default'}
+                                    documentId={doc.id}
+                                    documentName={doc.name}
+                                    onHover={true}
+                                >
+                                    <div className="relative group border rounded-lg p-3 hover:bg-muted/20 transition-colors min-w-0 cursor-pointer">
+                                        <div className="flex items-start gap-3">
+                                            <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                                            <div className="flex-1 min-w-0 space-y-2">
+                                                <div className="font-medium text-sm leading-tight pr-6 truncate">{doc.name}</div>
+                                                <div className="space-y-1.5">
+                                                    {getStatusBadge(doc.indexing_status)}
+                                                    <div className="text-xs text-muted-foreground font-mono">
+                                                        {doc.word_count.toLocaleString()} 字
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button 
-                                                variant="ghost" 
-                                                size="sm" 
-                                                className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 transition-opacity"
-                                            >
-                                                <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>确认删除</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    确定要删除文档 "{doc.name}" 吗？
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>取消</AlertDialogCancel>
-                                                <AlertDialogAction
-                                                    onClick={() => handleDeleteDocument(doc.id)}
-                                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 transition-opacity"
                                                 >
-                                                    删除
-                                                </AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                </div>
+                                                    <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>确认删除</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        确定要删除文档 "{doc.name}" 吗？
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>取消</AlertDialogCancel>
+                                                    <AlertDialogAction
+                                                        onClick={() => handleDeleteDocument(doc.id)}
+                                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                    >
+                                                        删除
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
+                                </DocumentSheetTrigger>
                             ))}
                         </div>
 
@@ -491,6 +501,8 @@ export default function ProjectAnalysis({
                     </div>
                 )}
             </CardContent>
-        </Card>
+            </Card>
+            <DocumentSheet />
+        </>
     );
 }

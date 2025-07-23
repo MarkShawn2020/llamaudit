@@ -10,6 +10,7 @@ import { GlobalNavbar } from '@/components/GlobalNavbar';
 import { CozeChat } from '@/components/CozeChat';
 import { getUser } from '@/lib/db/queries';
 import { DevFloat } from '@/components/dev-float';
+import { DocumentSheetProvider } from '@/components/document-sheet';
 
 const fontSans = FontSans({
   subsets: ['latin'],
@@ -51,11 +52,13 @@ export default async function RootLayout({
           <UserProvider initialUser={initialUser}>
             <DifyConfigProvider>
               <QueryProvider>
-                <div className="flex min-h-screen flex-col">
-                  <GlobalNavbar />
-                  <main className="flex-1">{children}</main>
-                </div>
-                <DevFloat />
+                <DocumentSheetProvider>
+                  <div className="flex min-h-screen flex-col">
+                    <GlobalNavbar />
+                    <main className="flex-1">{children}</main>
+                  </div>
+                  <DevFloat />
+                </DocumentSheetProvider>
               </QueryProvider>
             </DifyConfigProvider>
           </UserProvider>
