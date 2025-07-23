@@ -229,7 +229,7 @@ function BasicInfoCard({ document }: { document: ExtendedDocumentDetails }) {
       <CardContent className="space-y-4">
         {/* 文档名称 */}
         <div className="flex items-start justify-between">
-          <span className="text-sm text-muted-foreground">文档名称</span>
+          <span className="text-sm text-muted-foreground w-20 flex-shrink-0">文档名称</span>
           <span className="text-sm font-medium text-right max-w-[200px] break-words">
             {document.name}
           </span>
@@ -237,7 +237,7 @@ function BasicInfoCard({ document }: { document: ExtendedDocumentDetails }) {
         
         {/* 文档ID */}
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">文档ID</span>
+          <span className="text-sm text-muted-foreground w-20 flex-shrink-0">文档ID</span>
           <div className="flex items-center gap-2">
             <code className="text-xs bg-muted px-2 py-1 rounded font-mono">
               {document.id.slice(0, 8)}...{document.id.slice(-4)}
@@ -279,14 +279,14 @@ function BasicInfoCard({ document }: { document: ExtendedDocumentDetails }) {
               
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">文件类型</span>
+                  <span className="text-sm text-muted-foreground w-20 flex-shrink-0">文件类型</span>
                   <Badge variant="outline" className="text-xs">
                     {document.upload_file.extension?.toUpperCase() || document.doc_form}
                   </Badge>
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">文件大小</span>
+                  <span className="text-sm text-muted-foreground w-20 flex-shrink-0">文件大小</span>
                   <span className="text-sm font-medium">
                     {formatFileSize(document.upload_file.size)}
                   </span>
@@ -294,7 +294,7 @@ function BasicInfoCard({ document }: { document: ExtendedDocumentDetails }) {
                 
                 {uploadFile && (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">MIME类型</span>
+                    <span className="text-sm text-muted-foreground w-20 flex-shrink-0">MIME类型</span>
                     <code className="text-xs bg-muted px-2 py-1 rounded">
                       {uploadFile.mime_type}
                     </code>
@@ -309,7 +309,7 @@ function BasicInfoCard({ document }: { document: ExtendedDocumentDetails }) {
         
         {/* 创建时间 */}
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">创建时间</span>
+          <span className="text-sm text-muted-foreground w-20 flex-shrink-0">创建时间</span>
           <span className="text-sm font-medium">
             {format(new Date(document.created_at * 1000), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
           </span>
@@ -317,7 +317,7 @@ function BasicInfoCard({ document }: { document: ExtendedDocumentDetails }) {
         
         {/* 创建者 */}
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">创建者</span>
+          <span className="text-sm text-muted-foreground w-20 flex-shrink-0">创建者</span>
           <span className="text-sm font-medium">{document.created_by}</span>
         </div>
       </CardContent>
@@ -347,7 +347,7 @@ function ProcessingStatusCard({ document }: { document: ExtendedDocumentDetails 
       <CardContent className="space-y-4">
         {/* 当前状态 */}
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">当前状态</span>
+          <span className="text-sm text-muted-foreground w-20 flex-shrink-0">当前状态</span>
           <div className="flex items-center gap-2">
             <StatusIcon 
               className={`h-4 w-4 ${status?.color || 'text-muted-foreground'} ${
@@ -363,7 +363,7 @@ function ProcessingStatusCard({ document }: { document: ExtendedDocumentDetails 
         {/* 处理开始时间 */}
         {document.processing_started_at && (
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">开始时间</span>
+            <span className="text-sm text-muted-foreground w-20 flex-shrink-0">开始时间</span>
             <span className="text-sm font-medium">
               {format(new Date(document.processing_started_at * 1000), 'MM-dd HH:mm')}
             </span>
@@ -373,7 +373,7 @@ function ProcessingStatusCard({ document }: { document: ExtendedDocumentDetails 
         {/* 处理完成时间 */}
         {document.processing_completed_at && (
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">完成时间</span>
+            <span className="text-sm text-muted-foreground w-20 flex-shrink-0">完成时间</span>
             <span className="text-sm font-medium">
               {format(new Date(document.processing_completed_at * 1000), 'MM-dd HH:mm')}
             </span>
@@ -383,7 +383,7 @@ function ProcessingStatusCard({ document }: { document: ExtendedDocumentDetails 
         {/* 处理时长 */}
         {processingDuration && (
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">处理时长</span>
+            <span className="text-sm text-muted-foreground w-20 flex-shrink-0">处理时长</span>
             <span className="text-sm font-medium">{processingDuration}</span>
           </div>
         )}
@@ -391,7 +391,7 @@ function ProcessingStatusCard({ document }: { document: ExtendedDocumentDetails 
         {/* 错误信息 */}
         {document.error && (
           <div className="space-y-2">
-            <span className="text-sm text-muted-foreground">错误信息</span>
+            <span className="text-sm text-muted-foreground w-20 flex-shrink-0">错误信息</span>
             <div className="p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
               {document.error}
             </div>
@@ -454,7 +454,7 @@ function StatisticsCard({ document }: { document: ExtendedDocumentDetails }) {
           <>
             <Separator className="my-4" />
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">词数统计</span>
+              <span className="text-sm text-muted-foreground w-20 flex-shrink-0">词数统计</span>
               <span className="text-sm font-medium">{formatNumber(document.word_count)}</span>
             </div>
           </>

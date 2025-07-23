@@ -102,7 +102,7 @@ function DocumentBottomActions() {
         <div className="border-t bg-background/95 backdrop-blur-sm p-4 space-y-2" id="bottom-actions">
             {/* 查看原文 - 第一行 */}
             <Button
-                variant="default"
+                variant="outline"
                 size="lg"
                 className="w-full h-11 text-base font-medium"
                 onClick={handleViewOriginal}
