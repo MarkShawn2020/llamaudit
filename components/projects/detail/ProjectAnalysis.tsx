@@ -247,8 +247,8 @@ export default function ProjectAnalysis({
                             <FileText className="h-4 w-4" />
                             {dataset ? (
                                 <span className="flex items-center gap-2">
-                                    <span>{dataset.document_count} 个文档</span>
-                                    {dataset.document_count > 0 && (
+                                    <span>{allDocuments.length} 个文档</span>
+                                    {allDocuments.length > 0 && (
                                         <span className="w-2 h-2 bg-green-500 rounded-full inline-block" />
                                     )}
                                 </span>

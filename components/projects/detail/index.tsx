@@ -34,7 +34,7 @@ import {useAtom} from 'jotai';
 import {
   projectTiobItemsAtomFamily
 } from '@/components/projects/detail/project-atoms';
-import { useDatasetDetails, useProjectDataset } from '@/hooks/use-dify-dataset';
+import { useDatasetDetails, useDatasetDocuments, useProjectDataset } from '@/hooks/use-dify-dataset';
 import { updateProjectDatasetId } from '@/lib/api/project-api';
 import { Badge } from '@/components/ui/badge';
 
@@ -62,6 +62,15 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
         error: datasetError, 
         isLoading: isLoadingDataset
     } = useDatasetDetails(project?.datasetId, !!project?.datasetId);
+
+    // 查询文档列表以获取实时文档数量
+    const { 
+        data: documentsResponse 
+    } = useDatasetDocuments(project?.datasetId, !!project?.datasetId && !!dataset);
+    
+    // 获取实时文档数量
+    const allDocuments = documentsResponse?.pages?.flatMap(page => page.data) || [];
+    const realTimeDocumentCount = allDocuments.length;
 
     // logger.info('ProjectDetail', {projectId, project});
 
@@ -234,7 +243,7 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
                                         已连接
                                     </Badge>
                                     <span className="text-sm font-medium text-muted-foreground">
-                                        {dataset.document_count} 文档
+                                        {realTimeDocumentCount} 文档
                                     </span>
                                 </>
                             ) : datasetError ? (

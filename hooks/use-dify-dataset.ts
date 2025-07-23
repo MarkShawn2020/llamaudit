@@ -29,7 +29,7 @@ export function useDatasetDetails(datasetId: string | undefined, enabled = true)
     queryKey: QUERY_KEYS.datasetDetails(datasetId || ''),
     queryFn: () => api.getDatasetDetails(datasetId!),
     enabled: enabled && !!datasetId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 2 * 60 * 1000, // 减少到2分钟，与文档列表保持一致
     retry: (failureCount, error) => {
       // 如果是404错误（知识库不存在），不重试
       if (error.message.includes('404')) {
@@ -114,9 +114,12 @@ export function useCreateDocumentByFile() {
     }) => api.createDocumentByFile(datasetId, file, options),
     onSuccess: (data, variables) => {
       toast.success('文档上传成功，正在处理中...');
-      // 刷新文档列表
+      // 同时刷新文档列表和知识库详情，确保数据一致性
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.datasetDocuments(variables.datasetId)
+      });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.datasetDetails(variables.datasetId)
       });
     },
     onError: (error: Error) => {
@@ -135,9 +138,12 @@ export function useDeleteDocument() {
       api.deleteDocument(datasetId, documentId),
     onSuccess: (_, variables) => {
       toast.success('文档删除成功');
-      // 刷新文档列表
+      // 同时刷新文档列表和知识库详情，确保数据一致性
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.datasetDocuments(variables.datasetId)
+      });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.datasetDetails(variables.datasetId)
       });
     },
     onError: (error: Error) => {
