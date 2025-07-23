@@ -99,40 +99,59 @@ function DocumentSheetHeaderContent() {
 }
 
 /**
- * 文档操作工具栏
+ * 文档信息条
  */
-function DocumentActions() {
+function DocumentInfoStrip() {
   const { datasetId, documentId } = useDocumentSheet();
   const { data: document } = useDocumentDetails(datasetId || undefined, documentId || undefined);
+  const { data: uploadFile } = useDocumentUploadFile(datasetId || undefined, documentId || undefined);
+  
+  return (
+    <div className="px-6 py-3 border-b bg-muted/30" id={"doc-info"}>
+      {/* Simplified document info strip */}
+      <div className="flex items-center gap-4 text-sm">
+        {document && (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <FileText className="h-4 w-4" />
+            <span>{document.doc_form || 'Document'}</span>
+          </div>
+        )}
+        {uploadFile && (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Badge variant="outline" className="text-xs px-2 py-0.5">
+              {uploadFile.extension.toUpperCase()}
+            </Badge>
+            <span className="text-xs">{(uploadFile.size / 1024).toFixed(1)}KB</span>
+          </div>
+        )}
+        {document && (
+          <div className="text-xs text-muted-foreground ml-auto">
+            {new Date(document.created_at * 1000).toLocaleDateString('zh-CN')}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 底部操作区域 - 固定在侧边栏底部的单列满占布局
+ */
+function DocumentBottomActions() {
+  const { datasetId, documentId } = useDocumentSheet();
   const { data: uploadFile, isLoading: isLoadingUploadFile } = useDocumentUploadFile(datasetId || undefined, documentId || undefined);
   const { config } = useDifyConfig();
   
   // 查看原文
   const handleViewOriginal = () => {
-    console.log('Upload file data:', uploadFile);
-    console.log('Config baseUrl:', config.baseUrl);
-    
     if (uploadFile?.url) {
       let previewUrl = uploadFile.url;
-      
-      // 调试日志
-      console.log('Original URL:', previewUrl);
-      
-      // 如果URL是相对路径，需要拼接文件服务的base URL
       if (previewUrl.startsWith('/')) {
-        // 从API baseUrl提取文件服务的baseUrl
-        // 例如: https://api.dify.ai/v1 -> https://api.dify.ai
-        // 或者: http://dify.cs-magic.cn/v1 -> http://dify.cs-magic.cn
         const fileBaseUrl = config.baseUrl.replace('/v1', '');
         previewUrl = `${fileBaseUrl}${previewUrl}`;
-        console.log('File service URL:', previewUrl);
       }
-      
-      // 尝试打开URL
-      console.log('Opening URL:', previewUrl);
       window.open(previewUrl, '_blank');
     } else {
-      console.error('Upload file URL not available:', uploadFile);
       alert('原文链接不可用');
     }
   };
@@ -140,15 +159,12 @@ function DocumentActions() {
   // 下载文档
   const handleDownload = () => {
     if (uploadFile?.download_url) {
-      // 确保下载URL是完整的
       let downloadUrl = uploadFile.download_url;
       if (downloadUrl.startsWith('/')) {
-        // 从API baseUrl提取文件服务的baseUrl
         const fileBaseUrl = config.baseUrl.replace('/v1', '');
         downloadUrl = `${fileBaseUrl}${downloadUrl}`;
       }
       
-      // 创建隐藏的下载链接
       const link = window.document.createElement('a');
       link.href = downloadUrl;
       link.download = uploadFile.name || '文档';
@@ -161,44 +177,40 @@ function DocumentActions() {
   };
   
   return (
-    <div className="px-6 py-4 border-b bg-background" id={"doc-actions"}>
-      {/* Clean action bar with generous spacing */}
-      <div className="flex items-center justify-end gap-4">
-        {/* Primary action - prominent and clear */}
-        <Button 
-          variant="default" 
-          size="default" 
-          className="h-10 px-6 font-medium shadow-sm"
-          onClick={handleViewOriginal}
-          disabled={isLoadingUploadFile || !uploadFile?.url}
-        >
-          <ExternalLink className="h-4 w-4 mr-2" />
-          查看原文
-        </Button>
-        
-        {/* Secondary actions - subtle but accessible */}
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="default"
-            className="h-10 px-4 text-muted-foreground border-muted-foreground/20 hover:border-muted-foreground/40 hover:text-foreground hover:bg-muted/50"
-            onClick={handleDownload}
-            disabled={isLoadingUploadFile || !uploadFile?.download_url}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            导出
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            size="default"
-            className="h-10 px-4 text-muted-foreground border-muted-foreground/20 hover:border-red-300 hover:text-red-600 hover:bg-red-50"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            删除
-          </Button>
-        </div>
-      </div>
+    <div className="border-t bg-background/95 backdrop-blur-sm p-4 space-y-2" id="bottom-actions">
+      {/* 查看原文 - 第一行 */}
+      <Button 
+        variant="default" 
+        size="lg" 
+        className="w-full h-11 text-base font-medium"
+        onClick={handleViewOriginal}
+        disabled={isLoadingUploadFile || !uploadFile?.url}
+      >
+        <ExternalLink className="h-4 w-4 mr-2" />
+        查看原文
+      </Button>
+      
+      {/* 导出文档 - 第二行 */}
+      <Button 
+        variant="outline" 
+        size="lg"
+        className="w-full h-11 text-base font-medium"
+        onClick={handleDownload}
+        disabled={isLoadingUploadFile || !uploadFile?.download_url}
+      >
+        <Download className="h-4 w-4 mr-2" />
+        导出文档
+      </Button>
+      
+      {/* 删除文档 - 第三行 */}
+      <Button 
+        variant="outline" 
+        size="lg"
+        className="w-full h-11 text-base font-medium text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 hover:text-red-700"
+      >
+        <Trash2 className="h-4 w-4 mr-2" />
+        删除文档
+      </Button>
     </div>
   );
 }
@@ -387,15 +399,18 @@ export default function DocumentSheet() {
         {hasValidData ? (
           <DocumentSheetErrorBoundary>
             <DocumentSheetHeaderContent />
-            <DocumentActions />
+            <DocumentInfoStrip />
             
             <div className="flex-1 overflow-hidden">
               <ScrollArea className="h-full">
-                <div className="p-6">
+                <div className="p-6 pb-0">
                   <DocumentTabsContent />
                 </div>
               </ScrollArea>
             </div>
+            
+            {/* Bottom Actions Area - Fixed Position */}
+            <DocumentBottomActions />
           </DocumentSheetErrorBoundary>
         ) : (
           <div className="flex items-center justify-center h-full">
