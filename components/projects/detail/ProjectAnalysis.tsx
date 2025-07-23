@@ -48,6 +48,7 @@ import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 
 export default function ProjectAnalysis({
     projectId, 
@@ -69,13 +70,26 @@ export default function ProjectAnalysis({
         refetch: refetchDataset
     } = useDatasetDetails(project?.datasetId, !!project?.datasetId);
 
-    // 查询知识库文档
+    // 查询知识库文档（使用无限查询）
     const { 
         data: documentsResponse, 
         error: documentsError, 
         isLoading: isLoadingDocuments,
-        refetch: refetchDocuments
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage
     } = useDatasetDocuments(project?.datasetId, !!project?.datasetId && !!dataset);
+    
+    // 展平所有页面的数据
+    const allDocuments = documentsResponse?.pages?.flatMap(page => page.data) || [];
+    
+    // 自动加载所有数据
+    useEffect(() => {
+        // 如果有数据且还有更多页，自动加载
+        if (documentsResponse && hasNextPage && !isFetchingNextPage && !isLoadingDocuments) {
+            fetchNextPage();
+        }
+    }, [documentsResponse, hasNextPage, isFetchingNextPage, isLoadingDocuments, fetchNextPage]);
 
     // 上传文档到知识库
     const createDocument = useCreateDocumentByFile();
@@ -88,8 +102,8 @@ export default function ProjectAnalysis({
 
     // 监听文档状态变化，显示完成通知
     useEffect(() => {
-        if (documentsResponse?.data) {
-            const currentDocs = documentsResponse.data;
+        if (allDocuments.length > 0) {
+            const currentDocs = allDocuments;
             const previousDocs = previousDocsRef.current;
 
             // 检查状态变化
@@ -118,7 +132,7 @@ export default function ProjectAnalysis({
             // 更新previous docs
             previousDocsRef.current = currentDocs;
         }
-    }, [documentsResponse?.data]);
+    }, [allDocuments]);
 
     // 触发文件选择
     const triggerFileUpload = () => {
@@ -314,7 +328,7 @@ export default function ProjectAnalysis({
                     <div className="text-center py-12 text-destructive">
                         加载失败，请重试
                     </div>
-                ) : !documentsResponse?.data?.length ? (
+                ) : !allDocuments.length ? (
                     // 空状态：整个区域都是上传区域
                     <div 
                         className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 cursor-pointer hover:border-primary/50 hover:bg-muted/25 transition-all group"
@@ -344,7 +358,7 @@ export default function ProjectAnalysis({
                     // 有文档状态：显示网格列表 + 底部上传提示
                     <div className="space-y-4 w-full">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 w-full">
-                            {documentsResponse?.data?.map((doc) => (
+                            {allDocuments.map((doc) => (
                                 <div key={doc.id} className="relative group border rounded-lg p-3 hover:bg-muted/20 transition-colors min-w-0">
                                     <div className="flex items-start gap-3">
                                         <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
@@ -389,6 +403,27 @@ export default function ProjectAnalysis({
                                 </div>
                             ))}
                         </div>
+
+                        {/* 加载更多按钮 */}
+                        {hasNextPage && (
+                            <div className="flex justify-center">
+                                <Button 
+                                    variant="outline" 
+                                    onClick={() => fetchNextPage()}
+                                    disabled={isFetchingNextPage}
+                                    className="gap-2"
+                                >
+                                    {isFetchingNextPage ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            加载中...
+                                        </>
+                                    ) : (
+                                        `加载更多文档 (${allDocuments.length} / ${dataset?.document_count || '?'})`
+                                    )}
+                                </Button>
+                            </div>
+                        )}
 
                         {/* 继续上传区域 */}
                         <div 

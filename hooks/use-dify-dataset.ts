@@ -61,21 +61,30 @@ export function useCreateDataset() {
 export function useDatasetDocuments(datasetId: string | undefined, enabled = true) {
   const api = useDifyDatasetAPI();
 
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: QUERY_KEYS.datasetDocuments(datasetId || ''),
-    queryFn: () => api.getDatasetDocuments(datasetId!),
+    queryFn: ({ pageParam = 1 }) => api.getDatasetDocuments(datasetId!, pageParam, 50), // 增加每页数量到50
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages, lastPageParam) => {
+      // 如果当前页的数据数量小于限制，说明没有更多数据了
+      if (lastPage.data.length < 50) {
+        return undefined;
+      }
+      return (lastPageParam as number) + 1;
+    },
     enabled: enabled && !!datasetId,
     staleTime: 2 * 60 * 1000, // 2 minutes
     refetchInterval: (query) => {
       // 如果有文档正在处理，则更频繁地轮询
-      const data = query.state.data;
+      const pages = query.state.data?.pages || [];
+      const allDocs = pages.flatMap(page => page.data);
       const processingStatuses = ['waiting', 'queuing', 'indexing', 'splitting', 'processing'];
-      const hasProcessingDocs = data?.data?.some((doc: DifyDocument) => 
+      const hasProcessingDocs = allDocs.some((doc: DifyDocument) => 
         processingStatuses.includes(doc.indexing_status)
       );
       
       // 对于刚上传的文档，在前2分钟内保持更频繁的轮询
-      const recentDocs = data?.data?.some((doc: DifyDocument) => {
+      const recentDocs = allDocs.some((doc: DifyDocument) => {
         const createdTime = new Date(doc.created_at || 0).getTime();
         const now = Date.now();
         const twoMinutesAgo = now - 2 * 60 * 1000;
