@@ -58,7 +58,7 @@ export default async function RootLayout({
                     <GlobalNavbar />
                     <main className="flex-1">{children}</main>
                   </div>
-                  <DevFloat />
+                  {/*<DevFloat />*/}
                   <SimpleProjectAwareAssistant />
                 </DocumentSheetProvider>
               </QueryProvider>

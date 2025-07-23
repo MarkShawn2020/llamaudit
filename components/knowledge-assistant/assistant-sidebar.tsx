@@ -25,6 +25,19 @@ export function AssistantSidebar({
   const [isMinimized, setIsMinimized] = useState(false);
   const [showQuickQuestions, setShowQuickQuestions] = useState(messages.length === 0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  console.log('🧩 AssistantSidebar 渲染:', {
+    isOpen,
+    messagesLength: messages.length,
+    isLoading,
+    error,
+    isMinimized
+  });
+  
+  // 监听 isOpen 变化
+  useEffect(() => {
+    console.log('🧩 AssistantSidebar isOpen 状态变化:', isOpen);
+  }, [isOpen]);
 
   // 自动滚动到底部
   useEffect(() => {
@@ -71,7 +84,12 @@ export function AssistantSidebar({
     URL.revokeObjectURL(url);
   };
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    console.log('🧩 AssistantSidebar 不显示 - isOpen 为 false');
+    return null;
+  }
+  
+  console.log('🧩 AssistantSidebar 开始渲染 - isOpen 为 true');
 
   return (
     <>

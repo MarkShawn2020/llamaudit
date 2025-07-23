@@ -8,9 +8,10 @@ import { getProject } from '@/lib/actions/project-actions';
 import { AssistantConfig } from '@/components/knowledge-assistant/types';
 
 export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const projectId = searchParams.get('projectId');
+  
   try {
-    const { searchParams } = new URL(request.url);
-    const projectId = searchParams.get('projectId');
 
     if (!projectId) {
       return NextResponse.json(
@@ -79,8 +80,17 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Assistant config API error:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      projectId: projectId,
+    });
+    
     return NextResponse.json(
-      { error: '获取助手配置失败' },
+      { 
+        error: '获取助手配置失败',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }

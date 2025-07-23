@@ -15,12 +15,50 @@ export function FloatingAssistantButton({
   hasNotification = false,
   disabled = false,
 }: FloatingButtonProps) {
+  console.log('🔵 FloatingAssistantButton 渲染:', { 
+    onClickType: typeof onClick, 
+    hasNotification, 
+    disabled,
+    onClickFunction: onClick?.toString?.()?.substring(0, 100) + '...'
+  });
+  
+  const handleClick = (e: React.MouseEvent) => {
+    console.log('🖱️ === FloatingButton handleClick 开始 ===');
+    console.log('🖱️ 事件对象:', e);
+    console.log('🖱️ disabled 状态:', disabled);
+    console.log('🖱️ onClick 函数:', typeof onClick, onClick);
+    
+    // 阻止事件冒泡和默认行为
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (disabled) {
+      console.log('⚠️ 按钮被禁用，不执行点击');
+      return;
+    }
+    
+    if (typeof onClick !== 'function') {
+      console.error('❌ onClick 不是一个函数!', typeof onClick);
+      return;
+    }
+    
+    try {
+      console.log('🚀 即将调用 onClick 函数...');
+      const result = onClick();
+      console.log('🚀 onClick 调用完成，返回值:', result);
+    } catch (error) {
+      console.error('❌ onClick 调用异常:', error);
+    }
+    
+    console.log('🖱️ === FloatingButton handleClick 结束 ===');
+  };
+  
   return (
     <div className="fixed bottom-6 right-6 z-50">
       <div className="relative">
         {/* 主按钮 */}
         <Button
-          onClick={onClick}
+          onClick={handleClick}
           disabled={disabled}
           size="lg"
           className={`

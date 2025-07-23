@@ -11,7 +11,7 @@ import {
 } from '@/components/knowledge-assistant/types';
 import { useKnowledgeRetrieval } from './use-knowledge-retrieval';
 import { useSmartChat } from './use-ai-chat';
-import { KnowledgeAPI } from '@/lib/knowledge-api';
+import { SecureKnowledgeAPI } from '@/lib/secure-knowledge-api';
 
 export function useKnowledgeAssistant(config: AssistantConfig): UseKnowledgeAssistantReturn {
   const [isOpen, setIsOpen] = useState(false);
@@ -22,20 +22,68 @@ export function useKnowledgeAssistant(config: AssistantConfig): UseKnowledgeAssi
   const knowledgeRetrieval = useKnowledgeRetrieval(config);
   const smartChat = useSmartChat(config);
   const lastMessageRef = useRef<ChatMessage | null>(null);
+  
+  console.log('🔄 useKnowledgeAssistant hook 初始化:', {
+    isOpen,
+    messagesLength: messages.length,
+    isLoading,
+    error,
+    configDatasetId: config?.datasetId
+  });
+  
+  // 监听 isOpen 状态变化
+  useEffect(() => {
+    console.log('🔄 isOpen 状态变化:', isOpen);
+  }, [isOpen]);
+  
+  // 监听 messages 状态变化
+  useEffect(() => {
+    console.log('🔄 messages 状态变化:', messages.length);
+  }, [messages]);
+  
+  // 监听 error 状态变化
+  useEffect(() => {
+    console.log('🔄 error 状态变化:', error);
+  }, [error]);
 
   // 打开助手
   const openAssistant = useCallback(() => {
-    setIsOpen(true);
-    setError(null);
-  }, []);
+    console.log('🔄 === useKnowledgeAssistant.openAssistant 调用开始 ===');
+    console.log('🔄 调用前 isOpen 状态:', isOpen);
+    
+    try {
+      setIsOpen(true);
+      console.log('🔄 setIsOpen(true) 调用完成');
+      
+      setError(null);
+      console.log('🔄 setError(null) 调用完成');
+      
+      // 使用 setTimeout 检查状态是否更新
+      setTimeout(() => {
+        console.log('🔄 openAssistant 后延迟检查 isOpen:', isOpen);
+      }, 0);
+      
+    } catch (error) {
+      console.error('❌ openAssistant 内部错误:', error);
+    }
+    
+    console.log('🔄 === useKnowledgeAssistant.openAssistant 调用结束 ===');
+  }, [isOpen]);
 
   // 关闭助手
   const closeAssistant = useCallback(() => {
+    console.log('❌ === useKnowledgeAssistant.closeAssistant 调用开始 ===');
+    console.log('❌ 调用前 isOpen 状态:', isOpen);
+    
     setIsOpen(false);
+    console.log('❌ setIsOpen(false) 调用完成');
+    
     // 取消正在进行的请求
     knowledgeRetrieval.cancelRequest?.();
     smartChat.cancelRequest?.();
-  }, [knowledgeRetrieval, smartChat]);
+    
+    console.log('❌ === useKnowledgeAssistant.closeAssistant 调用结束 ===');
+  }, [knowledgeRetrieval, smartChat, isOpen]);
 
   // 生成消息ID
   const generateMessageId = useCallback(() => {
@@ -222,62 +270,78 @@ export function useKnowledgeAssistant(config: AssistantConfig): UseKnowledgeAssi
 }
 
 /**
- * 智能助手配置 Hook
+ * 智能助手配置 Hook - 项目感知版本
  */
 export function useAssistantConfig(initialConfig: Partial<AssistantConfig>) {
-  const [config, setConfig] = useState<AssistantConfig>({
-    datasetId: process.env.NEXT_PUBLIC_DIFY_DATASET_ID || '',
-    difyApiKey: process.env.NEXT_PUBLIC_DIFY_API_KEY || '',
-    difyBaseUrl: process.env.NEXT_PUBLIC_DIFY_BASE_URL || 'https://api.dify.ai',
-    openRouterApiKey: process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || '',
-    aiModel: 'claude-3-haiku',
-    maxContextLength: 4000,
-    retrievalTopK: 5,
-    scoreThreshold: 0.3,
-    ...initialConfig,
+  // 使用传入的配置，而不是环境变量
+  const [config, setConfig] = useState<AssistantConfig>(() => {
+    const defaultConfig: AssistantConfig = {
+      datasetId: '',
+      difyApiKey: 'server-side-configured',
+      difyBaseUrl: 'https://api.dify.ai/v1',
+      openRouterApiKey: 'server-side-configured',
+      aiModel: 'deepseek-chat',
+      maxContextLength: 4000,
+      retrievalTopK: 5,
+      scoreThreshold: 0.3,
+    };
+    
+    return { ...defaultConfig, ...initialConfig };
   });
+
+  // 监听initialConfig变化并更新配置
+  useEffect(() => {
+    if (Object.keys(initialConfig).length > 0) {
+      setConfig(prev => ({ ...prev, ...initialConfig }));
+    }
+  }, [initialConfig]);
 
   const updateConfig = useCallback((updates: Partial<AssistantConfig>) => {
     setConfig(prev => ({ ...prev, ...updates }));
   }, []);
 
   const resetConfig = useCallback(() => {
-    setConfig({
-      datasetId: process.env.NEXT_PUBLIC_DIFY_DATASET_ID || '',
-      difyApiKey: process.env.NEXT_PUBLIC_DIFY_API_KEY || '',
-      difyBaseUrl: process.env.NEXT_PUBLIC_DIFY_BASE_URL || 'https://api.dify.ai',
-      openRouterApiKey: process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || '',
-      aiModel: 'claude-3-haiku',
+    const defaultConfig: AssistantConfig = {
+      datasetId: '',
+      difyApiKey: 'server-side-configured',
+      difyBaseUrl: 'https://api.dify.ai/v1',
+      openRouterApiKey: 'server-side-configured',
+      aiModel: 'deepseek-chat',
       maxContextLength: 4000,
       retrievalTopK: 5,
       scoreThreshold: 0.3,
-      ...initialConfig,
-    });
+    };
+    
+    setConfig({ ...defaultConfig, ...initialConfig });
   }, [initialConfig]);
 
   const validateConfig = useCallback((): { isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
 
-    if (!config.datasetId) {
-      errors.push('数据集ID不能为空');
+    // 核心必需配置
+    if (!config.datasetId || config.datasetId.trim() === '') {
+      errors.push('项目数据集ID不能为空');
     }
 
-    if (!config.difyApiKey) {
-      errors.push('Dify API密钥不能为空');
-    }
-
-    if (!config.difyBaseUrl) {
+    if (!config.difyBaseUrl || config.difyBaseUrl.trim() === '') {
       errors.push('Dify API地址不能为空');
     }
 
-    if (!config.openRouterApiKey) {
-      errors.push('OpenRouter API密钥不能为空');
-    }
-
-    if (!config.aiModel) {
+    if (!config.aiModel || config.aiModel.trim() === '') {
       errors.push('AI模型不能为空');
     }
 
+    // API密钥在服务端代理架构中不需要验证（服务端处理）
+    // 只检查是否有占位符即可
+    if (!config.difyApiKey) {
+      errors.push('Dify API配置缺失');
+    }
+
+    if (!config.openRouterApiKey) {
+      errors.push('AI API配置缺失');
+    }
+
+    // 数值范围验证
     if (config.maxContextLength && config.maxContextLength < 100) {
       errors.push('最大上下文长度不能少于100');
     }
