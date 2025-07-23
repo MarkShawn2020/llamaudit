@@ -28,7 +28,7 @@ export function adaptDifyConfigToAssistantConfig(difyConfig: DifyConfig): Assist
     datasetId: datasetId,
     difyApiKey: difyConfig.datasetApiKey,
     difyBaseUrl: difyConfig.baseUrl,
-    openRouterApiKey: process.env.DEEPSEEK_API_KEY || '', // 使用DeepSeek API key
+    openRouterApiKey: 'secure-server-side', // 服务端安全处理，不需要在客户端配置
     aiModel: 'deepseek-chat', // DeepSeek模型
     maxContextLength: 4000,
     retrievalTopK: 5,
@@ -62,9 +62,9 @@ export function validateAssistantConfig(config: AssistantConfig): {
     errors.push('Dify API 地址缺失');
   }
 
-  if (!config.openRouterApiKey) {
+  if (!config.openRouterApiKey || config.openRouterApiKey === '') {
     missingFields.push('openRouterApiKey');
-    errors.push('需要配置 OpenRouter 环境变量');
+    errors.push('AI API 配置缺失，请检查服务端环境变量');
   }
 
   return {
@@ -85,7 +85,7 @@ export function getDefaultAssistantConfig(): AssistantConfig {
     datasetId: datasetId,
     difyApiKey: datasetApiKey,
     difyBaseUrl: process.env.NEXT_PUBLIC_DIFY_API_URL || 'https://api.dify.ai/v1',
-    openRouterApiKey: process.env.DEEPSEEK_API_KEY || '',
+    openRouterApiKey: 'secure-server-side', // 服务端安全处理
     aiModel: 'deepseek-chat',
     maxContextLength: 4000,
     retrievalTopK: 5,

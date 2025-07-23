@@ -3,9 +3,9 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
-import { OpenRouterAPI, buildMessages, getModelConfig } from '@/lib/openrouter-api';
-import { DeepSeekAPIAdapter } from '@/lib/deepseek-api-adapter';
-import { KnowledgeAPI } from '@/lib/knowledge-api';
+import { SecureChatAPI } from '@/lib/secure-chat-api';
+import { buildMessages } from '@/lib/openrouter-api';
+import { SecureKnowledgeAPI } from '@/lib/secure-knowledge-api';
 import { 
   OpenRouterMessage,
   UseAIChatReturn,
@@ -17,16 +17,12 @@ export function useAIChat(config: AssistantConfig): UseAIChatReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const apiRef = useRef<OpenRouterAPI | DeepSeekAPIAdapter | undefined>(undefined);
+  const apiRef = useRef<SecureChatAPI | undefined>(undefined);
   const abortControllerRef = useRef<AbortController | undefined>(undefined);
 
-  // 初始化API实例 - 根据模型类型选择API
+  // 初始化安全API实例 - 不需要API密钥，通过服务端代理
   if (!apiRef.current) {
-    if (config.aiModel === 'deepseek-chat') {
-      apiRef.current = new DeepSeekAPIAdapter(config.openRouterApiKey);
-    } else {
-      apiRef.current = new OpenRouterAPI(config.openRouterApiKey);
-    }
+    apiRef.current = new SecureChatAPI();
   }
 
   // 发送消息到AI
@@ -47,39 +43,17 @@ export function useAIChat(config: AssistantConfig): UseAIChatReturn {
     setError(null);
 
     try {
-      let modelConfig;
-      let request;
-      
-      if (config.aiModel === 'deepseek-chat') {
-        // DeepSeek 配置
-        modelConfig = { temperature: 0.7, max_tokens: 1500 };
-        request = {
-          model: config.aiModel,
-          messages,
-          ...modelConfig,
-          max_tokens: config.maxContextLength || modelConfig.max_tokens,
-        };
-        
-        // 检查消息长度
-        const lengthCheck = DeepSeekAPIAdapter.checkMessageLength(messages, request.max_tokens);
-        if (!lengthCheck.withinLimit) {
-          console.warn('Message length exceeds limit:', lengthCheck);
-        }
-      } else {
-        // OpenRouter 配置
-        modelConfig = getModelConfig(config.aiModel);
-        request = {
-          model: config.aiModel,
-          messages,
-          ...modelConfig,
-          max_tokens: config.maxContextLength || modelConfig.max_tokens,
-        };
-        
-        // 检查消息长度
-        const lengthCheck = OpenRouterAPI.checkMessageLength(messages, request.max_tokens);
-        if (!lengthCheck.withinLimit) {
-          console.warn('Message length exceeds limit:', lengthCheck);
-        }
+      const request = {
+        model: config.aiModel,
+        messages,
+        temperature: 0.7,
+        max_tokens: config.maxContextLength || 1500,
+      };
+
+      // 检查消息长度
+      const lengthCheck = SecureChatAPI.checkMessageLength(messages, request.max_tokens);
+      if (!lengthCheck.withinLimit) {
+        console.warn('Message length exceeds limit:', lengthCheck);
       }
 
       let result;
@@ -171,7 +145,7 @@ export function useSmartChat(config: AssistantConfig) {
     const { maxHistoryLength = 10 } = options || {};
 
     // 格式化知识上下文
-    const context = KnowledgeAPI.formatRetrievalContext(retrievalResult, {
+    const context = SecureKnowledgeAPI.formatRetrievalContext(retrievalResult, {
       includeMetadata: true,
       maxLength: config.maxContextLength ? Math.floor(config.maxContextLength * 0.6) : 2400,
     });
@@ -219,9 +193,7 @@ export function useSmartChat(config: AssistantConfig) {
       assistantMessages,
       totalMessages: conversationHistory.length,
       totalCharacters,
-      estimatedTokens: config.aiModel === 'deepseek-chat' 
-        ? DeepSeekAPIAdapter.estimateTokens(conversationHistory.map(m => m.content).join('\n'))
-        : OpenRouterAPI.estimateTokens(conversationHistory.map(m => m.content).join('\n')),
+      estimatedTokens: SecureChatAPI.estimateTokens(conversationHistory.map(m => m.content).join('\n')),
     };
   }, [conversationHistory, config.aiModel]);
 

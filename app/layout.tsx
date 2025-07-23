@@ -11,7 +11,7 @@ import { CozeChat } from '@/components/CozeChat';
 import { getUser } from '@/lib/db/queries';
 import { DevFloat } from '@/components/dev-float';
 import { DocumentSheetProvider } from '@/components/document-sheet';
-import { SafeKnowledgeAssistant } from '@/components/SafeKnowledgeAssistant';
+import { SimpleProjectAwareAssistant } from '@/components/ProjectAwareKnowledgeAssistant';
 
 const fontSans = FontSans({
   subsets: ['latin'],
@@ -59,7 +59,7 @@ export default async function RootLayout({
                     <main className="flex-1">{children}</main>
                   </div>
                   <DevFloat />
-                  <SafeKnowledgeAssistant />
+                  <SimpleProjectAwareAssistant />
                 </DocumentSheetProvider>
               </QueryProvider>
             </DifyConfigProvider>

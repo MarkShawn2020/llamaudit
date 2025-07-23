@@ -3,7 +3,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
-import { KnowledgeAPI, getDefaultRetrievalConfig } from '@/lib/knowledge-api';
+import { SecureKnowledgeAPI, getDefaultRetrievalConfig } from '@/lib/secure-knowledge-api';
 import { 
   DifyRetrievalRequest, 
   DifyRetrievalResponse,
@@ -15,12 +15,12 @@ export function useKnowledgeRetrieval(config: AssistantConfig): UseKnowledgeRetr
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const apiRef = useRef<KnowledgeAPI | undefined>(undefined);
+  const apiRef = useRef<SecureKnowledgeAPI | undefined>(undefined);
   const abortControllerRef = useRef<AbortController | undefined>(undefined);
 
-  // 初始化API实例
+  // 初始化安全API实例 - 不需要API密钥，通过服务端代理
   if (!apiRef.current) {
-    apiRef.current = new KnowledgeAPI(config.difyBaseUrl, config.difyApiKey);
+    apiRef.current = new SecureKnowledgeAPI();
   }
 
   // 检索知识库
@@ -61,7 +61,7 @@ export function useKnowledgeRetrieval(config: AssistantConfig): UseKnowledgeRetr
       }
 
       // 过滤和排序结果
-      const filteredResult = KnowledgeAPI.filterAndSortResults(result.data, {
+      const filteredResult = SecureKnowledgeAPI.filterAndSortResults(result.data, {
         minScore: config.scoreThreshold || 0,
         maxResults: config.retrievalTopK || 5,
         deduplicateByDocument: true,
