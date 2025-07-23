@@ -256,16 +256,16 @@ function SegmentItem({
                 #{segment.position}
               </Badge>
               
-              <div className="flex items-center gap-1">
-                <StatusIcon 
-                  className={`h-3 w-3 ${status?.color || 'text-muted-foreground'} ${
-                    status?.animate ? 'animate-spin' : ''
-                  }`} 
-                />
-                <Badge variant={status?.variant || 'secondary'} className="text-xs">
-                  {status?.label || segment.status}
-                </Badge>
-              </div>
+              {/*<div className="flex items-center gap-1">*/}
+              {/*  <StatusIcon*/}
+              {/*    className={`h-3 w-3 ${status?.color || 'text-muted-foreground'} ${*/}
+              {/*      status?.animate ? 'animate-spin' : ''*/}
+              {/*    }`}*/}
+              {/*  />*/}
+              {/*  <Badge variant={status?.variant || 'secondary'} className="text-xs">*/}
+              {/*    {status?.label || segment.status}*/}
+              {/*  </Badge>*/}
+              {/*</div>*/}
             </div>
           </div>
 
@@ -403,21 +403,23 @@ function SegmentsList({
 
   if (segments.length === 0) {
     return (
-      <div className="text-center py-12">
-        <Hash className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-muted-foreground">暂无分段数据</h3>
-        <p className="text-sm text-muted-foreground mt-2">
-          文档正在处理中，分段信息将稍后显示
-        </p>
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <Hash className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-muted-foreground">暂无分段数据</h3>
+          <p className="text-sm text-muted-foreground mt-2">
+            文档正在处理中，分段信息将稍后显示
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="h-full flex flex-col space-y-4">
       {/* 批量选择头部 */}
       {isBatchMode && (
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2">
             <Checkbox
               checked={selectedSegmentIds.length === segments.length && segments.length > 0}
@@ -431,7 +433,7 @@ function SegmentsList({
       )}
 
       {/* 分段列表 */}
-      <ScrollArea className="h-[600px] w-full" onScrollCapture={handleScroll}>
+      <ScrollArea className="flex-1 w-full min-h-0" onScrollCapture={handleScroll}>
         <div className="space-y-3 pr-4 min-w-0 max-w-full">
           {segments.map((segment, index) => (
             <SegmentItem
@@ -469,9 +471,9 @@ function SegmentsList({
  */
 function DocumentSegmentsLoading() {
   return (
-    <div className="space-y-4">
+    <div className="h-full flex flex-col space-y-6">
       {/* 头部加载状态 */}
-      <div className="space-y-4">
+      <div className="space-y-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <Skeleton className="h-5 w-32" />
           <Skeleton className="h-8 w-20" />
@@ -480,30 +482,32 @@ function DocumentSegmentsLoading() {
       </div>
       
       {/* 分段列表加载状态 */}
-      <div className="space-y-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Card key={i}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-5 w-8" />
-                  <Skeleton className="h-5 w-16" />
+      <div className="flex-1 min-h-0">
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-5 w-8" />
+                    <Skeleton className="h-5 w-16" />
+                  </div>
+                  <Skeleton className="h-6 w-6" />
                 </div>
-                <Skeleton className="h-6 w-6" />
-              </div>
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-              </div>
-              <div className="flex items-center gap-4 mt-3">
-                <Skeleton className="h-3 w-12" />
-                <Skeleton className="h-3 w-16" />
-                <Skeleton className="h-3 w-20" />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+                <div className="flex items-center gap-4 mt-3">
+                  <Skeleton className="h-3 w-12" />
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -514,19 +518,21 @@ function DocumentSegmentsLoading() {
  */
 function DocumentSegmentsError({ error }: { error: Error }) {
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="text-center space-y-4">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
-          <div>
-            <h3 className="text-lg font-semibold text-red-700">加载失败</h3>
-            <p className="text-sm text-muted-foreground mt-2">
-              {error.message || '无法加载分段信息，请稍后重试'}
-            </p>
+    <div className="h-full flex items-center justify-center p-6">
+      <Card className="max-w-md w-full">
+        <CardContent className="pt-6">
+          <div className="text-center space-y-4">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
+            <div>
+              <h3 className="text-lg font-semibold text-red-700">加载失败</h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                {error.message || '无法加载分段信息，请稍后重试'}
+              </p>
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -558,18 +564,20 @@ export default function DocumentSegments({
   }
   
   return (
-    <div className="space-y-6">
+    <div className="h-full flex flex-col space-y-6">
       <SegmentsHeader 
         totalCount={totalCount} 
         onBatchAction={handleBatchAction}
       />
-      <SegmentsList
-        segments={segments}
-        hasNextPage={hasNextPage}
-        isFetchingNextPage={isFetchingNextPage}
-        fetchNextPage={fetchNextPage}
-        onBatchAction={handleBatchAction}
-      />
+      <div className="flex-1 min-h-0">
+        <SegmentsList
+          segments={segments}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          fetchNextPage={fetchNextPage}
+          onBatchAction={handleBatchAction}
+        />
+      </div>
     </div>
   );
 }
