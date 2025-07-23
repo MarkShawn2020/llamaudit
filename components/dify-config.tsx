@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,20 +20,53 @@ import { DifyConfig, DEFAULT_DIFY_CONFIGS } from '@/types/dify-config';
 import { useDifyConfig } from '@/contexts/dify-config-context';
 
 export function DifyConfigComponent() {
+  const params = useParams();
+  const projectId = params?.projectId as string;
   const [isOpen, setIsOpen] = useState(false);
   const { config, setConfig } = useDifyConfig();
   const [workingConfig, setWorkingConfig] = useState<DifyConfig>(config);
   const [customConfig, setCustomConfig] = useState<DifyConfig>({
     baseUrl: '',
-    apiKey: '',
+    apiKey: '', // 保留以兼容类型，但项目级配置不使用
     datasetApiKey: '',
     environment: 'custom' as any
   });
-  const [testingApiKey, setTestingApiKey] = useState(false);
   const [testingDatasetKey, setTestingDatasetKey] = useState(false);
-  const [apiKeyTestResult, setApiKeyTestResult] = useState<{success: boolean; message: string} | null>(null);
   const [datasetKeyTestResult, setDatasetKeyTestResult] = useState<{success: boolean; message: string} | null>(null);
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [projectDifyConfig, setProjectDifyConfig] = useState<any>(null);
   const { toast } = useToast();
+
+  // 加载项目的Dify配置
+  const loadProjectDifyConfig = async () => {
+    if (!projectId) return;
+    
+    try {
+      const response = await fetch(`/api/projects/${projectId}/dify-config`);
+      if (response.ok) {
+        const data = await response.json();
+        setProjectDifyConfig(data);
+        
+        // 如果项目有自定义配置，设置为自定义模式
+        if (data.hasApiKey && data.difyBaseUrl !== 'https://api.dify.ai/v1') {
+          setCustomConfig({
+            baseUrl: data.difyBaseUrl,
+            apiKey: '', // 由于安全原因，不显示完整的API密钥
+            datasetApiKey: '', // 显示masked版本，但实际使用时从服务器获取
+            environment: 'custom' as any
+          });
+          setWorkingConfig({ ...config, environment: 'custom' as any });
+        }
+      }
+    } catch (error) {
+      console.error('加载项目Dify配置失败:', error);
+    }
+  };
+
+  // 组件挂载时加载项目配置
+  useEffect(() => {
+    loadProjectDifyConfig();
+  }, [projectId]);
 
   const handlePresetChange = (environment: 'local' | 'cloud') => {
     const newConfig = DEFAULT_DIFY_CONFIGS[environment];
@@ -59,37 +93,86 @@ export function DifyConfigComponent() {
     }
   };
 
-  const handleSave = () => {
-    let finalConfig: DifyConfig;
+  const handleSave = async () => {
+    setSavingConfig(true);
+    
+    try {
+      let finalConfig: DifyConfig;
 
-    if (workingConfig.environment === 'local' || workingConfig.environment === 'cloud') {
-      // 使用预设配置
-      finalConfig = DEFAULT_DIFY_CONFIGS[workingConfig.environment];
-    } else {
-      // 使用自定义配置
-      finalConfig = customConfig;
-    }
+      if (workingConfig.environment === 'local' || workingConfig.environment === 'cloud') {
+        // 使用预设配置 - 保存到localStorage
+        finalConfig = DEFAULT_DIFY_CONFIGS[workingConfig.environment];
+        setConfig(finalConfig);
+        
+        toast({
+          title: "配置已保存",
+          description: `已切换到 ${finalConfig.environment === 'local' ? '本地' : '云端'} Dify 服务`,
+        });
+      } else {
+        // 使用自定义配置 - 保存到数据库
+        finalConfig = customConfig;
 
-    // 验证配置
-    if (!finalConfig.baseUrl || !finalConfig.apiKey || !finalConfig.datasetApiKey) {
+        // 验证自定义配置
+        if (!finalConfig.baseUrl || !finalConfig.datasetApiKey) {
+          toast({
+            title: "配置错误",
+            description: "请填写完整的 API URL 和 Dataset API Key",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (!projectId) {
+          toast({
+            title: "配置错误",
+            description: "无法获取项目ID，请刷新页面重试",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // 调用后端API保存配置
+        const response = await fetch(`/api/projects/${projectId}/dify-config`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            difyBaseUrl: finalConfig.baseUrl,
+            difyDatasetApiKey: finalConfig.datasetApiKey,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || '保存配置失败');
+        }
+
+        const result = await response.json();
+        console.log('✅ 项目Dify配置已保存到数据库:', result);
+
+        // 同时更新localStorage以保持一致性
+        setConfig(finalConfig);
+        
+        toast({
+          title: "配置已保存",
+          description: "自定义Dify配置已保存到项目中",
+        });
+      }
+      
+      setDatasetKeyTestResult(null);
+      setIsOpen(false);
+      
+    } catch (error) {
+      console.error('保存Dify配置失败:', error);
       toast({
-        title: "配置错误",
-        description: "请填写完整的 API URL、API Key 和 Dataset API Key",
+        title: "保存失败",
+        description: error instanceof Error ? error.message : '保存配置时发生错误',
         variant: "destructive",
       });
-      return;
+    } finally {
+      setSavingConfig(false);
     }
-
-    setConfig(finalConfig);
-    
-    toast({
-      title: "配置已保存",
-      description: `已切换到 ${finalConfig.environment === 'local' ? '本地' : finalConfig.environment === 'cloud' ? '云端' : '自定义'} Dify 服务`,
-    });
-    
-    setApiKeyTestResult(null);
-    setDatasetKeyTestResult(null);
-    setIsOpen(false);
   };
 
   const getCurrentConfigDisplay = () => {
@@ -98,7 +181,7 @@ export function DifyConfigComponent() {
     return '自定义配置';
   };
 
-  const testApiConnection = async (type: 'app' | 'dataset') => {
+  const testDatasetConnection = async () => {
     const configToTest = workingConfig.environment === 'custom' ? customConfig : workingConfig;
     
     if (!configToTest.baseUrl) {
@@ -110,16 +193,7 @@ export function DifyConfigComponent() {
       return;
     }
 
-    if (type === 'app' && !configToTest.apiKey) {
-      toast({
-        title: "测试失败",
-        description: "请先填写 API Key",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (type === 'dataset' && !configToTest.datasetApiKey) {
+    if (!configToTest.datasetApiKey) {
       toast({
         title: "测试失败",
         description: "请先填写 Dataset API Key",
@@ -128,35 +202,34 @@ export function DifyConfigComponent() {
       return;
     }
 
-    if (type === 'app') {
-      setTestingApiKey(true);
-      setApiKeyTestResult(null);
-    } else {
-      setTestingDatasetKey(true);
-      setDatasetKeyTestResult(null);
+    if (!projectId) {
+      toast({
+        title: "测试失败",
+        description: "无法获取项目ID，请刷新页面重试",
+        variant: "destructive",
+      });
+      return;
     }
 
+    setTestingDatasetKey(true);
+    setDatasetKeyTestResult(null);
+
     try {
-      const response = await fetch('/api/dify/test', {
+      // 使用项目级别的测试API
+      const response = await fetch(`/api/projects/${projectId}/dify-config`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          baseUrl: configToTest.baseUrl,
-          apiKey: configToTest.apiKey,
-          datasetApiKey: configToTest.datasetApiKey,
-          type,
+          difyBaseUrl: configToTest.baseUrl,
+          difyDatasetApiKey: configToTest.datasetApiKey,
+          datasetId: projectDifyConfig?.datasetId || 'test-dataset-id'
         }),
       });
 
       const result = await response.json();
-      
-      if (type === 'app') {
-        setApiKeyTestResult(result);
-      } else {
-        setDatasetKeyTestResult(result);
-      }
+      setDatasetKeyTestResult(result);
 
       if (result.success) {
         toast({
@@ -166,7 +239,7 @@ export function DifyConfigComponent() {
       } else {
         toast({
           title: "测试失败",
-          description: result.message,
+          description: result.message || result.error,
           variant: "destructive",
         });
       }
@@ -176,11 +249,7 @@ export function DifyConfigComponent() {
         message: '网络错误，请检查网络连接'
       };
       
-      if (type === 'app') {
-        setApiKeyTestResult(errorResult);
-      } else {
-        setDatasetKeyTestResult(errorResult);
-      }
+      setDatasetKeyTestResult(errorResult);
 
       toast({
         title: "测试失败",
@@ -188,11 +257,7 @@ export function DifyConfigComponent() {
         variant: "destructive",
       });
     } finally {
-      if (type === 'app') {
-        setTestingApiKey(false);
-      } else {
-        setTestingDatasetKey(false);
-      }
+      setTestingDatasetKey(false);
     }
   };
 
@@ -208,7 +273,7 @@ export function DifyConfigComponent() {
         <DialogHeader>
           <DialogTitle>Dify 服务配置</DialogTitle>
           <DialogDescription>
-            选择要使用的 Dify 服务器环境，配置将保存在本地浏览器中。
+            选择要使用的 Dify 服务器环境。自定义配置将保存到项目数据库中，预设配置保存在本地浏览器中。
           </DialogDescription>
         </DialogHeader>
         
@@ -282,48 +347,6 @@ export function DifyConfigComponent() {
                 />
               </div>
               <div>
-                <Label htmlFor="custom-key">API Key</Label>
-                <div className="flex gap-2 mt-1">
-                  <Input
-                    id="custom-key"
-                    placeholder="app-xxxxxxxxxx"
-                    value={customConfig.apiKey}
-                    onChange={(e) => {
-                      handleCustomConfigChange('apiKey', e.target.value);
-                      setApiKeyTestResult(null);
-                    }}
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => testApiConnection('app')}
-                    disabled={testingApiKey || !customConfig.baseUrl || !customConfig.apiKey}
-                    className="shrink-0"
-                  >
-                    {testingApiKey ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : apiKeyTestResult ? (
-                      apiKeyTestResult.success ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <XCircle className="h-4 w-4 text-red-500" />
-                      )
-                    ) : (
-                      "测试"
-                    )}
-                  </Button>
-                </div>
-                {apiKeyTestResult && (
-                  <p className={`text-xs mt-1 ${
-                    apiKeyTestResult.success ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {apiKeyTestResult.message}
-                  </p>
-                )}
-              </div>
-              <div>
                 <Label htmlFor="custom-dataset-key">Dataset API Key</Label>
                 <div className="flex gap-2 mt-1">
                   <Input
@@ -340,7 +363,7 @@ export function DifyConfigComponent() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => testApiConnection('dataset')}
+                    onClick={testDatasetConnection}
                     disabled={testingDatasetKey || !customConfig.baseUrl || !customConfig.datasetApiKey}
                     className="shrink-0"
                   >
@@ -369,11 +392,18 @@ export function DifyConfigComponent() {
           )}
 
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => handleOpenChange(false)}>
+            <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={savingConfig}>
               取消
             </Button>
-            <Button onClick={handleSave}>
-              保存配置
+            <Button onClick={handleSave} disabled={savingConfig}>
+              {savingConfig ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  保存中...
+                </>
+              ) : (
+                '保存配置'
+              )}
             </Button>
           </div>
         </div>

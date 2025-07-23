@@ -12,6 +12,29 @@ import {
 import { useKnowledgeRetrieval } from './use-knowledge-retrieval';
 import { useSmartChat } from './use-ai-chat';
 import { SecureKnowledgeAPI } from '@/lib/secure-knowledge-api';
+import { useDifyConfig } from '@/contexts/dify-config-context';
+import { DifyConfig } from '@/types/dify-config';
+
+/**
+ * 将DifyConfig转换为AssistantConfig的辅助函数
+ */
+function convertDifyConfigToAssistantConfig(
+  difyConfig: DifyConfig, 
+  baseAssistantConfig: AssistantConfig
+): AssistantConfig {
+  // 如果是预设配置，使用原始的AssistantConfig
+  if (difyConfig.environment === 'local' || difyConfig.environment === 'cloud') {
+    return baseAssistantConfig;
+  }
+  
+  // 自定义配置：使用DifyConfig的值覆盖AssistantConfig
+  return {
+    ...baseAssistantConfig,
+    difyBaseUrl: difyConfig.baseUrl,
+    difyApiKey: difyConfig.datasetApiKey, // 用于服务端验证
+    // 注意：projectId和datasetId保持从baseAssistantConfig中获取
+  };
+}
 
 export function useKnowledgeAssistant(config: AssistantConfig): UseKnowledgeAssistantReturn {
   const [isOpen, setIsOpen] = useState(false);
@@ -19,8 +42,37 @@ export function useKnowledgeAssistant(config: AssistantConfig): UseKnowledgeAssi
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const knowledgeRetrieval = useKnowledgeRetrieval(config);
-  const smartChat = useSmartChat(config);
+  // 🔥 集成Dify配置Context，实现配置透传
+  const { config: difyConfig } = useDifyConfig();
+  
+  // 🔄 响应式配置：合并基础配置和Dify配置
+  const [reactiveConfig, setReactiveConfig] = useState<AssistantConfig>(config);
+  
+  useEffect(() => {
+    // 当DifyConfig或基础config变化时，重新计算响应式配置
+    const newReactiveConfig = convertDifyConfigToAssistantConfig(difyConfig, config);
+    setReactiveConfig(newReactiveConfig);
+    
+    console.log('🔄 配置更新 - Dify配置透传:', {
+      difyEnvironment: difyConfig.environment,
+      difyBaseUrl: difyConfig.baseUrl,
+      difyDatasetApiKey: difyConfig.datasetApiKey ? `${difyConfig.datasetApiKey.substring(0, 10)}...` : null,
+      finalConfig: {
+        projectId: newReactiveConfig.projectId,
+        difyBaseUrl: newReactiveConfig.difyBaseUrl,
+        difyApiKey: newReactiveConfig.difyApiKey ? `${newReactiveConfig.difyApiKey.substring(0, 10)}...` : null,
+        datasetId: newReactiveConfig.datasetId
+      },
+      willPassCustomConfig: difyConfig.environment === 'custom',
+      customConfigToPass: difyConfig.environment === 'custom' ? {
+        difyBaseUrl: newReactiveConfig.difyBaseUrl,
+        hasApiKey: !!newReactiveConfig.difyApiKey
+      } : null
+    });
+  }, [difyConfig, config]);
+
+  const knowledgeRetrieval = useKnowledgeRetrieval(reactiveConfig);
+  const smartChat = useSmartChat(reactiveConfig);
   const lastMessageRef = useRef<ChatMessage | null>(null);
   
   console.log('🔄 useKnowledgeAssistant hook 初始化:', {
@@ -28,7 +80,9 @@ export function useKnowledgeAssistant(config: AssistantConfig): UseKnowledgeAssi
     messagesLength: messages.length,
     isLoading,
     error,
-    configDatasetId: config?.datasetId
+    configDatasetId: reactiveConfig?.datasetId,
+    difyEnvironment: difyConfig?.environment,
+    configSource: difyConfig?.environment === 'custom' ? 'dify-context' : 'server-config'
   });
   
   // 监听 isOpen 状态变化
@@ -137,7 +191,7 @@ export function useKnowledgeAssistant(config: AssistantConfig): UseKnowledgeAssi
         body: JSON.stringify({
           question: messageContent.trim(),
           conversationContext,
-          projectId: config.datasetId?.split('-')[0] || 'unknown'
+          projectId: reactiveConfig.projectId || 'unknown'
         })
       });
 
@@ -181,14 +235,19 @@ export function useKnowledgeAssistant(config: AssistantConfig): UseKnowledgeAssi
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              datasetId: config.datasetId,
-              projectId: config.datasetId?.split('-')[0] || 'unknown',
+              datasetId: reactiveConfig.datasetId,
+              projectId: reactiveConfig.projectId, // 🔧 使用正确的项目ID，而不是从datasetId截取
+              // 🚀 新增：自定义配置透传 - 只在自定义模式下传递
+              customConfig: difyConfig.environment === 'custom' ? {
+                difyBaseUrl: reactiveConfig.difyBaseUrl,
+                difyDatasetApiKey: reactiveConfig.difyApiKey
+              } : undefined,
               retrievalRequest: {
                 query: messageContent.trim(),
                 retrieval_model: {
                   search_method: 'hybrid_search',
-                  top_k: config.retrievalTopK || 5,
-                  score_threshold: config.scoreThreshold || 0.3,
+                  top_k: reactiveConfig.retrievalTopK || 5,
+                  score_threshold: reactiveConfig.scoreThreshold || 0.3,
                   score_threshold_enabled: true,
                   reranking_enable: true
                 }
@@ -264,9 +323,9 @@ export function useKnowledgeAssistant(config: AssistantConfig): UseKnowledgeAssi
             content: msg.content
           })),
           knowledgeContext,
-          projectId: config.datasetId?.split('-')[0] || 'unknown',
+          projectId: reactiveConfig.projectId || 'unknown',
           options: {
-            model: config.aiModel || 'deepseek/deepseek-chat',
+            model: reactiveConfig.aiModel || 'deepseek/deepseek-chat',
             temperature: 0.7,
             maxTokens: 2000
           }
@@ -359,7 +418,7 @@ export function useKnowledgeAssistant(config: AssistantConfig): UseKnowledgeAssi
           msg.id === streamingMessage.id 
             ? { 
                 ...msg, 
-                content: streamedContent || '抱歉，未能生成有效回答。',
+                content: streamedContent,
                 isStreaming: false,
                 isLoading: false,
                 timestamp: new Date()
@@ -405,7 +464,7 @@ export function useKnowledgeAssistant(config: AssistantConfig): UseKnowledgeAssi
     isLoading,
     generateMessageId,
     messages,
-    config
+    reactiveConfig
   ]);
 
   // 重试最后一条消息
@@ -494,6 +553,7 @@ export function useAssistantConfig(initialConfig: Partial<AssistantConfig>) {
   // 使用传入的配置，而不是环境变量
   const [config, setConfig] = useState<AssistantConfig>(() => {
     const defaultConfig: AssistantConfig = {
+      projectId: '', // 默认为空，需要从实际配置中获取
       datasetId: '',
       difyApiKey: 'server-side-configured',
       difyBaseUrl: 'https://api.dify.ai/v1',
@@ -520,6 +580,7 @@ export function useAssistantConfig(initialConfig: Partial<AssistantConfig>) {
 
   const resetConfig = useCallback(() => {
     const defaultConfig: AssistantConfig = {
+      projectId: '', // 默认为空，需要从实际配置中获取
       datasetId: '',
       difyApiKey: 'server-side-configured',
       difyBaseUrl: 'https://api.dify.ai/v1',

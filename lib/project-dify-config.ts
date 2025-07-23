@@ -14,7 +14,7 @@ export interface ProjectDifyConfig {
     difyDatasetApiKey: string;
     datasetId?: string;
     hasValidConfig: boolean;
-    configSource: 'database' | 'environment' | 'none';
+    configSource: 'database' | 'environment' | 'none' | 'frontend-custom';
 }
 
 /**
@@ -37,8 +37,32 @@ function getEnvironmentDifyConfig(): {
 export async function getProjectDifyConfig(projectId: string): Promise<ProjectDifyConfig> {
     try {
         console.log(`🔧 获取项目[${projectId}]Dify配置...`);
+        console.log(`🔍 ProjectId 详细信息:`, {
+            value: projectId,
+            type: typeof projectId,
+            length: projectId?.length,
+            isString: typeof projectId === 'string',
+            firstChar: projectId?.[0],
+            lastChar: projectId?.[projectId.length - 1],
+            contains_hyphen: projectId?.includes('-'),
+            uuid_pattern_match: /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(projectId)
+        });
+
+        // 验证UUID格式
+        if (!projectId || typeof projectId !== 'string') {
+            throw new Error(`无效的项目ID: ${projectId}`);
+        }
+
+        // 检查UUID格式
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if (!uuidPattern.test(projectId)) {
+            console.error(`❌ 项目ID格式无效: "${projectId}"`);
+            console.error(`❌ UUID格式应为: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`);
+            throw new Error(`项目ID格式无效，必须是有效的UUID格式: ${projectId}`);
+        }
 
         // 从数据库获取项目配置
+        console.log(`📊 准备查询数据库，projectId: ${projectId}`);
         const project = await db.query.auditUnits.findFirst({
             where: eq(auditUnits.id, projectId),
             columns: {
@@ -54,8 +78,24 @@ export async function getProjectDifyConfig(projectId: string): Promise<ProjectDi
             throw new Error(`项目[${projectId}]不存在`);
         }
 
+        console.log(`📊 数据库查询结果:`, {
+            projectId: project.id,
+            datasetId: project.datasetId,
+            difyBaseUrl: project.difyBaseUrl,
+            difyDatasetApiKey: project.difyDatasetApiKey ? `${project.difyDatasetApiKey.substring(0, 10)}...` : null,
+            difyConfigUpdatedAt: project.difyConfigUpdatedAt
+        });
+
         // 检查是否有项目级别的配置
         const hasProjectConfig = !!(project.difyBaseUrl && project.difyDatasetApiKey);
+        
+        console.log(`🔍 项目配置检查:`, {
+            hasProjectConfig,
+            hasDifyBaseUrl: !!project.difyBaseUrl,
+            hasDifyDatasetApiKey: !!project.difyDatasetApiKey,
+            difyBaseUrlValue: project.difyBaseUrl,
+            difyApiKeyExists: !!project.difyDatasetApiKey
+        });
 
         if (hasProjectConfig) {
             try {
@@ -146,7 +186,7 @@ export function validateDifyConfig(config: ProjectDifyConfig): {
     errors: string[];
 } {
     console.log('validating dify config: ', config)
-    
+
     const errors: string[] = [];
 
     // 检查Base URL

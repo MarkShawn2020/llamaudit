@@ -9,7 +9,13 @@ import { getProjectDifyConfig, validateDifyConfig, getDifyConfigSummary } from '
 
 export async function POST(request: NextRequest) {
   try {
-    const { datasetId, projectId, retrievalRequest } = await request.json();
+    const { 
+      datasetId, 
+      projectId, 
+      retrievalRequest,
+      // 🚀 新增：支持前端自定义配置透传
+      customConfig
+    } = await request.json();
 
     // 验证必需参数
     if (!projectId || typeof projectId !== 'string') {
@@ -28,7 +34,53 @@ export async function POST(request: NextRequest) {
 
     // 获取项目的Dify配置
     console.log(`🔧 获取项目[${projectId}]的Dify配置...`);
-    const difyConfig = await getProjectDifyConfig(projectId);
+    console.log(`🔍 知识库检索API接收到的参数详情:`, {
+      projectId: {
+        value: projectId,
+        type: typeof projectId,
+        length: projectId?.length,
+        isValidUUID: projectId ? /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(projectId) : false
+      },
+      datasetId: datasetId,
+      retrievalQuery: retrievalRequest?.query?.substring(0, 50) + '...',
+      hasCustomConfig: !!customConfig,
+      customConfigSummary: customConfig ? {
+        hasBaseUrl: !!customConfig.difyBaseUrl,
+        hasApiKey: !!customConfig.difyDatasetApiKey,
+        baseUrl: customConfig.difyBaseUrl
+      } : null
+    });
+    
+    // 获取基础配置（数据库或环境变量）
+    let difyConfig = await getProjectDifyConfig(projectId);
+    
+    // 🚀 配置优先级：前端自定义配置 > 数据库配置 > 环境变量配置
+    if (customConfig) {
+      console.log('🔧 应用前端自定义Dify配置透传:', {
+        originalConfigSource: difyConfig.configSource,
+        customBaseUrl: customConfig.difyBaseUrl,
+        customApiKeyExists: !!customConfig.difyDatasetApiKey
+      });
+      
+      // 使用自定义配置覆盖数据库配置
+      if (customConfig.difyBaseUrl) {
+        difyConfig.difyBaseUrl = customConfig.difyBaseUrl;
+      }
+      if (customConfig.difyDatasetApiKey) {
+        difyConfig.difyDatasetApiKey = customConfig.difyDatasetApiKey;
+      }
+      
+      // 更新配置来源标记
+      difyConfig.configSource = 'frontend-custom';
+      difyConfig.hasValidConfig = !!(difyConfig.difyBaseUrl && difyConfig.difyDatasetApiKey);
+      
+      console.log('✅ 自定义配置应用完成:', {
+        finalBaseUrl: difyConfig.difyBaseUrl,
+        hasApiKey: !!difyConfig.difyDatasetApiKey,
+        configSource: difyConfig.configSource,
+        isValid: difyConfig.hasValidConfig
+      });
+    }
     const configValidation = validateDifyConfig(difyConfig);
     
     if (!configValidation.isValid) {
@@ -76,19 +128,7 @@ export async function POST(request: NextRequest) {
     // 构建Dify API请求
     const difyRequest: DifyRetrievalRequest = {
       query: retrievalRequest.query,
-      retrieval_model: {
-        search_method: retrievalRequest.retrieval_model?.search_method || 'hybrid_search',
-        top_k: Math.min(retrievalRequest.retrieval_model?.top_k || 5, 20),
-        score_threshold: retrievalRequest.retrieval_model?.score_threshold || 0.3,
-        score_threshold_enabled: retrievalRequest.retrieval_model?.score_threshold_enabled || true,
-        reranking_enable: retrievalRequest.retrieval_model?.reranking_enable || true,
-        reranking_model: retrievalRequest.retrieval_model?.reranking_enable ? {
-          reranking_provider_name: 'jina',
-          reranking_model_name: 'jina-reranker-v1-base-en'
-        } : undefined,
-        weights: retrievalRequest.retrieval_model?.weights || 0.7,
-        metadata_filtering_conditions: retrievalRequest.retrieval_model?.metadata_filtering_conditions
-      }
+      // todo: more config
     };
 
     // 调用 Dify API

@@ -130,6 +130,7 @@ export interface AssistantState {
 
 // 配置类型
 export interface AssistantConfig {
+  projectId: string; // 项目ID - 用于知识库API调用
   datasetId: string;
   difyApiKey: string;
   difyBaseUrl: string;

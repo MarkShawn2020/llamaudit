@@ -11,6 +11,14 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const projectId = searchParams.get('projectId');
   
+  console.log(`🔍 assistant/config API 接收到的参数:`, {
+    fullUrl: request.url,
+    projectId: projectId,
+    projectIdType: typeof projectId,
+    projectIdLength: projectId?.length,
+    searchParamsAll: Object.fromEntries(searchParams.entries())
+  });
+  
   try {
 
     if (!projectId) {
@@ -57,6 +65,7 @@ export async function GET(request: NextRequest) {
 
     // 构建安全的配置（不包含真实API密钥）
     const config: AssistantConfig = {
+      projectId: projectId, // 项目ID - 用于知识库API调用
       datasetId: project.datasetId, // 使用项目特定的数据集ID
       difyApiKey: 'server-side-configured', // 占位符，真实密钥在服务端
       difyBaseUrl: difyApiUrl || 'https://api.dify.ai/v1',

@@ -19,12 +19,15 @@ function extractDatasetIdFromApiKey(datasetApiKey: string): string {
 
 /**
  * 将DifyConfig转换为AssistantConfig
+ * @param difyConfig - Dify配置
+ * @param projectId - 项目ID（可选）
  */
-export function adaptDifyConfigToAssistantConfig(difyConfig: DifyConfig): AssistantConfig {
+export function adaptDifyConfigToAssistantConfig(difyConfig: DifyConfig, projectId: string = ''): AssistantConfig {
   // 从dataset API key中提取dataset ID
   const datasetId = extractDatasetIdFromApiKey(difyConfig.datasetApiKey);
   
   return {
+    projectId: projectId, // 项目ID - 用于知识库API调用
     datasetId: datasetId,
     difyApiKey: difyConfig.datasetApiKey,
     difyBaseUrl: difyConfig.baseUrl,
@@ -82,6 +85,7 @@ export function getDefaultAssistantConfig(): AssistantConfig {
   const datasetId = extractDatasetIdFromApiKey(datasetApiKey);
   
   return {
+    projectId: '', // 默认为空，需要从具体项目上下文中获取
     datasetId: datasetId,
     difyApiKey: datasetApiKey,
     difyBaseUrl: process.env.NEXT_PUBLIC_DIFY_API_URL || 'https://api.dify.ai/v1',

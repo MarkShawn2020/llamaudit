@@ -31,8 +31,19 @@ export function ProjectAwareKnowledgeAssistant() {
 
     // 提取项目ID从URL
     const getProjectIdFromPath = (path: string): string | null => {
+        console.log(`🔍 URL解析开始，path: "${path}"`);
         const projectMatch = path.match(/\/projects\/([^\/]+)/);
-        return projectMatch ? projectMatch[1] : null;
+        const extractedId = projectMatch ? projectMatch[1] : null;
+        
+        console.log(`🔍 URL解析结果:`, {
+            fullPath: path,
+            regexMatch: projectMatch,
+            extractedId: extractedId,
+            extractedIdLength: extractedId?.length,
+            isValidUUID: extractedId ? /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(extractedId) : false
+        });
+        
+        return extractedId;
     };
 
     // 获取项目配置
