@@ -161,61 +161,41 @@ function DocumentActions() {
   };
   
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border-b bg-muted/50 gap-3 sm:gap-0" id={"doc-actions"}>
-      {/* Document title/status indicator */}
-      <div className="flex items-center gap-2 flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          {document && (
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <FileText className="h-3 w-3" />
-              <span className="truncate">{document.doc_form || 'Document'}</span>
-            </div>
-          )}
-          {uploadFile && (
-            <div className="text-xs text-muted-foreground">
-              {uploadFile.extension.toUpperCase()} • {(uploadFile.size / 1024).toFixed(1)}KB
-            </div>
-          )}
-        </div>
-      </div>
-      
-      {/* Action buttons - responsive layout */}
-      <div className="flex items-center justify-between sm:justify-end gap-3">
-        {/* Primary action - always visible */}
+    <div className="px-6 py-4 border-b bg-background" id={"doc-actions"}>
+      {/* Clean action bar with generous spacing */}
+      <div className="flex items-center justify-end gap-4">
+        {/* Primary action - prominent and clear */}
         <Button 
           variant="default" 
-          size="sm" 
-          className="h-9 px-4 flex-1 sm:flex-none"
+          size="default" 
+          className="h-10 px-6 font-medium shadow-sm"
           onClick={handleViewOriginal}
           disabled={isLoadingUploadFile || !uploadFile?.url}
         >
           <ExternalLink className="h-4 w-4 mr-2" />
-          <span className="hidden xs:inline">查看原文</span>
-          <span className="xs:hidden">查看</span>
+          查看原文
         </Button>
         
-        {/* Secondary actions - adaptive layout */}
-        <div className="flex items-center gap-1">
+        {/* Secondary actions - subtle but accessible */}
+        <div className="flex items-center gap-2">
           <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-9 px-3 text-muted-foreground hover:text-foreground"
+            variant="outline" 
+            size="default"
+            className="h-10 px-4 text-muted-foreground border-muted-foreground/20 hover:border-muted-foreground/40 hover:text-foreground hover:bg-muted/50"
             onClick={handleDownload}
             disabled={isLoadingUploadFile || !uploadFile?.download_url}
-            title="导出文档"
           >
-            <Download className="h-4 w-4" />
-            <span className="hidden sm:ml-2 sm:inline">导出</span>
+            <Download className="h-4 w-4 mr-2" />
+            导出
           </Button>
           
           <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-9 px-3 text-muted-foreground hover:text-red-600"
-            title="删除文档"
+            variant="outline" 
+            size="default"
+            className="h-10 px-4 text-muted-foreground border-muted-foreground/20 hover:border-red-300 hover:text-red-600 hover:bg-red-50"
           >
-            <Trash2 className="h-4 w-4" />
-            <span className="hidden sm:ml-2 sm:inline">删除</span>
+            <Trash2 className="h-4 w-4 mr-2" />
+            删除
           </Button>
         </div>
       </div>
