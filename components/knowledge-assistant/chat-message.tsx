@@ -5,6 +5,11 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { materialDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { 
@@ -281,7 +286,7 @@ function MessageContent({ message }: { message: any }) {
       <div className="space-y-3">
         {/* 主要内容 */}
         {message.content && (
-          <SimpleTextDisplay content={message.content} />
+          <MarkdownDisplay content={message.content} />
         )}
         
         {/* 工具调用 */}
@@ -300,7 +305,7 @@ function MessageContent({ message }: { message: any }) {
   }
 
   // 默认渲染纯文本内容
-  return <SimpleTextDisplay content={message.content || ''} />;
+  return <MarkdownDisplay content={message.content || ''} />;
 }
 
 
@@ -320,7 +325,7 @@ function MessagePart({
     case 'text':
       return (
         <div className={isLatest ? 'animate-in fade-in duration-300' : ''}>
-          <SimpleTextDisplay content={part.text || ''} />
+          <MarkdownDisplay content={part.text || ''} />
         </div>
       );
 
@@ -365,28 +370,80 @@ function MessagePart({
       const content = part.text || part.content || JSON.stringify(part);
       return (
         <div className={isLatest ? 'animate-in fade-in duration-300' : ''}>
-          <SimpleTextDisplay content={content} />
+          <MarkdownDisplay content={content} />
         </div>
       );
   }
 }
 
 /**
- * 简单文本显示组件
+ * 专业的 Markdown 显示组件 - 使用 Tailwind Typography
  */
-function SimpleTextDisplay({ content }: { content: string }) {
+function MarkdownDisplay({ content, className }: { content: string; className?: string }) {
   if (!content) return null;
   
-  const processedContent = content
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // 粗体
-    .replace(/\*(.*?)\*/g, '<em>$1</em>') // 斜体
-    .replace(/`(.*?)`/g, '<code class="bg-muted px-1 py-0.5 rounded text-sm">$1</code>'); // 行内代码
-
   return (
-    <div 
-      dangerouslySetInnerHTML={{ __html: processedContent }}
-      className="[&>code]:bg-muted [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded [&>code]:text-sm"
-    />
+    <div className={cn(
+      'prose prose-sm dark:prose-invert max-w-none',
+      'prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground',
+      'prose-code:text-foreground prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs',
+      'prose-pre:bg-muted prose-pre:border',
+      'prose-blockquote:border-l-border prose-blockquote:text-muted-foreground',
+      'prose-ul:text-foreground prose-ol:text-foreground prose-li:text-foreground',
+      'prose-ul:list-disc prose-ol:list-decimal prose-li:marker:text-foreground',
+      'prose-a:text-primary prose-a:underline-offset-4',
+      className
+    )}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          code: ({ node, inline, className, children, ...props }: any) => {
+            const match = /language-(\w+)/.exec(className || '');
+            return !inline && match ? (
+              <SyntaxHighlighter
+                style={materialDark as Record<string, React.CSSProperties>}
+                language={match[1]}
+                PreTag="div"
+                className="rounded-md text-sm"
+                {...props}
+              >
+                {String(children).replace(/\n$/, '')}
+              </SyntaxHighlighter>
+            ) : (
+              <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono" {...props}>
+                {children}
+              </code>
+            );
+          },
+          // 自定义标题样式
+          h1: ({ children, ...props }) => (
+            <h1 className="text-lg font-bold mb-2 mt-4 first:mt-0" {...props}>{children}</h1>
+          ),
+          h2: ({ children, ...props }) => (
+            <h2 className="text-base font-bold mb-2 mt-3 first:mt-0" {...props}>{children}</h2>
+          ),
+          h3: ({ children, ...props }) => (
+            <h3 className="text-sm font-semibold mb-1 mt-2 first:mt-0" {...props}>{children}</h3>
+          ),
+          // 自定义段落样式
+          p: ({ children, ...props }) => (
+            <p className="mb-2 last:mb-0 leading-relaxed" {...props}>{children}</p>
+          ),
+          // 自定义列表样式
+          ul: ({ children, ...props }) => (
+            <ul className="mb-2 pl-6 space-y-0 list-disc" {...props}>{children}</ul>
+          ),
+          ol: ({ children, ...props }) => (
+            <ol className="mb-2 pl-6 space-y-0 list-decimal" {...props}>{children}</ol>
+          ),
+          li: ({ children, ...props }) => (
+            <li className="leading-normal mb-0.5" {...props}>{children}</li>
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
   );
 }
 
@@ -493,7 +550,10 @@ function ThinkingDisplay({ content }: { content: string }) {
         AI 思考中...
       </div>
       <div className="text-sm text-blue-800">
-        <SimpleTextDisplay content={content} />
+        <MarkdownDisplay 
+          content={content} 
+          className="prose-sm prose-blue [&>*]:text-blue-800 [&>*]:mb-1"
+        />
       </div>
     </div>
   );
