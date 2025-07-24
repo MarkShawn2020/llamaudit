@@ -4,6 +4,8 @@
  */
 
 import { DifyRetrievalResponse } from '@/components/knowledge-assistant/types';
+import { retrieveKnowledge as retrieveKnowledgeAction } from '@/lib/actions/dify-actions';
+import { getProject } from '@/lib/api/project-api';
 
 export interface KnowledgeRetrievalParams {
   query: string;
@@ -35,48 +37,35 @@ export async function retrieveKnowledge(params: KnowledgeRetrievalParams): Promi
       topK
     });
 
-    // 构建检索请求
-    const retrievalRequest = {
-      query,
-      retrieval_model: {
-        search_method: searchMethod,
-        reranking_enable: true,
-        top_k: topK,
-        score_threshold_enabled: true,
-        score_threshold: scoreThreshold,
-        weights: searchMethod === 'hybrid_search' ? 0.7 : undefined
+    // 获取项目信息以确定datasetId
+    let finalDatasetId = datasetId;
+    if (!finalDatasetId) {
+      const project = await getProject(projectId);
+      if (!project?.datasetId) {
+        throw new Error('项目未关联知识库，请先在项目管理页面创建知识库');
       }
-    };
-
-    // 调用现有的知识库检索 API
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ''}/api/assistant/knowledge/retrieve`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        projectId,
-        datasetId,
-        retrievalRequest
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `检索请求失败: ${response.status}`);
+      finalDatasetId = project.datasetId;
     }
 
-    const data: DifyRetrievalResponse = await response.json();
+    // 直接调用Server Action
+    const data = await retrieveKnowledgeAction(finalDatasetId, query, {
+      search_method: searchMethod,
+      reranking_enable: true,
+      top_k: topK,
+      score_threshold_enabled: true,
+      score_threshold: scoreThreshold,
+      weights: searchMethod === 'hybrid_search' ? 0.7 : undefined
+    });
 
     // 提取相关文档内容用于 AI 上下文
-    const relevantDocuments = data.records?.map(record => {
+    const relevantDocuments = data.records?.map((record: any) => {
       const segment = record.segment;
       return `[文档: ${segment.document?.name || '未知'}]\n${segment.content}\n相关性: ${record.score?.toFixed(4) || 'N/A'}`;
     }) || [];
 
     console.log('✅ 知识库检索完成:', {
       recordCount: data.records?.length || 0,
-      hasMetadata: !!(data as any).metadata
+      datasetId: finalDatasetId
     });
 
     return {

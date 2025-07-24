@@ -386,6 +386,57 @@ export async function getDocumentUploadFile(
 }
 
 /**
+ * 知识库检索
+ */
+export async function retrieveKnowledge(
+  datasetId: string,
+  query: string,
+  retrievalModel: {
+    search_method?: 'keyword_search' | 'semantic_search' | 'full_text_search' | 'hybrid_search';
+    reranking_enable?: boolean;
+    top_k?: number;
+    score_threshold_enabled?: boolean;
+    score_threshold?: number;
+    weights?: number;
+  } = {}
+): Promise<any> {
+  try {
+    const config = await getDifyConfig();
+    
+    const requestBody = {
+      query,
+      retrieval_model: {
+        search_method: retrievalModel.search_method || 'hybrid_search',
+        reranking_enable: retrievalModel.reranking_enable ?? true,
+        top_k: retrievalModel.top_k || 5,
+        score_threshold_enabled: retrievalModel.score_threshold_enabled ?? true,
+        score_threshold: retrievalModel.score_threshold || 0.3,
+        weights: retrievalModel.weights || (retrievalModel.search_method === 'hybrid_search' ? 0.7 : undefined),
+      }
+    };
+
+    const response = await fetch(`${config.baseUrl}/datasets/${datasetId}/retrieve`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${config.datasetApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('知识库检索失败:', error);
+    throw error;
+  }
+}
+
+/**
  * 健康检查：测试Dify连接
  */
 export async function testDifyConnection(): Promise<{ success: boolean; message: string }> {
