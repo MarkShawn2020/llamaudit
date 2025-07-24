@@ -27,43 +27,6 @@ function sanitizeFileName(fileName: string): string {
     .trim();
 }
 
-/**
- * 创建兼容的文件对象，适用于不同Node.js版本
- */
-function createFileObject(buffer: Buffer, fileName: string, mimeType: string): File {
-  // 优先使用Blob（Node.js 15.7+稳定支持）
-  if (typeof Blob !== 'undefined') {
-    const blob = new Blob([buffer], { type: mimeType });
-    // 添加name属性以兼容FormData
-    Object.defineProperty(blob, 'name', {
-      value: fileName,
-      writable: false
-    });
-    return blob as unknown as File;
-  }
-  
-  // 如果Blob不可用，尝试使用File构造函数
-  if (typeof File !== 'undefined') {
-    return new File([buffer], fileName, { type: mimeType });
-  }
-  
-  // 最后的fallback：创建File-like对象
-  const fileObj = {
-    name: fileName,
-    type: mimeType,
-    size: buffer.length,
-    stream: () => new ReadableStream({
-      start(controller) {
-        controller.enqueue(buffer);
-        controller.close();
-      }
-    }),
-    arrayBuffer: () => Promise.resolve(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)),
-    [Symbol.toStringTag]: 'File'
-  };
-  
-  return fileObj as unknown as File;
-}
 
 /**
  * 获取Dify配置的统一方法（服务器端）
@@ -146,9 +109,10 @@ export async function createDocumentByFile(
     // 清理文件名以确保与Dify API兼容
     const sanitizedFileName = sanitizeFileName(fileName);
     
-    // 创建兼容的文件对象（适用于Node.js服务端环境）
-    const bufferData = Buffer.from(fileBuffer);
-    const file = createFileObject(bufferData, sanitizedFileName, getContentType(fileName));
+    // 创建File对象（Node.js 20+支持）
+    const file = new File([fileBuffer], sanitizedFileName, {
+      type: getContentType(fileName)
+    });
     
     return await api.createDocumentByFile(datasetId, file, options);
   } catch (error) {
