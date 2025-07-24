@@ -1,7 +1,7 @@
 'use server';
 
 import { DifyDatasetAPI } from '@/lib/api/dify-dataset-api';
-import { DEFAULT_DIFY_CONFIGS } from '@/types/dify-config';
+import type { DifyConfig } from '@/types/dify-config';
 import type { 
   DifyDataset, 
   DifyDocument, 
@@ -28,28 +28,21 @@ function sanitizeFileName(fileName: string): string {
 }
 
 
-/**
- * 获取Dify配置的统一方法（服务器端）
- * 优先级: 环境变量 > 默认配置
- */
-async function getDifyConfig() {
-  const environment = (process.env.DIFY_ENVIRONMENT as 'local' | 'cloud') || 'cloud';
-  const defaultConfig = DEFAULT_DIFY_CONFIGS[environment];
-  
-  return {
-    ...defaultConfig,
-    datasetApiKey: process.env.DIFY_DATASET_API_KEY || 
-                   process.env.NEXT_PUBLIC_DIFY_DATASET_API_KEY || 
-                   defaultConfig.datasetApiKey,
-  };
-}
 
 /**
  * 获取数据集详情
  */
-export async function getDatasetDetails(datasetId: string): Promise<DifyDataset> {
+export async function getDatasetDetails(config: DifyConfig, datasetId: string): Promise<DifyDataset> {
   try {
-    const config = await getDifyConfig();
+    console.log('📋 getDatasetDetails 接收到的配置:', {
+      baseUrl: config?.baseUrl,
+      environment: config?.environment,
+      hasApiKey: !!config?.apiKey,
+      hasDatasetApiKey: !!config?.datasetApiKey,
+      datasetApiKeyType: typeof config?.datasetApiKey,
+      configKeys: Object.keys(config || {}),
+    });
+    
     const api = new DifyDatasetAPI(config);
     return await api.getDatasetDetails(datasetId);
   } catch (error) {
@@ -61,9 +54,8 @@ export async function getDatasetDetails(datasetId: string): Promise<DifyDataset>
 /**
  * 创建数据集
  */
-export async function createDataset(payload: CreateDatasetPayload): Promise<DifyDataset> {
+export async function createDataset(config: DifyConfig, payload: CreateDatasetPayload): Promise<DifyDataset> {
   try {
-    const config = await getDifyConfig();
     const api = new DifyDatasetAPI(config);
     return await api.createDataset(payload);
   } catch (error) {
@@ -76,12 +68,12 @@ export async function createDataset(payload: CreateDatasetPayload): Promise<Dify
  * 获取数据集文档列表
  */
 export async function getDatasetDocuments(
+  config: DifyConfig,
   datasetId: string, 
   page: number = 1, 
   limit: number = 20
 ): Promise<DocumentListResponse> {
   try {
-    const config = await getDifyConfig();
     const api = new DifyDatasetAPI(config);
     return await api.getDatasetDocuments(datasetId, page, limit);
   } catch (error) {
@@ -94,6 +86,7 @@ export async function getDatasetDocuments(
  * 通过文件创建文档
  */
 export async function createDocumentByFile(
+  config: DifyConfig,
   datasetId: string,
   fileBuffer: ArrayBuffer,
   fileName: string,
@@ -106,7 +99,6 @@ export async function createDocumentByFile(
   const sanitizedFileName = sanitizeFileName(fileName);
   
   try {
-    const config = await getDifyConfig();
     const api = new DifyDatasetAPI(config);
     
     // 创建File对象（Node.js 20+支持）
@@ -136,9 +128,8 @@ export async function createDocumentByFile(
 /**
  * 删除文档
  */
-export async function deleteDocument(datasetId: string, documentId: string): Promise<void> {
+export async function deleteDocument(config: DifyConfig, datasetId: string, documentId: string): Promise<void> {
   try {
-    const config = await getDifyConfig();
     const api = new DifyDatasetAPI(config);
     await api.deleteDocument(datasetId, documentId);
   } catch (error) {
@@ -150,9 +141,8 @@ export async function deleteDocument(datasetId: string, documentId: string): Pro
 /**
  * 删除数据集
  */
-export async function deleteDataset(datasetId: string): Promise<void> {
+export async function deleteDataset(config: DifyConfig, datasetId: string): Promise<void> {
   try {
-    const config = await getDifyConfig();
     const api = new DifyDatasetAPI(config);
     await api.deleteDataset(datasetId);
   } catch (error) {
@@ -165,11 +155,11 @@ export async function deleteDataset(datasetId: string): Promise<void> {
  * 获取文档索引状态
  */
 export async function getDocumentIndexingStatus(
+  config: DifyConfig,
   datasetId: string, 
   batch: string
 ): Promise<any> {
   try {
-    const config = await getDifyConfig();
     const api = new DifyDatasetAPI(config);
     return await api.getDocumentIndexingStatus(datasetId, batch);
   } catch (error) {
@@ -203,12 +193,12 @@ function getContentType(fileName: string): string {
  * 批量获取多个数据集的文档（用于优化性能）
  */
 export async function batchGetDatasetDocuments(
+  config: DifyConfig,
   datasetIds: string[],
   page: number = 1,
   limit: number = 20
 ): Promise<Record<string, DocumentListResponse>> {
   try {
-    const config = await getDifyConfig();
     const api = new DifyDatasetAPI(config);
     
     const results: Record<string, DocumentListResponse> = {};
@@ -236,9 +226,8 @@ export async function batchGetDatasetDocuments(
 /**
  * 获取文档详情
  */
-export async function getDocumentDetails(datasetId: string, documentId: string): Promise<any> {
+export async function getDocumentDetails(config: DifyConfig, datasetId: string, documentId: string): Promise<any> {
   try {
-    const config = await getDifyConfig();
     const api = new DifyDatasetAPI(config);
     
     const response = await fetch(`${config.baseUrl}/datasets/${datasetId}/documents/${documentId}`, {
@@ -263,13 +252,13 @@ export async function getDocumentDetails(datasetId: string, documentId: string):
  * 获取文档分段信息
  */
 export async function getDocumentSegments(
+  config: DifyConfig,
   datasetId: string, 
   documentId: string, 
   page: number = 1, 
   limit: number = 20
 ): Promise<any> {
   try {
-    const config = await getDifyConfig();
     
     const response = await fetch(`${config.baseUrl}/datasets/${datasetId}/documents/${documentId}/segments?page=${page}&limit=${limit}`, {
       method: 'GET',
@@ -293,6 +282,7 @@ export async function getDocumentSegments(
  * 搜索文档分段
  */
 export async function searchDocumentSegments(
+  config: DifyConfig,
   datasetId: string,
   documentId: string,
   keyword: string,
@@ -300,7 +290,6 @@ export async function searchDocumentSegments(
   limit: number = 20
 ): Promise<any> {
   try {
-    const config = await getDifyConfig();
     
     const response = await fetch(`${config.baseUrl}/datasets/${datasetId}/documents/${documentId}/segments/search`, {
       method: 'POST',
@@ -330,12 +319,12 @@ export async function searchDocumentSegments(
  * 获取分段详情
  */
 export async function getSegmentDetails(
+  config: DifyConfig,
   datasetId: string,
   documentId: string,
   segmentId: string
 ): Promise<any> {
   try {
-    const config = await getDifyConfig();
     
     const response = await fetch(`${config.baseUrl}/datasets/${datasetId}/documents/${documentId}/segments/${segmentId}`, {
       method: 'GET',
@@ -359,13 +348,13 @@ export async function getSegmentDetails(
  * 批量更新分段状态
  */
 export async function updateSegmentsStatus(
+  config: DifyConfig,
   datasetId: string,
   documentId: string,
   segmentIds: string[],
   enabled: boolean
 ): Promise<{ success: boolean; updated_count: number }> {
   try {
-    const config = await getDifyConfig();
     
     const response = await fetch(`${config.baseUrl}/datasets/${datasetId}/documents/${documentId}/segments/batch`, {
       method: 'PATCH',
@@ -394,11 +383,11 @@ export async function updateSegmentsStatus(
  * 获取文档上传文件信息
  */
 export async function getDocumentUploadFile(
+  config: DifyConfig,
   datasetId: string,
   documentId: string
 ): Promise<any> {
   try {
-    const config = await getDifyConfig();
     
     const response = await fetch(`${config.baseUrl}/datasets/${datasetId}/documents/${documentId}/upload-file`, {
       method: 'GET',
@@ -422,6 +411,7 @@ export async function getDocumentUploadFile(
  * 知识库检索
  */
 export async function retrieveKnowledge(
+  config: DifyConfig,
   datasetId: string,
   query: string,
   retrievalModel: {
@@ -434,7 +424,6 @@ export async function retrieveKnowledge(
   } = {}
 ): Promise<any> {
   try {
-    const config = await getDifyConfig();
     
     const requestBody = {
       query,
@@ -472,9 +461,14 @@ export async function retrieveKnowledge(
 /**
  * 健康检查：测试Dify连接
  */
-export async function testDifyConnection(): Promise<{ success: boolean; message: string }> {
+export async function testDifyConnection(config: DifyConfig): Promise<{ success: boolean; message: string }> {
   try {
-    const config = await getDifyConfig();
+    console.log('🧪 测试Dify连接，配置信息:', {
+      baseUrl: config.baseUrl,
+      environment: config.environment,
+      hasDatasetApiKey: !!config.datasetApiKey,
+      datasetApiKeyPreview: config.datasetApiKey ? `${config.datasetApiKey.substring(0, 12)}...${config.datasetApiKey.substring(config.datasetApiKey.length - 4)}` : 'undefined'
+    });
     
     if (!config.datasetApiKey) {
       return {

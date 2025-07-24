@@ -6,6 +6,7 @@
 import { DifyRetrievalResponse } from '@/components/knowledge-assistant/types';
 import { retrieveKnowledge as retrieveKnowledgeAction } from '@/lib/actions/dify-actions';
 import { getProject } from '@/lib/api/project-api';
+import { DEFAULT_DIFY_CONFIGS, type DifyConfig } from '@/types/dify-config';
 
 export interface KnowledgeRetrievalParams {
   query: string;
@@ -21,6 +22,21 @@ export interface KnowledgeRetrievalResult {
   data?: DifyRetrievalResponse;
   error?: string;
   relevantDocuments?: string[];
+}
+
+/**
+ * 获取Dify配置（服务器端）
+ */
+function getDifyConfig(): DifyConfig {
+  const environment = (process.env.DIFY_ENVIRONMENT as 'local' | 'cloud') || 'cloud';
+  const defaultConfig = DEFAULT_DIFY_CONFIGS[environment];
+  
+  return {
+    ...defaultConfig,
+    datasetApiKey: process.env.DIFY_DATASET_API_KEY || 
+                   process.env.NEXT_PUBLIC_DIFY_DATASET_API_KEY || 
+                   defaultConfig.datasetApiKey,
+  };
 }
 
 /**
@@ -47,8 +63,9 @@ export async function retrieveKnowledge(params: KnowledgeRetrievalParams): Promi
       finalDatasetId = project.datasetId;
     }
 
-    // 直接调用Server Action
-    const data = await retrieveKnowledgeAction(finalDatasetId, query, {
+    // 获取配置并调用Server Action
+    const config = getDifyConfig();
+    const data = await retrieveKnowledgeAction(config, finalDatasetId, query, {
       search_method: searchMethod,
       reranking_enable: true,
       top_k: topK,

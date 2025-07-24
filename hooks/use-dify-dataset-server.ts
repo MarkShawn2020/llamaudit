@@ -12,6 +12,7 @@ import {
     getDatasetDocuments,
 } from '@/lib/actions/dify-actions';
 import type {CreateDatasetPayload,} from '@/lib/api/dify-dataset-api';
+import { useDifyConfig } from '@/contexts/dify-config-context';
 
 const QUERY_KEYS = {
     datasetDetails: (datasetId: string) => ['dify', 'dataset', datasetId] as const,
@@ -24,9 +25,11 @@ const QUERY_KEYS = {
  * 获取数据集详情的Hook
  */
 export function useDatasetDetails(datasetId?: string, enabled: boolean = true) {
+    const { config } = useDifyConfig();
+    
     return useQuery({
         queryKey: QUERY_KEYS.datasetDetails(datasetId || ''),
-        queryFn: () => getDatasetDetails(datasetId!),
+        queryFn: () => getDatasetDetails(config, datasetId!),
         enabled: enabled && !!datasetId && datasetId !== '',
         staleTime: 2 * 60 * 1000,
         retry: (failureCount, error) => {
@@ -47,9 +50,10 @@ export function useDatasetDetails(datasetId?: string, enabled: boolean = true) {
  */
 export function useCreateDataset() {
     const queryClient = useQueryClient();
+    const { config } = useDifyConfig();
 
     return useMutation({
-        mutationFn: (payload: CreateDatasetPayload) => createDataset(payload),
+        mutationFn: (payload: CreateDatasetPayload) => createDataset(config, payload),
         onSuccess: (data) => {
             // 缓存新创建的数据集详情
             queryClient.setQueryData(
@@ -74,10 +78,12 @@ export function useCreateDataset() {
  * 获取数据集文档列表的Hook（无限滚动）
  */
 export function useDatasetDocuments(datasetId?: string, enabled: boolean = true) {
+    const { config } = useDifyConfig();
+    
     return useInfiniteQuery({
         queryKey: QUERY_KEYS.datasetDocuments(datasetId || ''),
         queryFn: ({pageParam = 1}) =>
-            getDatasetDocuments(datasetId!, pageParam, 50),
+            getDatasetDocuments(config, datasetId!, pageParam, 50),
         enabled: enabled && !!datasetId && datasetId !== '',
         initialPageParam: 1,
         getNextPageParam: (lastPage) => {
@@ -105,6 +111,7 @@ export function useDatasetDocuments(datasetId?: string, enabled: boolean = true)
  */
 export function useCreateDocumentByFile(datasetId: string) {
     const queryClient = useQueryClient();
+    const { config } = useDifyConfig();
 
     return useMutation({
         mutationFn: async ({
@@ -119,7 +126,7 @@ export function useCreateDocumentByFile(datasetId: string) {
         }) => {
             // 将File转换为ArrayBuffer用于传输到server action
             const arrayBuffer = await file.arrayBuffer();
-            return createDocumentByFile(datasetId, arrayBuffer, file.name, options);
+            return createDocumentByFile(config, datasetId, arrayBuffer, file.name, options);
         },
         onSuccess: (data, variables) => {
             // 使查询失效，触发重新获取
@@ -150,9 +157,10 @@ export function useCreateDocumentByFile(datasetId: string) {
  */
 export function useDeleteDocument(datasetId: string) {
     const queryClient = useQueryClient();
+    const { config } = useDifyConfig();
 
     return useMutation({
-        mutationFn: (documentId: string) => deleteDocument(datasetId, documentId),
+        mutationFn: (documentId: string) => deleteDocument(config, datasetId, documentId),
         onSuccess: (_, documentId) => {
             // 使查询失效，触发重新获取
             queryClient.invalidateQueries({
@@ -179,9 +187,10 @@ export function useDeleteDocument(datasetId: string) {
  */
 export function useDeleteDataset() {
     const queryClient = useQueryClient();
+    const { config } = useDifyConfig();
 
     return useMutation({
-        mutationFn: (datasetId: string) => deleteDataset(datasetId),
+        mutationFn: (datasetId: string) => deleteDataset(config, datasetId),
         onSuccess: (_, datasetId) => {
             // 清除相关的所有查询缓存
             queryClient.removeQueries({
@@ -207,6 +216,7 @@ export function useDeleteDataset() {
  * 项目数据集管理Hook（高级功能）
  */
 export function useProjectDataset(projectId: string, projectName: string) {
+    const { config } = useDifyConfig();
     const createDatasetMutation = useCreateDataset();
     const deleteDatasetMutation = useDeleteDataset();
 
@@ -214,7 +224,7 @@ export function useProjectDataset(projectId: string, projectName: string) {
         try {
             if (existingDatasetId) {
                 // 验证现有数据集是否存在
-                const details = await getDatasetDetails(existingDatasetId);
+                const details = await getDatasetDetails(config, existingDatasetId);
                 return details.id;
             }
 
@@ -234,7 +244,7 @@ export function useProjectDataset(projectId: string, projectName: string) {
             console.error('确保数据集存在失败:', error);
             return null;
         }
-    }, [projectId, projectName, createDatasetMutation]);
+    }, [config, projectId, projectName, createDatasetMutation]);
 
     return {
         ensureDataset,

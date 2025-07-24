@@ -435,19 +435,27 @@ export async function createProjectWithDataset(projectData: Omit<Project, 'id' |
 }
 
 /**
- * 获取Dify配置的统一方法
+ * 获取Dify配置的统一方法（服务器端）
  * 优先级: 环境变量 > 默认配置
  */
 async function getDifyConfig() {
   const environment = (process.env.DIFY_ENVIRONMENT as 'local' | 'cloud') || 'cloud';
   const defaultConfig = DEFAULT_DIFY_CONFIGS[environment];
   
-  return {
+  const config = {
     ...defaultConfig,
     datasetApiKey: process.env.DIFY_DATASET_API_KEY || 
                    process.env.NEXT_PUBLIC_DIFY_DATASET_API_KEY || 
                    defaultConfig.datasetApiKey,
   };
+
+  // 验证配置完整性
+  if (!config.baseUrl || config.baseUrl === 'undefined') {
+    console.error('Dify配置错误: baseUrl未定义', { environment, config });
+    throw new Error(`Dify配置错误: baseUrl未定义，environment=${environment}`);
+  }
+
+  return config;
 }
 
 /**

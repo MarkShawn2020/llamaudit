@@ -20,6 +20,7 @@ import type {
   DocumentSegmentListResponse,
   DocumentUploadFile
 } from '@/lib/api/dify-dataset-api-extended';
+import { useDifyConfig } from '@/contexts/dify-config-context';
 
 // 查询键定义
 const DOCUMENT_QUERY_KEYS = {
@@ -43,9 +44,11 @@ export function useDocumentDetails(
   documentId: string | undefined, 
   enabled = true
 ) {
+  const { config } = useDifyConfig();
+  
   return useQuery({
     queryKey: DOCUMENT_QUERY_KEYS.documentDetails(datasetId || '', documentId || ''),
-    queryFn: () => getDocumentDetails(datasetId!, documentId!),
+    queryFn: () => getDocumentDetails(config, datasetId!, documentId!),
     enabled: enabled && !!datasetId && !!documentId,
     staleTime: 5 * 60 * 1000, // 5分钟缓存
     gcTime: 10 * 60 * 1000, // 10分钟垃圾回收
@@ -75,10 +78,12 @@ export function useDocumentSegments(
   documentId: string | undefined, 
   enabled = true
 ) {
+  const { config } = useDifyConfig();
+  
   return useInfiniteQuery({
     queryKey: DOCUMENT_QUERY_KEYS.documentSegments(datasetId || '', documentId || ''),
     queryFn: ({ pageParam = 1 }) => 
-      getDocumentSegments(datasetId!, documentId!, pageParam, 20),
+      getDocumentSegments(config, datasetId!, documentId!, pageParam, 20),
     initialPageParam: 1,
     getNextPageParam: (lastPage, allPages, lastPageParam) => {
       if (lastPage.data.length < 20 || !lastPage.has_more) {
@@ -114,10 +119,12 @@ export function useSearchDocumentSegments(
   keyword: string,
   enabled = true
 ) {
+  const { config } = useDifyConfig();
+  
   return useInfiniteQuery({
     queryKey: DOCUMENT_QUERY_KEYS.searchSegments(datasetId || '', documentId || '', keyword),
     queryFn: ({ pageParam = 1 }) => 
-      searchDocumentSegments(datasetId!, documentId!, keyword, pageParam, 20),
+      searchDocumentSegments(config, datasetId!, documentId!, keyword, pageParam, 20),
     initialPageParam: 1,
     getNextPageParam: (lastPage, allPages, lastPageParam) => {
       if (lastPage.data.length < 20 || !lastPage.has_more) {
@@ -139,9 +146,11 @@ export function useSegmentDetails(
   segmentId: string | undefined,
   enabled = true
 ) {
+  const { config } = useDifyConfig();
+  
   return useQuery({
     queryKey: DOCUMENT_QUERY_KEYS.segmentDetails(datasetId || '', documentId || '', segmentId || ''),
-    queryFn: () => getSegmentDetails(datasetId!, documentId!, segmentId!),
+    queryFn: () => getSegmentDetails(config, datasetId!, documentId!, segmentId!),
     enabled: enabled && !!datasetId && !!documentId && !!segmentId,
     staleTime: 5 * 60 * 1000,
   });
@@ -152,6 +161,7 @@ export function useSegmentDetails(
  */
 export function useUpdateSegmentsStatus() {
   const queryClient = useQueryClient();
+  const { config } = useDifyConfig();
 
   return useMutation({
     mutationFn: ({ 
@@ -164,7 +174,7 @@ export function useUpdateSegmentsStatus() {
       documentId: string; 
       segmentIds: string[]; 
       enabled: boolean; 
-    }) => updateSegmentsStatus(datasetId, documentId, segmentIds, enabled),
+    }) => updateSegmentsStatus(config, datasetId, documentId, segmentIds, enabled),
     
     onMutate: async ({ datasetId, documentId, segmentIds, enabled }) => {
       // 乐观更新：立即更新UI中的分段状态
@@ -229,11 +239,12 @@ export function useUpdateSegmentsStatus() {
  */
 export function usePrefetchDocumentDetails() {
   const queryClient = useQueryClient();
+  const { config } = useDifyConfig();
 
   return (datasetId: string, documentId: string) => {
     queryClient.prefetchQuery({
       queryKey: DOCUMENT_QUERY_KEYS.documentDetails(datasetId, documentId),
-      queryFn: () => getDocumentDetails(datasetId, documentId),
+      queryFn: () => getDocumentDetails(config, datasetId, documentId),
       staleTime: 5 * 60 * 1000,
     });
   };
@@ -277,9 +288,11 @@ export function useDocumentUploadFile(
   documentId: string | undefined,
   enabled = true
 ) {
+  const { config } = useDifyConfig();
+  
   return useQuery({
     queryKey: DOCUMENT_QUERY_KEYS.uploadFile(datasetId || '', documentId || ''),
-    queryFn: () => getDocumentUploadFile(datasetId!, documentId!),
+    queryFn: () => getDocumentUploadFile(config, datasetId!, documentId!),
     enabled: enabled && !!datasetId && !!documentId,
     staleTime: 10 * 60 * 1000, // 10分钟缓存（文件信息相对稳定）
     gcTime: 30 * 60 * 1000, // 30分钟垃圾回收
