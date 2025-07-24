@@ -39,17 +39,31 @@ export function ChatMessage({
 }: ChatMessageProps) {
   const [isCopied, setIsCopied] = useState(false);
   const [showSources, setShowSources] = useState(false);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  
+  // 检测触摸设备
+  useEffect(() => {
+    setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  }, []);
 
   // 复制消息内容
   const handleCopy = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(message.content);
+      // 获取纯文本内容用于复制
+      const textContent = message.content || message.parts?.map((part: any) => 
+        part.type === 'text' ? part.text : ''
+      ).join('') || '';
+      
+      await navigator.clipboard.writeText(textContent);
       setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
+      
+      // 成功反馈
+      setTimeout(() => setIsCopied(false), 2500);
     } catch (error) {
       console.error('Failed to copy message:', error);
+      // TODO: 可以添加错误提示
     }
-  }, [message.content]);
+  }, [message.content, message.parts]);
 
   // 切换上下文显示
   const handleContextToggle = useCallback(() => {
@@ -83,13 +97,44 @@ export function ChatMessage({
       <div className={`flex-1 max-w-[80%] ${isUser ? 'items-end' : 'items-start'} flex flex-col overflow-hidden`}>
         {/* 消息气泡 */}
         <div className={`
-          rounded-lg px-4 py-3 break-words overflow-hidden
+          relative rounded-lg px-4 py-3 break-words overflow-hidden group
           ${isUser 
             ? 'bg-blue-500 text-white ml-auto' 
             : 'bg-muted text-foreground mr-auto'
           }
           ${message.error ? 'border border-red-200 bg-red-50 text-red-700' : ''}
         `}>
+          {/* 悬浮复制按钮 - 触摸设备上始终显示，桌面设备hover显示 */}
+          {!isUser && !message.error && !message.isLoading && (
+            <div className={`
+              absolute top-2 right-2 transition-opacity duration-200
+              ${isTouchDevice 
+                ? 'opacity-70' 
+                : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
+              }
+            `}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCopy}
+                className={`
+                  h-6 w-6 p-0 backdrop-blur-sm shadow-sm transition-all duration-200
+                  ${isCopied 
+                    ? 'bg-green-100/90 border border-green-300/50 hover:bg-green-100' 
+                    : 'bg-background/80 border border-border/50 hover:bg-background/90'
+                  }
+                `}
+                title={isCopied ? "已复制到剪贴板" : "复制消息内容"}
+                aria-label={isCopied ? "已复制到剪贴板" : "复制消息内容"}
+              >
+                {isCopied ? (
+                  <Check className="h-3 w-3 text-green-600 animate-in zoom-in-50 duration-200" />
+                ) : (
+                  <Copy className="h-3 w-3 text-muted-foreground" />
+                )}
+              </Button>
+            </div>
+          )}
           {/* 增强的加载和流式状态 */}
           {message.isLoading && !message.isStreaming ? (
             <div className="flex items-center gap-2">
@@ -142,73 +187,57 @@ export function ChatMessage({
           {format(message.timestamp || message.createdAt || new Date(), 'HH:mm', { locale: zhCN })}
         </div>
 
-        {/* 操作按钮 */}
-        {!message.isLoading && (
-          <div className={`flex items-center gap-1 mt-2 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-            {/* 复制按钮 */}
+        {/* 操作按钮 - 移除复制按钮，现在使用悬浮式 */}
+        {!message.isLoading && !isUser && (
+          <div className="flex items-center gap-1 mt-2">
+            {/* 重新生成按钮 */}
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleCopy}
               className="h-6 w-6 p-0"
+              title="重新生成回答"
             >
-              {isCopied ? (
-                <Check className="h-3 w-3 text-green-600" />
-              ) : (
-                <Copy className="h-3 w-3" />
-              )}
+              <RotateCcw className="h-3 w-3" />
             </Button>
 
-            {/* AI消息专用操作 */}
-            {!isUser && (
-              <>
-                {/* 重新生成按钮 */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0"
-                >
-                  <RotateCcw className="h-3 w-3" />
-                </Button>
+            {/* 点赞/点踩 */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              title="点赞"
+            >
+              <ThumbsUp className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              title="点踩"
+            >
+              <ThumbsDown className="h-3 w-3" />
+            </Button>
 
-                {/* 点赞/点踩 */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0"
-                >
-                  <ThumbsUp className="h-3 w-3" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0"
-                >
-                  <ThumbsDown className="h-3 w-3" />
-                </Button>
-
-                {/* 查看来源按钮 */}
-                {hasContext && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleContextToggle}
-                    className="h-6 px-2 text-xs"
-                  >
-                    {showSources ? (
-                      <>
-                        <ChevronUp className="h-3 w-3 mr-1" />
-                        隐藏来源
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="h-3 w-3 mr-1" />
-                        查看来源 ({message.context?.length})
-                      </>
-                    )}
-                  </Button>
+            {/* 查看来源按钮 */}
+            {hasContext && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleContextToggle}
+                className="h-6 px-2 text-xs"
+              >
+                {showSources ? (
+                  <>
+                    <ChevronUp className="h-3 w-3 mr-1" />
+                    隐藏来源
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="h-3 w-3 mr-1" />
+                    查看来源 ({message.context?.length})
+                  </>
                 )}
-              </>
+              </Button>
             )}
           </div>
         )}
@@ -282,32 +311,55 @@ function MessageContent({ message }: { message: any }) {
 
   // 如果有工具调用，渲染工具调用信息
   if (message.toolInvocations && message.toolInvocations.length > 0) {
-    return (
-      <div className="space-y-3">
-        {/* 主要内容 */}
-        {message.content && (
-          <MarkdownDisplay content={message.content} />
-        )}
-        
-        {/* 工具调用 */}
-        <div className="space-y-2">
-          {message.toolInvocations.map((tool: any, index: number) => (
-            <ToolInvocationCard 
-              key={tool.toolCallId || index}
-              tool={tool}
-              isExpanded={false}
-              onToggleExpansion={() => {}}
-            />
-          ))}
-        </div>
-      </div>
-    );
+    return <ToolInvocationsDisplay toolInvocations={message.toolInvocations} content={message.content} />;
   }
 
   // 默认渲染纯文本内容
   return <MarkdownDisplay content={message.content || ''} />;
 }
 
+/**
+ * 工具调用列表显示组件 - 管理多个工具调用的展开状态
+ */
+function ToolInvocationsDisplay({ toolInvocations, content }: { toolInvocations: any[]; content?: string }) {
+  const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
+  
+  const handleToggleExpansion = useCallback((toolId: string) => {
+    setExpandedTools(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(toolId)) {
+        newSet.delete(toolId);
+      } else {
+        newSet.add(toolId);
+      }
+      return newSet;
+    });
+  }, []);
+  
+  return (
+    <div className="space-y-3">
+      {/* 主要内容 */}
+      {content && (
+        <MarkdownDisplay content={content} />
+      )}
+      
+      {/* 工具调用 */}
+      <div className="space-y-2">
+        {toolInvocations.map((tool: any, index: number) => {
+          const toolId = tool.toolCallId || `tool-${index}`;
+          return (
+            <ToolInvocationCard 
+              key={toolId}
+              tool={tool}
+              isExpanded={expandedTools.has(toolId)}
+              onToggleExpansion={() => handleToggleExpansion(toolId)}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 /**
  * 消息部分渲染组件 - 处理单个 message part
@@ -321,6 +373,12 @@ function MessagePart({
   isLatest: boolean; 
   messageId: string;
 }) {
+  // 管理工具调用的展开状态
+  const [isToolExpanded, setIsToolExpanded] = useState(false);
+  
+  const handleToggleToolExpansion = useCallback(() => {
+    setIsToolExpanded(prev => !prev);
+  }, []);
   switch (part.type) {
     case 'text':
       return (
@@ -335,8 +393,8 @@ function MessagePart({
         <div className={`${isLatest ? 'animate-in fade-in duration-300' : ''} my-2`}>
           <ToolInvocationCard 
             tool={part.toolInvocation || part}
-            isExpanded={false}
-            onToggleExpansion={() => {}}
+            isExpanded={isToolExpanded}
+            onToggleExpansion={handleToggleToolExpansion}
           />
         </div>
       );
@@ -624,23 +682,32 @@ function ToolInvocationCard({
     switch (tool.state) {
       case 'result':
         return tool.result?.includes('失败') || tool.result?.includes('错误') 
-          ? 'border-red-200 bg-red-50' 
-          : 'border-green-200 bg-green-50';
+          ? 'border-red-200 bg-red-50/50 dark:border-red-800 dark:bg-red-950/20' 
+          : 'border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/20';
       case 'partial':
-        return 'border-blue-200 bg-blue-50';
+        return 'border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20';
       case 'error':
-        return 'border-red-200 bg-red-50';
+        return 'border-red-200 bg-red-50/50 dark:border-red-800 dark:bg-red-950/20';
       default:
-        return 'border-gray-200 bg-gray-50';
+        return 'border-border bg-muted/30';
     }
   };
 
   return (
     <div className={`border rounded-lg ${getStatusColor()}`}>
-      {/* 工具调用头部 */}
+      {/* 工具调用头部 - 增强点击反馈 */}
       <div 
-        className="flex items-center justify-between p-3 cursor-pointer hover:bg-black/5 transition-colors"
+        className="flex items-center justify-between p-3 cursor-pointer hover:bg-background/50 transition-all duration-200 select-none"
         onClick={onToggleExpansion}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onToggleExpansion();
+          }
+        }}
+        title={isExpanded ? "收起详情" : "展开详情"}
       >
         <div className="flex items-center gap-2">
           <span className="text-lg">{getToolIcon(tool.toolName)}</span>
@@ -657,13 +724,18 @@ function ToolInvocationCard({
         </div>
         <div className="flex items-center gap-2">
           <ToolStatusBadge tool={tool} />
-          <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+          <div className="flex items-center gap-1">
+            <span className="text-xs text-muted-foreground">
+              {isExpanded ? '收起' : '展开'}
+            </span>
+            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+          </div>
         </div>
       </div>
 
-      {/* 工具调用详情 */}
+      {/* 工具调用详情 - 添加展开动画 */}
       {isExpanded && (
-        <div className="border-t p-3 space-y-3">
+        <div className="border-t p-3 space-y-3 animate-in slide-in-from-top-2 duration-200">
           {/* 参数 */}
           {tool.args && Object.keys(tool.args).length > 0 && (
             <div>
