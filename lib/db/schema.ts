@@ -239,7 +239,8 @@ export const filesRelations = relations(files, ({ one, many }) => ({
   }),
   uploadedBy: one(users, {
     fields: [files.userId],
-    references: [users.id]
+    references: [users.id],
+    relationName: 'userUploadedFiles'
   }),
   llmAnalysisTasks: many(llmAnalysisTasks, { relationName: 'fileLlmAnalysisTasks' }),
 }));
@@ -268,6 +269,7 @@ export const llmAnalysisTasksRelations = relations(llmAnalysisTasks, ({ one }) =
   fromFile: one(files, {
     fields: [llmAnalysisTasks.fromFile],
     references: [files.id],
+    relationName: 'fileLlmAnalysisTasks'
   })
 }));
 
@@ -278,7 +280,8 @@ export type InsertLlmAnalysisTask = typeof llmAnalysisTasks.$inferInsert;
 export const auditUnitsRelations = relations(auditUnits, ({ one, many }) => ({
   createdBy: one(users, {
     fields: [auditUnits.createdBy],
-    references: [users.id]
+    references: [users.id],
+    relationName: 'userCreatedAuditUnits'
   }),
   files: many(files)
 }));

@@ -5,43 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1746532932266,
-      "tag": "0000_old_firelord",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1746837345694,
-      "tag": "0001_tidy_umar",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1746840288198,
-      "tag": "0002_lean_moonstone",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1746855318333,
-      "tag": "0003_past_abomination",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1753225703925,
-      "tag": "0004_brief_ultimo",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1753288029827,
-      "tag": "0005_public_brood",
+      "when": 1753375965255,
+      "tag": "0000_happy_sally_floyd",
       "breakpoints": true
     }
   ]

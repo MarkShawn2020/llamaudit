@@ -1,5 +1,5 @@
 {
-  "id": "47e971cb-9f93-4e65-b9fe-1789234f715f",
+  "id": "6dbd2208-1a3d-4e2e-9ccc-1a46faab9cbe",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -81,267 +81,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.analysis_results": {
-      "name": "analysis_results",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "file_id": {
-          "name": "file_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "item_index": {
-          "name": "item_index",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "meeting_time": {
-          "name": "meeting_time",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "meeting_number": {
-          "name": "meeting_number",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "meeting_topic": {
-          "name": "meeting_topic",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "meeting_conclusion": {
-          "name": "meeting_conclusion",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "content_summary": {
-          "name": "content_summary",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "event_category": {
-          "name": "event_category",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "event_details": {
-          "name": "event_details",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "amount_involved": {
-          "name": "amount_involved",
-          "type": "numeric(20, 2)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "related_departments": {
-          "name": "related_departments",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "related_personnel": {
-          "name": "related_personnel",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "decision_basis": {
-          "name": "decision_basis",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "original_text": {
-          "name": "original_text",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "confidence": {
-          "name": "confidence",
-          "type": "numeric(5, 2)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "status": {
-          "name": "status",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'pending'"
-        },
-        "error_message": {
-          "name": "error_message",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "started_at": {
-          "name": "started_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "completed_at": {
-          "name": "completed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "analysis_results_file_id_files_id_fk": {
-          "name": "analysis_results_file_id_files_id_fk",
-          "tableFrom": "analysis_results",
-          "tableTo": "files",
-          "columnsFrom": [
-            "file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.audit_unit_rules": {
-      "name": "audit_unit_rules",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "audit_unit_id": {
-          "name": "audit_unit_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "rule_type": {
-          "name": "rule_type",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "rule_name": {
-          "name": "rule_name",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "rule_description": {
-          "name": "rule_description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "rule_config": {
-          "name": "rule_config",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "audit_unit_rules_audit_unit_id_audit_units_id_fk": {
-          "name": "audit_unit_rules_audit_unit_id_audit_units_id_fk",
-          "tableFrom": "audit_unit_rules",
-          "tableTo": "audit_units",
-          "columnsFrom": [
-            "audit_unit_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "audit_unit_rules_created_by_users_id_fk": {
-          "name": "audit_unit_rules_created_by_users_id_fk",
-          "tableFrom": "audit_unit_rules",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.audit_units": {
       "name": "audit_units",
       "schema": "",
@@ -350,8 +89,7 @@
           "name": "id",
           "type": "uuid",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "notNull": true
         },
         "code": {
           "name": "code",
@@ -398,6 +136,31 @@
         "description": {
           "name": "description",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dataset_id": {
+          "name": "dataset_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dify_base_url": {
+          "name": "dify_base_url",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'https://api.dify.ai/v1'"
+        },
+        "dify_dataset_api_key": {
+          "name": "dify_dataset_api_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dify_config_updated_at": {
+          "name": "dify_config_updated_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -448,574 +211,6 @@
           ]
         }
       },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.compliance_checks": {
-      "name": "compliance_checks",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "document_id": {
-          "name": "document_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "rule_id": {
-          "name": "rule_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "passed": {
-          "name": "passed",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "details": {
-          "name": "details",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "checked_at": {
-          "name": "checked_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "compliance_checks_document_id_documents_id_fk": {
-          "name": "compliance_checks_document_id_documents_id_fk",
-          "tableFrom": "compliance_checks",
-          "tableTo": "documents",
-          "columnsFrom": [
-            "document_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "compliance_checks_rule_id_compliance_rules_id_fk": {
-          "name": "compliance_checks_rule_id_compliance_rules_id_fk",
-          "tableFrom": "compliance_checks",
-          "tableTo": "compliance_rules",
-          "columnsFrom": [
-            "rule_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.compliance_results": {
-      "name": "compliance_results",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "audit_unit_id": {
-          "name": "audit_unit_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "file_id": {
-          "name": "file_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "rule_id": {
-          "name": "rule_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "is_compliant": {
-          "name": "is_compliant",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "issue_description": {
-          "name": "issue_description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "severity": {
-          "name": "severity",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'medium'"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "compliance_results_audit_unit_id_audit_units_id_fk": {
-          "name": "compliance_results_audit_unit_id_audit_units_id_fk",
-          "tableFrom": "compliance_results",
-          "tableTo": "audit_units",
-          "columnsFrom": [
-            "audit_unit_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "compliance_results_file_id_files_id_fk": {
-          "name": "compliance_results_file_id_files_id_fk",
-          "tableFrom": "compliance_results",
-          "tableTo": "files",
-          "columnsFrom": [
-            "file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "compliance_results_rule_id_audit_unit_rules_id_fk": {
-          "name": "compliance_results_rule_id_audit_unit_rules_id_fk",
-          "tableFrom": "compliance_results",
-          "tableTo": "audit_unit_rules",
-          "columnsFrom": [
-            "rule_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.compliance_rules": {
-      "name": "compliance_rules",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "rule_type": {
-          "name": "rule_type",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "rule_config": {
-          "name": "rule_config",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "team_id": {
-          "name": "team_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "compliance_rules_created_by_users_id_fk": {
-          "name": "compliance_rules_created_by_users_id_fk",
-          "tableFrom": "compliance_rules",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "compliance_rules_team_id_teams_id_fk": {
-          "name": "compliance_rules_team_id_teams_id_fk",
-          "tableFrom": "compliance_rules",
-          "tableTo": "teams",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.contracts": {
-      "name": "contracts",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "document_id": {
-          "name": "document_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "contract_number": {
-          "name": "contract_number",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "signing_date": {
-          "name": "signing_date",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "contract_name": {
-          "name": "contract_name",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "party_a": {
-          "name": "party_a",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "party_b": {
-          "name": "party_b",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "amount_with_tax": {
-          "name": "amount_with_tax",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "amount_without_tax": {
-          "name": "amount_without_tax",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "payment_terms": {
-          "name": "payment_terms",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "performance_period": {
-          "name": "performance_period",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "obligations": {
-          "name": "obligations",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "acceptance_criteria": {
-          "name": "acceptance_criteria",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "liability_for_breach": {
-          "name": "liability_for_breach",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "extracted_at": {
-          "name": "extracted_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "contracts_document_id_documents_id_fk": {
-          "name": "contracts_document_id_documents_id_fk",
-          "tableFrom": "contracts",
-          "tableTo": "documents",
-          "columnsFrom": [
-            "document_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.document_types": {
-      "name": "document_types",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.documents": {
-      "name": "documents",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "file_path": {
-          "name": "file_path",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "file_type": {
-          "name": "file_type",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "document_type_id": {
-          "name": "document_type_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "organization_id": {
-          "name": "organization_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "uploaded_by": {
-          "name": "uploaded_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "uploaded_at": {
-          "name": "uploaded_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "extracted_info": {
-          "name": "extracted_info",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "team_id": {
-          "name": "team_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "documents_document_type_id_document_types_id_fk": {
-          "name": "documents_document_type_id_document_types_id_fk",
-          "tableFrom": "documents",
-          "tableTo": "document_types",
-          "columnsFrom": [
-            "document_type_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "documents_organization_id_organizations_id_fk": {
-          "name": "documents_organization_id_organizations_id_fk",
-          "tableFrom": "documents",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "documents_uploaded_by_users_id_fk": {
-          "name": "documents_uploaded_by_users_id_fk",
-          "tableFrom": "documents",
-          "tableTo": "users",
-          "columnsFrom": [
-            "uploaded_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "documents_team_id_teams_id_fk": {
-          "name": "documents_team_id_teams_id_fk",
-          "tableFrom": "documents",
-          "tableTo": "teams",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -1283,96 +478,106 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.meeting_minutes": {
-      "name": "meeting_minutes",
+    "public.llm_analysis_tasks": {
+      "name": "llm_analysis_tasks",
       "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "serial",
+          "type": "uuid",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "default": "gen_random_uuid()"
         },
-        "document_id": {
-          "name": "document_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "meeting_date": {
-          "name": "meeting_date",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "document_number": {
-          "name": "document_number",
+        "task_id": {
+          "name": "task_id",
           "type": "varchar(100)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
-        "meeting_topic": {
-          "name": "meeting_topic",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "meeting_conclusion": {
-          "name": "meeting_conclusion",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "content_summary": {
-          "name": "content_summary",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "event_type": {
-          "name": "event_type",
+        "status": {
+          "name": "status",
           "type": "varchar(50)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
-        "event_details": {
-          "name": "event_details",
+        "file_ids": {
+          "name": "file_ids",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "prompt": {
+          "name": "prompt",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "involved_amount": {
-          "name": "involved_amount",
+        "raw_response": {
+          "name": "raw_response",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "response_format": {
+          "name": "response_format",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'markdown'"
+        },
+        "processing_time": {
+          "name": "processing_time",
           "type": "real",
           "primaryKey": false,
           "notNull": false
         },
-        "related_departments": {
-          "name": "related_departments",
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error": {
+          "name": "error",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "related_personnel": {
-          "name": "related_personnel",
-          "type": "text",
+        "model_name": {
+          "name": "model_name",
+          "type": "varchar(100)",
           "primaryKey": false,
           "notNull": false
         },
-        "decision_basis": {
-          "name": "decision_basis",
-          "type": "text",
+        "from_file": {
+          "name": "from_file",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
-        "original_text": {
-          "name": "original_text",
-          "type": "text",
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
-        "extracted_at": {
-          "name": "extracted_at",
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -1381,12 +586,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "meeting_minutes_document_id_documents_id_fk": {
-          "name": "meeting_minutes_document_id_documents_id_fk",
-          "tableFrom": "meeting_minutes",
-          "tableTo": "documents",
+        "llm_analysis_tasks_from_file_files_id_fk": {
+          "name": "llm_analysis_tasks_from_file_files_id_fk",
+          "tableFrom": "llm_analysis_tasks",
+          "tableTo": "files",
           "columnsFrom": [
-            "document_id"
+            "from_file"
           ],
           "columnsTo": [
             "id"
@@ -1396,7 +601,15 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "llm_analysis_tasks_task_id_unique": {
+          "name": "llm_analysis_tasks_task_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "task_id"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
