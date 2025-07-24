@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { 
@@ -228,66 +228,124 @@ export function ChatMessage({
 }
 
 /**
- * 消息内容渲染组件（支持Markdown等格式）
- * 解决渲染模式切换导致的用户体验问题
+ * 消息内容渲染组件 - 自然渲染后端发送的消息部分
+ * 无需复杂的模式判断，直接渲染 parts 内容
  */
 function MessageContent({ message }: { message: any }) {
-  // 智能判断最终的渲染模式 - 避免模式切换
-  const shouldUseAdvancedMode = useMemo(() => {
-    // 1. 检查是否有工具调用（最可靠的指标）
-    if (message.toolInvocations && message.toolInvocations.length > 0) {
-      return true;
-    }
-    
-    // 2. 检查 parts 中是否包含工具调用
-    if (message.parts && Array.isArray(message.parts)) {
-      const hasToolInvocation = message.parts.some((part: any) => 
-        part.type === 'tool-invocation' || part.type === 'step-start'
-      );
-      if (hasToolInvocation) {
-        return true;
-      }
-    }
-    
-    // 3. 检查是否是AI助手消息且内容复杂（启发式判断）
-    const isAssistant = (message.role || message.type) === 'assistant';
-    if (isAssistant) {
-      const content = message.content || '';
-      // 如果内容包含多个段落或者很长，可能会有复杂的推理过程
-      const hasMultipleParagraphs = content.split('\n\n').length > 2;
-      const isLongContent = content.length > 500;
-      const hasStructuredContent = content.includes('##') || content.includes('###');
-      
-      if (hasMultipleParagraphs || isLongContent || hasStructuredContent) {
-        return true;
-      }
-    }
-    
-    return false;
-  }, [
-    message.toolInvocations, 
-    message.parts, 
-    message.role, 
-    message.type, 
-    message.content
-  ]);
+  // 如果有 parts，逐个渲染各部分
+  if (message.parts && Array.isArray(message.parts) && message.parts.length > 0) {
+    return (
+      <div className="space-y-2">
+        {message.parts.map((part: any, index: number) => (
+          <MessagePart 
+            key={index} 
+            part={part} 
+            isLatest={index === message.parts.length - 1}
+            messageId={message.id}
+          />
+        ))}
+      </div>
+    );
+  }
 
-  // 使用统一的渲染架构
-  return (
-    <div>
-      {shouldUseAdvancedMode ? (
-        <UnifiedAdvancedDisplay message={message} />
-      ) : (
-        <SimpleTextDisplay content={message.content || ''} />
-      )}
-    </div>
-  );
+  // 如果有工具调用，渲染工具调用信息
+  if (message.toolInvocations && message.toolInvocations.length > 0) {
+    return (
+      <div className="space-y-3">
+        {/* 主要内容 */}
+        {message.content && (
+          <SimpleTextDisplay content={message.content} />
+        )}
+        
+        {/* 工具调用 */}
+        <div className="space-y-2">
+          {message.toolInvocations.map((tool: any, index: number) => (
+            <ToolInvocationCard 
+              key={tool.toolCallId || index}
+              tool={tool}
+              isExpanded={false}
+              onToggleExpansion={() => {}}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // 默认渲染纯文本内容
+  return <SimpleTextDisplay content={message.content || ''} />;
+}
+
+/**
+ * 消息部分渲染组件 - 处理单个 message part
+ */
+function MessagePart({ 
+  part, 
+  isLatest, 
+  messageId 
+}: { 
+  part: any; 
+  isLatest: boolean; 
+  messageId: string;
+}) {
+  switch (part.type) {
+    case 'text':
+      return (
+        <div className={isLatest ? 'animate-in fade-in duration-300' : ''}>
+          <SimpleTextDisplay content={part.text || ''} />
+        </div>
+      );
+
+    case 'tool-call':
+    case 'tool-invocation':
+      return (
+        <div className={`${isLatest ? 'animate-in fade-in duration-300' : ''} my-2`}>
+          <ToolInvocationCard 
+            tool={part.toolInvocation || part}
+            isExpanded={false}
+            onToggleExpansion={() => {}}
+          />
+        </div>
+      );
+
+    case 'tool-result':
+      return (
+        <div className={`${isLatest ? 'animate-in fade-in duration-300' : ''} my-2`}>
+          <ToolResultDisplay result={part.result || part} />
+        </div>
+      );
+
+    case 'step-start':
+      return (
+        <div className={`${isLatest ? 'animate-in fade-in duration-300' : ''} my-3`}>
+          <StepStartIndicator step={part.step || 1} />
+        </div>
+      );
+
+    case 'thinking':
+      return (
+        <div className={`${isLatest ? 'animate-in fade-in duration-300' : ''} my-2`}>
+          <ThinkingDisplay content={part.content || part.text || ''} />
+        </div>
+      );
+
+    default:
+      // 未知类型，尝试渲染为文本
+      const content = part.text || part.content || JSON.stringify(part);
+      return (
+        <div className={isLatest ? 'animate-in fade-in duration-300' : ''}>
+          <SimpleTextDisplay content={content} />
+        </div>
+      );
+  }
 }
 
 /**
  * 简单文本显示组件
  */
 function SimpleTextDisplay({ content }: { content: string }) {
+  if (!content) return null;
+  
   const processedContent = content
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // 粗体
     .replace(/\*(.*?)\*/g, '<em>$1</em>') // 斜体
@@ -302,431 +360,57 @@ function SimpleTextDisplay({ content }: { content: string }) {
 }
 
 /**
- * 统一的高级显示组件 - 避免模式切换
+ * 工具结果显示组件
  */
-function UnifiedAdvancedDisplay({ message }: { message: any }) {
-  const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
-  const [showAllSteps, setShowAllSteps] = useState(false);
-
-  const toggleToolExpansion = (toolCallId: string) => {
-    const newExpanded = new Set(expandedTools);
-    if (newExpanded.has(toolCallId)) {
-      newExpanded.delete(toolCallId);
-    } else {
-      newExpanded.add(toolCallId);
-    }
-    setExpandedTools(newExpanded);
-  };
-
-  // 解析消息结构 - 统一处理不同数据源
-  const parseMessageStructure = () => {
-    const structure: {
-      hasSteps: boolean;
-      steps: Array<{
-        stepNumber: number;
-        thinking: string[];
-        toolCalls: any[];
-      }>;
-      finalContent: string;
-      toolInvocations: any[];
-    } = {
-      hasSteps: false,
-      steps: [],
-      finalContent: '',
-      toolInvocations: []
-    };
-
-    // 优先从 toolInvocations 获取工具调用信息
-    if (message.toolInvocations && message.toolInvocations.length > 0) {
-      structure.toolInvocations = message.toolInvocations;
-    }
-
-    // 从 parts 解析步骤结构
-    if (message.parts && Array.isArray(message.parts)) {
-      let currentStep = -1;
-      let currentThinking: string[] = [];
-      let currentToolCalls: any[] = [];
-
-      message.parts.forEach((part: any) => {
-        if (part.type === 'step-start') {
-          // 保存上一步
-          if (currentStep >= 0) {
-            structure.steps[currentStep] = {
-              stepNumber: currentStep + 1,
-              thinking: [...currentThinking],
-              toolCalls: [...currentToolCalls]
-            };
-          }
-          
-          // 开始新步骤
-          currentStep++;
-          currentThinking = [];
-          currentToolCalls = [];
-          structure.hasSteps = true;
-        } else if (part.type === 'text') {
-          currentThinking.push(part.text);
-        } else if (part.type === 'tool-invocation') {
-          currentToolCalls.push(part.toolInvocation);
-        }
-      });
-
-      // 保存最后一步
-      if (currentStep >= 0) {
-        structure.steps[currentStep] = {
-          stepNumber: currentStep + 1,
-          thinking: [...currentThinking],
-          toolCalls: [...currentToolCalls]
-        };
-      }
-
-      // 如果没有明确的steps，但有内容，创建单一步骤
-      if (!structure.hasSteps && structure.steps.length === 0) {
-        const allText = message.parts
-          .filter((p: any) => p.type === 'text')
-          .map((p: any) => p.text)
-          .join('\n\n');
-        const allTools = message.parts
-          .filter((p: any) => p.type === 'tool-invocation')
-          .map((p: any) => p.toolInvocation);
-
-        if (allText || allTools.length > 0) {
-          structure.steps.push({
-            stepNumber: 1,
-            thinking: allText ? [allText] : [],
-            toolCalls: allTools
-          });
-        }
-      }
-    }
-
-    // 如果没有 parts 但有 content，使用 content 作为最终内容
-    if (structure.steps.length === 0 && message.content) {
-      structure.finalContent = message.content;
-    }
-
-    // 合并 toolInvocations 到相应步骤
-    if (structure.toolInvocations.length > 0 && structure.steps.length > 0) {
-      structure.toolInvocations.forEach((tool, index) => {
-        const stepIndex = tool.step || index;
-        if (structure.steps[stepIndex]) {
-          // 避免重复添加
-          const existingTool = structure.steps[stepIndex].toolCalls.find(
-            t => t.toolCallId === tool.toolCallId
-          );
-          if (!existingTool) {
-            structure.steps[stepIndex].toolCalls.push(tool);
-          }
-        }
-      });
-    }
-
-    return structure;
-  };
-
-  const messageStructure = parseMessageStructure();
-
-  // 如果既没有步骤也没有工具调用，降级到简单显示
-  if (messageStructure.steps.length === 0 && messageStructure.toolInvocations.length === 0) {
-    return <SimpleTextDisplay content={messageStructure.finalContent || message.content || ''} />;
-  }
-
-  // 显示统一的高级界面
+function ToolResultDisplay({ result }: { result: any }) {
   return (
-    <div className="space-y-3">
-      {/* 智能总览 - 只在有多个步骤或工具调用时显示 */}
-      {(messageStructure.steps.length > 1 || messageStructure.toolInvocations.length > 0) && (
-        <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg border">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-              <span className="text-white text-xs font-bold">
-                {Math.max(messageStructure.steps.length, 1)}
-              </span>
-            </div>
-            <span className="text-sm font-medium text-blue-700">
-              {messageStructure.steps.length > 1 
-                ? `AI推理过程 (${messageStructure.steps.length} 个步骤)` 
-                : '智能分析'
-              }
-            </span>
-          </div>
-          {messageStructure.steps.length > 1 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowAllSteps(!showAllSteps)}
-              className="h-6 px-2 text-xs text-blue-600"
-            >
-              {showAllSteps ? '折叠所有' : '展开所有'}
-            </Button>
-          )}
-        </div>
-      )}
-
-      {/* 步骤内容 */}
-      <div className="space-y-3">
-        {messageStructure.steps.length > 0 ? (
-          messageStructure.steps.map((step, stepIndex) => (
-            <StepDisplay 
-              key={stepIndex}
-              step={step}
-              stepIndex={stepIndex}
-              isExpanded={showAllSteps || stepIndex === messageStructure.steps.length - 1}
-              expandedTools={expandedTools}
-              onToggleToolExpansion={toggleToolExpansion}
-              hasMultipleSteps={messageStructure.steps.length > 1}
-            />
-          ))
-        ) : (
-          // 没有步骤但有内容的情况
-          <SimpleTextDisplay content={messageStructure.finalContent || message.content || ''} />
-        )}
+    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+      <div className="text-xs font-medium text-green-700 mb-2 flex items-center gap-2">
+        <span>✅</span>
+        工具执行结果
+      </div>
+      <div className="text-sm text-green-800 bg-white rounded p-2 max-h-32 overflow-y-auto">
+        {typeof result === 'string' ? result : JSON.stringify(result, null, 2)}
       </div>
     </div>
   );
 }
 
 /**
- * 多步骤推理过程展示组件
+ * 步骤开始指示器
  */
-function MultiStepReasoningDisplay({ message }: { message: any }) {
-  const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
-  const [showAllSteps, setShowAllSteps] = useState(false);
-
-  const toggleToolExpansion = (toolCallId: string) => {
-    const newExpanded = new Set(expandedTools);
-    if (newExpanded.has(toolCallId)) {
-      newExpanded.delete(toolCallId);
-    } else {
-      newExpanded.add(toolCallId);
-    }
-    setExpandedTools(newExpanded);
-  };
-
-  // 解析步骤结构
-  const parseSteps = () => {
-    const steps: Array<{
-      stepNumber: number;
-      thinking: string[];
-      toolCalls: any[];
-      finalText?: string;
-    }> = [];
-    
-    let currentStep = -1;
-    let currentThinking: string[] = [];
-    let currentToolCalls: any[] = [];
-
-    message.parts.forEach((part: any) => {
-      if (part.type === 'step-start') {
-        // 保存上一步
-        if (currentStep >= 0) {
-          steps[currentStep] = {
-            stepNumber: currentStep + 1,
-            thinking: [...currentThinking],
-            toolCalls: [...currentToolCalls]
-          };
-        }
-        
-        // 开始新步骤
-        currentStep++;
-        currentThinking = [];
-        currentToolCalls = [];
-      } else if (part.type === 'text') {
-        currentThinking.push(part.text);
-      } else if (part.type === 'tool-invocation') {
-        currentToolCalls.push(part.toolInvocation);
-      }
-    });
-
-    // 保存最后一步
-    if (currentStep >= 0) {
-      steps[currentStep] = {
-        stepNumber: currentStep + 1,
-        thinking: [...currentThinking],
-        toolCalls: [...currentToolCalls]
-      };
-    }
-
-    // 如果没有明确的steps，将所有内容作为一个步骤
-    if (steps.length === 0) {
-      const allText = message.parts
-        .filter((p: any) => p.type === 'text')
-        .map((p: any) => p.text)
-        .join('\n\n');
-      const allTools = message.parts
-        .filter((p: any) => p.type === 'tool-invocation')
-        .map((p: any) => p.toolInvocation);
-
-      if (allText || allTools.length > 0) {
-        steps.push({
-          stepNumber: 1,
-          thinking: allText ? [allText] : [],
-          toolCalls: allTools
-        });
-      }
-    }
-
-    return steps;
-  };
-
-  const steps = parseSteps();
-  const hasMultipleSteps = steps.length > 1;
-
-  // 如果只有一步且没有工具调用，显示简化版本
-  if (steps.length === 1 && steps[0].toolCalls.length === 0) {
-    const content = steps[0].thinking.join('\n\n');
-    const processedContent = content
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/`(.*?)`/g, '<code class="bg-muted px-1 py-0.5 rounded text-sm">$1</code>');
-
-    return (
-      <div 
-        dangerouslySetInnerHTML={{ __html: processedContent }}
-        className="[&>code]:bg-muted [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded [&>code]:text-sm"
-      />
-    );
-  }
-
+function StepStartIndicator({ step }: { step: number }) {
   return (
-    <div className="space-y-3">
-      {/* 步骤总览 */}
-      {hasMultipleSteps && (
-        <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg border">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-              <span className="text-white text-xs font-bold">{steps.length}</span>
-            </div>
-            <span className="text-sm font-medium text-blue-700">
-              AI推理过程 ({steps.length} 个步骤)
-            </span>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowAllSteps(!showAllSteps)}
-            className="h-6 px-2 text-xs text-blue-600"
-          >
-            {showAllSteps ? '折叠所有' : '展开所有'}
-          </Button>
-        </div>
-      )}
-
-      {/* 步骤详情 */}
-      <div className="space-y-3">
-        {steps.map((step, stepIndex) => (
-          <StepDisplay 
-            key={stepIndex}
-            step={step}
-            stepIndex={stepIndex}
-            isExpanded={showAllSteps || stepIndex === steps.length - 1}
-            expandedTools={expandedTools}
-            onToggleToolExpansion={toggleToolExpansion}
-            hasMultipleSteps={hasMultipleSteps}
-          />
-        ))}
+    <div className="flex items-center gap-2 py-2">
+      <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+        <span className="text-white text-xs font-bold">{step}</span>
       </div>
+      <span className="text-sm font-medium text-blue-700">
+        步骤 {step}
+      </span>
+      <div className="flex-1 h-px bg-blue-200"></div>
     </div>
   );
 }
 
 /**
- * 单个步骤展示组件
+ * AI 思考过程显示组件
  */
-function StepDisplay({ 
-  step, 
-  stepIndex, 
-  isExpanded, 
-  expandedTools, 
-  onToggleToolExpansion,
-  hasMultipleSteps 
-}: {
-  step: any;
-  stepIndex: number;
-  isExpanded: boolean;
-  expandedTools: Set<string>;
-  onToggleToolExpansion: (toolCallId: string) => void;
-  hasMultipleSteps: boolean;
-}) {
-  const [localExpanded, setLocalExpanded] = useState(isExpanded);
-  
-  useEffect(() => {
-    setLocalExpanded(isExpanded);
-  }, [isExpanded]);
-
-  const hasContent = step.thinking.length > 0 || step.toolCalls.length > 0;
-  if (!hasContent) return null;
-
+function ThinkingDisplay({ content }: { content: string }) {
   return (
-    <div className={`border rounded-lg ${hasMultipleSteps ? 'bg-gradient-to-r from-gray-50 to-transparent' : ''}`}>
-      {/* 步骤标题 */}
-      {hasMultipleSteps && (
-        <div 
-          className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50 transition-colors border-b"
-          onClick={() => setLocalExpanded(!localExpanded)}
-        >
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-              <span className="text-white text-xs font-bold">{step.stepNumber}</span>
-            </div>
-            <span className="font-medium text-sm">
-              步骤 {step.stepNumber}
-              {step.toolCalls.length > 0 && (
-                <span className="ml-2 text-xs text-gray-500">
-                  ({step.toolCalls.length} 个工具调用)
-                </span>
-              )}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            {step.toolCalls.map((tool: any) => (
-              <ToolStatusBadge key={tool.toolCallId} tool={tool} />
-            ))}
-            <ChevronDown className={`h-4 w-4 transition-transform ${localExpanded ? 'rotate-180' : ''}`} />
-          </div>
-        </div>
-      )}
-
-      {/* 步骤内容 */}
-      {localExpanded && (
-        <div className="p-3 space-y-3">
-          {/* AI思考内容 */}
-          {step.thinking.length > 0 && (
-            <div className="space-y-2">
-              {step.thinking.map((thought: string, index: number) => {
-                const processedContent = thought
-                  .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                  .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                  .replace(/`(.*?)`/g, '<code class="bg-muted px-1 py-0.5 rounded text-sm">$1</code>');
-
-                return (
-                  <div 
-                    key={index}
-                    dangerouslySetInnerHTML={{ __html: processedContent }}
-                    className="text-sm [&>code]:bg-muted [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded [&>code]:text-sm"
-                  />
-                );
-              })}
-            </div>
-          )}
-
-          {/* 工具调用 */}
-          {step.toolCalls.length > 0 && (
-            <div className="space-y-2">
-              {step.toolCalls.map((tool: any) => (
-                <ToolInvocationCard 
-                  key={tool.toolCallId}
-                  tool={tool}
-                  isExpanded={expandedTools.has(tool.toolCallId)}
-                  onToggleExpansion={() => onToggleToolExpansion(tool.toolCallId)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+    <div className="p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
+      <div className="text-xs font-medium text-blue-700 mb-2 flex items-center gap-2">
+        <span>🤔</span>
+        AI 思考中...
+      </div>
+      <div className="text-sm text-blue-800">
+        <SimpleTextDisplay content={content} />
+      </div>
     </div>
   );
 }
+
+
 
 /**
  * 工具状态徽章
