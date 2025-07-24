@@ -1,18 +1,18 @@
 /**
  * 项目上下文感知的智能助手组件
- * 根据当前项目获取对应的知识库配置
+ * 接收项目数据作为props，避免重复的URL解析和数据获取
  */
 
 'use client';
 
 import {useEffect, useMemo, useState} from 'react';
-import {usePathname} from 'next/navigation';
 import {AssistantConfig} from '@/components/knowledge-assistant/types';
 import {useAssistantConfig, useKnowledgeAssistant} from '@/hooks/use-knowledge-assistant';
 import {FloatingAssistantButton} from '@/components/knowledge-assistant/floating-button';
 import {AssistantSidebar} from '@/components/knowledge-assistant/assistant-sidebar';
 import {updateProjectDatasetId} from '@/lib/api/project-api';
 import {useProjectDataset} from "@/hooks/use-dify-dataset-server";
+import {Project} from '@/lib/actions/project-actions';
 
 interface ProjectConfigResponse {
     config: AssistantConfig;
@@ -24,70 +24,40 @@ interface ProjectConfigResponse {
     status: string;
 }
 
-export function ProjectAwareKnowledgeAssistant() {
-    const pathname = usePathname();
+interface ProjectAwareKnowledgeAssistantProps {
+    project: Project;
+}
+
+export function ProjectAwareKnowledgeAssistant({project}: ProjectAwareKnowledgeAssistantProps) {
     const [config, setConfig] = useState<AssistantConfig | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isAutoFixing, setIsAutoFixing] = useState(false);
-    const [projectInfo, setProjectInfo] = useState<{ id: string; name: string } | null>(null);
 
-    // 提取项目ID从URL
-    const getProjectIdFromPath = (path: string): string | null => {
-        console.log(`🔍 URL解析开始，path: "${path}"`);
-        const projectMatch = path.match(/\/projects\/([^\/]+)/);
-        const extractedId = projectMatch ? projectMatch[1] : null;
-        
-        console.log(`🔍 URL解析结果:`, {
-            fullPath: path,
-            regexMatch: projectMatch,
-            extractedId: extractedId,
-            extractedIdLength: extractedId?.length,
-            isValidUUID: extractedId ? /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(extractedId) : false
-        });
-        
-        return extractedId;
-    };
-
-    // 获取当前项目ID
-    const currentProjectId = getProjectIdFromPath(pathname);
-    
-    // 知识库管理（只在有项目ID和项目信息时初始化）
-    const datasetManager = useProjectDataset(
-        currentProjectId || '', 
-        projectInfo?.name || ''
-    );
+    // 知识库管理 - 直接使用传入的项目数据
+    const datasetManager = useProjectDataset(project.id, project.name);
 
     // 自动修复知识库关联问题
-    const autoFixKnowledgeBase = async (projectId: string, projectName: string) => {
-        console.log('🔧 开始自动修复知识库关联:', { projectId, projectName });
+    const autoFixKnowledgeBase = async () => {
+        console.log('🔧 开始自动修复知识库关联:', { projectId: project.id, projectName: project.name });
         setIsAutoFixing(true);
         setError(null);
 
         try {
-            // 更新项目信息以便datasetManager能正确工作
-            setProjectInfo({
-                id: projectId,
-                name: projectName
-            });
-
-            // 等待一个tick让状态更新
-            await new Promise(resolve => setTimeout(resolve, 0));
-            
             // 创建知识库
             const datasetId = await datasetManager.ensureDataset(undefined);
             console.log('✅ 知识库创建成功:', datasetId);
 
             // 更新项目关联
             if (datasetId) {
-                await updateProjectDatasetId(projectId, datasetId);
+                await updateProjectDatasetId(project.id, datasetId);
                 console.log('✅ 项目知识库关联更新成功');
             } else {
                 throw new Error('知识库创建失败');
             }
 
             // 重新加载配置
-            await loadProjectConfig(projectId);
+            await loadProjectConfig();
             
         } catch (error) {
             console.error('❌ 自动修复失败:', error);
@@ -99,13 +69,13 @@ export function ProjectAwareKnowledgeAssistant() {
     };
 
     // 获取项目配置
-    const loadProjectConfig = async (projectId: string) => {
-        console.log('🔄 开始加载项目配置:', projectId);
+    const loadProjectConfig = async () => {
+        console.log('🔄 开始加载项目配置:', project.id);
         setIsLoading(true);
         setError(null);
 
         try {
-            const url = `/api/assistant/config?projectId=${projectId}`;
+            const url = `/api/assistant/config?projectId=${project.id}`;
             console.log('📡 请求URL:', url);
 
             const response = await fetch(url);
@@ -119,18 +89,8 @@ export function ProjectAwareKnowledgeAssistant() {
                 if (errorData.error?.includes('项目未关联知识库')) {
                     console.log('🔧 检测到知识库未关联，尝试自动修复...');
                     setIsLoading(false); // 先关闭加载状态
-                    
-                    // 需要获取项目名称来创建知识库，先获取项目信息
-                    try {
-                        const projectResponse = await fetch(`/api/projects/${projectId}`);
-                        if (projectResponse.ok) {
-                            const projectData = await projectResponse.json();
-                            await autoFixKnowledgeBase(projectId, projectData.name || '未命名项目');
-                            return; // 自动修复会重新调用loadProjectConfig
-                        }
-                    } catch (err) {
-                        console.error('❌ 获取项目信息失败:', err);
-                    }
+                    await autoFixKnowledgeBase();
+                    return; // 自动修复会重新调用loadProjectConfig
                 }
                 
                 throw new Error(errorData.error || `配置获取失败: ${response.status}`);
@@ -140,10 +100,6 @@ export function ProjectAwareKnowledgeAssistant() {
             console.log('✅ 配置加载成功:', data);
 
             setConfig(data.config);
-            setProjectInfo({
-                id: data.project.id,
-                name: data.project.name,
-            });
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : '配置加载失败';
             console.error('❌ 项目配置加载错误:', err);
@@ -153,25 +109,12 @@ export function ProjectAwareKnowledgeAssistant() {
         }
     };
 
-    // 监听路径变化
+    // 监听项目变化，初始化配置
     useEffect(() => {
-        const projectId = getProjectIdFromPath(pathname);
-
-        if (projectId) {
-            loadProjectConfig(projectId);
-        } else {
-            // 不在项目页面，清除配置
-            setConfig(null);
-            setError(null);
-            setProjectInfo(null);
+        if (project?.id) {
+            loadProjectConfig();
         }
-    }, [pathname]);
-
-    // 不在项目页面时不显示
-    const projectId = getProjectIdFromPath(pathname);
-    if (!projectId) {
-        return null;
-    }
+    }, [project.id]); // 只在项目ID变化时重新加载
 
     // 加载中状态或自动修复状态
     if (isLoading || isAutoFixing) {
@@ -202,26 +145,24 @@ export function ProjectAwareKnowledgeAssistant() {
                 className="fixed bottom-4 right-4 z-50 max-w-sm p-3 bg-red-50 border border-red-200 rounded-lg shadow-lg">
                 <div className="font-medium text-red-800 mb-1">🚨 智能助手配置错误</div>
                 <div className="text-sm text-red-700 mb-2">{error}</div>
-                {projectInfo && (
-                    <div className="text-xs text-red-600 mb-2">
-                        项目：{projectInfo.name}
-                    </div>
-                )}
+                <div className="text-xs text-red-600 mb-2">
+                    项目：{project.name}
+                </div>
                 {process.env.NODE_ENV === 'development' && (
                     <div className="text-xs text-red-500 mb-2 font-mono bg-red-100 p-1 rounded">
-                        项目ID: {projectId}
+                        项目ID: {project.id}
                     </div>
                 )}
                 <div className="flex gap-2 mt-2">
                     <button
-                        onClick={() => loadProjectConfig(projectId)}
+                        onClick={() => loadProjectConfig()}
                         className="text-xs text-red-600 hover:text-red-800 underline"
                     >
                         🔄 重试
                     </button>
-                    {isKnowledgeBaseError && projectInfo && (
+                    {isKnowledgeBaseError && (
                         <button
-                            onClick={() => autoFixKnowledgeBase(projectId, projectInfo.name)}
+                            onClick={() => autoFixKnowledgeBase()}
                             className="text-xs text-blue-600 hover:text-blue-800 underline"
                         >
                             🔧 手动修复知识库
@@ -240,32 +181,28 @@ export function ProjectAwareKnowledgeAssistant() {
     // 渲染智能助手
     return (
         <div className="project-aware-knowledge-assistant">
-            <DiagnosticKnowledgeAssistant config={config}/>
+            <DiagnosticKnowledgeAssistant config={config} project={project}/>
 
         </div>
     );
 }
 
 /**
- * 简化版项目感知助手（只在项目页面显示）
+ * 简化版项目感知助手（需要项目数据）
+ * @deprecated 建议直接使用 ProjectAwareKnowledgeAssistant 并传入项目数据
  */
-export function SimpleProjectAwareAssistant() {
-    const pathname = usePathname();
-
-    // 检查是否在项目页面
-    const isProjectPage = /\/projects\/[^\/]+/.test(pathname);
-
-    if (!isProjectPage) {
+export function SimpleProjectAwareAssistant({project}: {project?: Project}) {
+    if (!project) {
         return null;
     }
 
-    return <ProjectAwareKnowledgeAssistant/>;
+    return <ProjectAwareKnowledgeAssistant project={project} />;
 }
 
 /**
  * 诊断版智能助手组件 - 增强调试版本
  */
-function DiagnosticKnowledgeAssistant({config}: { config: AssistantConfig }) {
+function DiagnosticKnowledgeAssistant({config, project}: { config: AssistantConfig; project: Project }) {
     console.log('🔍 DiagnosticKnowledgeAssistant 渲染开始，config:', config);
 
     // 配置管理
@@ -371,7 +308,7 @@ function DiagnosticKnowledgeAssistant({config}: { config: AssistantConfig }) {
                     console.log('❌ 侧边栏关闭按钮被点击');
                     assistant.closeAssistant();
                 }}
-                projectId={config.projectId}
+                projectId={project.id}
             />
 
             {/* 开发模式的额外调试面板 */}

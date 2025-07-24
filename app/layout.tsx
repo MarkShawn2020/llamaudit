@@ -9,7 +9,6 @@ import {GlobalSettingsProvider} from '@/contexts/global-settings-context';
 import {QueryProvider} from '@/components/query-provider';
 import {GlobalNavbar} from '@/components/GlobalNavbar';
 import {getUser} from '@/lib/db/queries';
-import {SimpleProjectAwareAssistant} from '@/components/ProjectAwareKnowledgeAssistant';
 import {DocumentSheetProvider} from "@/contexts/document-sheet-context";
 
 const fontSans = FontSans({
@@ -59,7 +58,6 @@ export default async function RootLayout({
                                     <main className="flex-1">{children}</main>
                                 </div>
                                 {/*<DevFloat />*/}
-                                <SimpleProjectAwareAssistant/>
                             </DocumentSheetProvider>
                         </QueryProvider>
                     </DifyConfigProvider>

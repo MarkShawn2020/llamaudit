@@ -2,6 +2,7 @@ import { getUser } from '@/lib/db/queries';
 import { redirect } from 'next/navigation';
 import { getProject } from '@/lib/actions/project-actions';
 import ProjectDetail from '@/components/projects/detail';
+import { ProjectAwareKnowledgeAssistant } from '@/components/ProjectAwareKnowledgeAssistant';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -27,7 +28,12 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     redirect('/projects');
   }
 
-  return <ProjectDetail project={project} />;
+  return (
+    <>
+      <ProjectDetail project={project} />
+      <ProjectAwareKnowledgeAssistant project={project} />
+    </>
+  );
 } 
 
  
