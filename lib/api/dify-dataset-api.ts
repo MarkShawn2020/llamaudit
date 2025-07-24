@@ -212,6 +212,15 @@ class DifyDatasetAPI {
     );
   }
 
+  async deleteDataset(datasetId: string): Promise<void> {
+    await this.makeRequest(
+      `/datasets/${datasetId}`,
+      {
+        method: 'DELETE',
+      }
+    );
+  }
+
   async getDocumentIndexingStatus(datasetId: string, batch: string): Promise<any> {
     const response = await this.makeRequest(
       `/datasets/${datasetId}/documents/${batch}/indexing-status`

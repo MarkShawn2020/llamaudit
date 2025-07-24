@@ -11,6 +11,8 @@ import {AssistantConfig} from '@/components/knowledge-assistant/types';
 import {useAssistantConfig, useKnowledgeAssistant} from '@/hooks/use-knowledge-assistant';
 import {FloatingAssistantButton} from '@/components/knowledge-assistant/floating-button';
 import {AssistantSidebar} from '@/components/knowledge-assistant/assistant-sidebar';
+import {useProjectDataset} from '@/hooks/use-dify-dataset';
+import {updateProjectDatasetId} from '@/lib/api/project-api';
 
 interface ProjectConfigResponse {
     config: AssistantConfig;
@@ -27,6 +29,7 @@ export function ProjectAwareKnowledgeAssistant() {
     const [config, setConfig] = useState<AssistantConfig | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [isAutoFixing, setIsAutoFixing] = useState(false);
     const [projectInfo, setProjectInfo] = useState<{ id: string; name: string } | null>(null);
 
     // 提取项目ID从URL
@@ -46,6 +49,51 @@ export function ProjectAwareKnowledgeAssistant() {
         return extractedId;
     };
 
+    // 获取当前项目ID
+    const currentProjectId = getProjectIdFromPath(pathname);
+    
+    // 知识库管理（只在有项目ID和项目信息时初始化）
+    const datasetManager = useProjectDataset(
+        currentProjectId || '', 
+        projectInfo?.name || ''
+    );
+
+    // 自动修复知识库关联问题
+    const autoFixKnowledgeBase = async (projectId: string, projectName: string) => {
+        console.log('🔧 开始自动修复知识库关联:', { projectId, projectName });
+        setIsAutoFixing(true);
+        setError(null);
+
+        try {
+            // 更新项目信息以便datasetManager能正确工作
+            setProjectInfo({
+                id: projectId,
+                name: projectName
+            });
+
+            // 等待一个tick让状态更新
+            await new Promise(resolve => setTimeout(resolve, 0));
+            
+            // 创建知识库
+            const datasetId = await datasetManager.ensureDataset(undefined);
+            console.log('✅ 知识库创建成功:', datasetId);
+
+            // 更新项目关联
+            await updateProjectDatasetId(projectId, datasetId);
+            console.log('✅ 项目知识库关联更新成功');
+
+            // 重新加载配置
+            await loadProjectConfig(projectId);
+            
+        } catch (error) {
+            console.error('❌ 自动修复失败:', error);
+            const errorMessage = error instanceof Error ? error.message : '自动修复失败';
+            setError(`自动修复失败: ${errorMessage}`);
+        } finally {
+            setIsAutoFixing(false);
+        }
+    };
+
     // 获取项目配置
     const loadProjectConfig = async (projectId: string) => {
         console.log('🔄 开始加载项目配置:', projectId);
@@ -62,6 +110,25 @@ export function ProjectAwareKnowledgeAssistant() {
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({error: `HTTP ${response.status}`}));
                 console.error('❌ API错误响应:', errorData);
+                
+                // 检查是否是知识库未关联的错误，如果是则尝试自动修复
+                if (errorData.error?.includes('项目未关联知识库')) {
+                    console.log('🔧 检测到知识库未关联，尝试自动修复...');
+                    setIsLoading(false); // 先关闭加载状态
+                    
+                    // 需要获取项目名称来创建知识库，先获取项目信息
+                    try {
+                        const projectResponse = await fetch(`/api/projects/${projectId}`);
+                        if (projectResponse.ok) {
+                            const projectData = await projectResponse.json();
+                            await autoFixKnowledgeBase(projectId, projectData.name || '未命名项目');
+                            return; // 自动修复会重新调用loadProjectConfig
+                        }
+                    } catch (err) {
+                        console.error('❌ 获取项目信息失败:', err);
+                    }
+                }
+                
                 throw new Error(errorData.error || `配置获取失败: ${response.status}`);
             }
 
@@ -102,21 +169,30 @@ export function ProjectAwareKnowledgeAssistant() {
         return null;
     }
 
-    // 加载中状态
-    if (isLoading) {
+    // 加载中状态或自动修复状态
+    if (isLoading || isAutoFixing) {
         return (
             <div className="fixed bottom-4 right-4 z-50 p-3 bg-blue-50 border border-blue-200 rounded-lg shadow-lg">
                 <div className="flex items-center gap-2">
                     <div
                         className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-sm text-blue-700">正在加载智能助手...</span>
+                    <span className="text-sm text-blue-700">
+                        {isAutoFixing ? '正在初始化知识库...' : '正在加载智能助手...'}
+                    </span>
                 </div>
+                {isAutoFixing && (
+                    <div className="mt-2 text-xs text-blue-600">
+                        检测到项目未关联知识库，正在自动创建中...
+                    </div>
+                )}
             </div>
         );
     }
 
     // 错误状态
     if (error) {
+        const isKnowledgeBaseError = error.includes('项目未关联知识库') || error.includes('自动修复失败');
+        
         return (
             <div
                 className="fixed bottom-4 right-4 z-50 max-w-sm p-3 bg-red-50 border border-red-200 rounded-lg shadow-lg">
@@ -132,12 +208,22 @@ export function ProjectAwareKnowledgeAssistant() {
                         项目ID: {projectId}
                     </div>
                 )}
-                <button
-                    onClick={() => loadProjectConfig(projectId)}
-                    className="mt-2 text-xs text-red-600 hover:text-red-800 underline"
-                >
-                    🔄 重试
-                </button>
+                <div className="flex gap-2 mt-2">
+                    <button
+                        onClick={() => loadProjectConfig(projectId)}
+                        className="text-xs text-red-600 hover:text-red-800 underline"
+                    >
+                        🔄 重试
+                    </button>
+                    {isKnowledgeBaseError && projectInfo && (
+                        <button
+                            onClick={() => autoFixKnowledgeBase(projectId, projectInfo.name)}
+                            className="text-xs text-blue-600 hover:text-blue-800 underline"
+                        >
+                            🔧 手动修复知识库
+                        </button>
+                    )}
+                </div>
             </div>
         );
     }

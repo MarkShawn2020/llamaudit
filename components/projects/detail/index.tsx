@@ -28,7 +28,7 @@ import ProjectInfo from 'components/projects/detail/ProjectInfo';
 import {PencilIcon, TrashIcon, Building2, Database, FileText, MapPin, Phone, Mail, Calendar, User} from 'lucide-react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {useEffect, useState, useCallback} from 'react';
+import {useEffect, useState, useCallback, useRef} from 'react';
 import {toast} from 'sonner';
 import {useAtom} from 'jotai';
 import {
@@ -51,6 +51,8 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
     const [showProjectInfo, setShowProjectInfo] = useState(false);
     // 使用项目特定的原子化状态
     const [tiobItems] = useAtom(projectTiobItemsAtomFamily(projectId));
+    // 防止重复初始化知识库的标志
+    const initializingDatasetRef = useRef(false);
     const router = useRouter();
 
     // 知识库管理
@@ -99,9 +101,8 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
     }, [projectId]);
 
     const handleProjectUpdate = useCallback((updated: Partial<Project>) => {
-        if (!project) return;
-        setProject({...project, ...updated});
-    }, [project]);
+        setProject(prev => prev ? {...prev, ...updated} : null);
+    }, []); // 依赖数组为空，因为函数不依赖任何外部变量
 
     useEffect(() => {
         // 加载项目详情
@@ -112,22 +113,66 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
     // 确保知识库存在
     useEffect(() => {
         const initializeDataset = async () => {
-            if (project && (!project.datasetId || datasetError)) {
+            // 防止重复初始化
+            if (initializingDatasetRef.current) return;
+            
+            // 只有项目存在且没有知识库ID时才初始化
+            if (project && !project.datasetId) {
+                console.log('🔧 项目详情页开始初始化知识库:', { 
+                    projectId: project.id, 
+                    projectName: project.name 
+                });
+                
                 try {
-                    const datasetId = await ensureDataset(project.datasetId);
-                    if (datasetId !== project.datasetId) {
+                    initializingDatasetRef.current = true;
+                    
+                    // 显示友好的提示
+                    toast.info('正在为项目初始化知识库...', {
+                        description: '首次访问项目需要创建知识库，请稍候',
+                        duration: 3000
+                    });
+                    
+                    // 传入undefined，让ensureDataset知道需要创建新的知识库
+                    const datasetId = await ensureDataset(undefined);
+                    if (datasetId) {
                         // 更新项目的知识库ID
                         await updateProjectDatasetId(project.id, datasetId);
                         handleProjectUpdate({ datasetId });
+                        
+                        console.log('✅ 项目详情页知识库初始化成功:', { 
+                            projectId: project.id, 
+                            datasetId 
+                        });
+                        
+                        toast.success('知识库初始化完成！', {
+                            description: '现在可以上传文档并使用智能助手功能',
+                            duration: 4000
+                        });
                     }
                 } catch (error) {
-                    console.error('初始化知识库失败:', error);
+                    console.error('❌ 项目详情页知识库初始化失败:', error);
+                    
+                    // 检查是否是命名冲突错误
+                    const errorMessage = error instanceof Error ? error.message : '未知错误';
+                    if (errorMessage.includes('already exists')) {
+                        toast.warning('知识库创建遇到命名冲突', {
+                            description: '正在重试使用备用名称...',
+                            duration: 5000
+                        });
+                    } else {
+                        toast.error('知识库初始化失败', {
+                            description: `错误: ${errorMessage}`,
+                            duration: 8000
+                        });
+                    }
+                } finally {
+                    initializingDatasetRef.current = false;
                 }
             }
         };
 
         initializeDataset();
-    }, [project, datasetError, ensureDataset, handleProjectUpdate]);
+    }, [project?.id, project?.datasetId, ensureDataset, handleProjectUpdate]); // 添加依赖以确保正确性
 
     const handleDeleteProject = async () => {
         if (!project) return;

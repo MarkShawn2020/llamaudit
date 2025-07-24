@@ -187,7 +187,7 @@ export const fileCategoriesRelations = relations(fileCategories, ({ many }) => (
 
 // 被审计单位表
 export const auditUnits = pgTable('audit_units', {
-  id: uuid('id').primaryKey().defaultRandom(),
+  id: uuid('id').primaryKey(),
   code: varchar('code', { length: 50 }).notNull().unique(),
   name: varchar('name', { length: 255 }).notNull(),
   type: varchar('type', { length: 100 }).notNull(),

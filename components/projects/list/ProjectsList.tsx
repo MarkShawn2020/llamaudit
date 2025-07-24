@@ -10,11 +10,12 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { getProjects, createProject, type Project } from '@/lib/actions/project-actions';
+import { getProjects, createProject, createProjectWithDataset, type Project } from '@/lib/actions/project-actions';
 
 export default function ProjectsList() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
   const [open, setOpen] = useState(false);
   const [newProject, setNewProject] = useState({ name: '', code: '', type: '' });
   const router = useRouter();
@@ -38,8 +39,15 @@ export default function ProjectsList() {
   };
 
   const handleAddProject = async () => {
+    setCreating(true);
+    
     try {
-      // 创建新项目
+      // 显示创建阶段的提示信息
+      const toastId = toast.loading('正在创建项目和知识库，请稍候...', {
+        description: '第1步：正在创建知识库...'
+      });
+      
+      // 创建新项目（使用知识库优先创建策略）
       const projectData = {
         name: newProject.name,
         code: newProject.code,
@@ -51,7 +59,13 @@ export default function ProjectsList() {
         description: ''
       };
       
-      const createdProject = await createProject(projectData);
+      // 更新提示信息
+      toast.loading('正在创建项目和知识库，请稍候...', {
+        id: toastId,
+        description: '第2步：正在创建项目记录...'
+      });
+      
+      const createdProject = await createProjectWithDataset(projectData);
       
       // 更新项目列表
       setProjects(prev => [...prev, createdProject]);
@@ -60,15 +74,25 @@ export default function ProjectsList() {
       setNewProject({ name: '', code: '', type: '' });
       setOpen(false);
       
-      // 提示成功
-      toast.success('创建项目成功');
+      // 显示成功提示
+      toast.success('项目创建成功！', {
+        id: toastId,
+        description: `知识库已关联，项目ID: ${createdProject.id.substring(0, 8)}...`
+      });
       
       // 跳转到新项目详情页
       router.push(`/projects/${createdProject.id}`);
+      
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '创建项目失败，请重试';
       console.error('创建项目失败:', error);
-      toast.error(errorMessage);
+      
+      // 显示错误提示
+      toast.error('创建项目失败', {
+        description: errorMessage
+      });
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -123,9 +147,9 @@ export default function ProjectsList() {
               <Button variant="outline" onClick={() => setOpen(false)}>取消</Button>
               <Button 
                 onClick={handleAddProject} 
-                disabled={!newProject.name || loading}
+                disabled={!newProject.name || loading || creating}
               >
-                确认添加
+                {creating ? '创建中...' : '确认添加'}
               </Button>
             </DialogFooter>
           </DialogContent>

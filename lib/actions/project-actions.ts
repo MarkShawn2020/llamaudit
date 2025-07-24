@@ -206,8 +206,9 @@ export async function getProject(id: string): Promise<Project | null> {
 }
 
 /**
- * 创建新项目
+ * 创建新项目（旧版本，保持向后兼容）
  * @param projectData 项目数据
+ * @deprecated 推荐使用 createProjectWithDataset
  */
 export async function createProject(projectData: Omit<Project, 'id' | 'createdAt' | 'documentCount' | 'taskCount' | 'status' | 'updatedAt'>): Promise<Project> {
   try {
@@ -237,7 +238,9 @@ export async function createProject(projectData: Omit<Project, 'id' | 'createdAt
     const unitCode = projectData.code || `AU-${crypto.randomUUID().substring(0, 8).toUpperCase()}`;
     
     // 创建新项目，处理字段名称差异
+    const projectId = crypto.randomUUID();
     const newProject = await db.insert(auditUnits).values({
+      id: projectId, // 手动生成UUID
       name: projectData.name,
       code: unitCode, // 使用用户提供的代码或生成的唯一代码
       type: projectData.type || '', // 单位类型可选
@@ -278,6 +281,164 @@ export async function createProject(projectData: Omit<Project, 'id' | 'createdAt
     return createdProject;
   } catch (error) {
     console.error('创建项目失败:', error);
+    throw error;
+  }
+}
+
+/**
+ * 创建项目并同时创建知识库（新版本，推荐使用）
+ * 采用知识库优先创建的策略，避免项目和知识库不同步的问题
+ * @param projectData 项目数据
+ */
+export async function createProjectWithDataset(projectData: Omit<Project, 'id' | 'createdAt' | 'documentCount' | 'taskCount' | 'status' | 'updatedAt' | 'datasetId'>): Promise<Project> {
+  const user = await getUser();
+  
+  if (!user) {
+    throw new Error('未授权访问');
+  }
+  
+  // 检查必填字段
+  if (!projectData.name) {
+    throw new Error('单位名称为必填项');
+  }
+
+  // 检查项目代码是否已存在（如果提供了代码）
+  if (projectData.code) {
+    const existingProject = await db.query.auditUnits.findFirst({
+      where: eq(auditUnits.code, projectData.code)
+    });
+
+    if (existingProject) {
+      throw new Error('项目代码已存在');
+    }
+  }
+
+  // 生成唯一的单位代码（如果未提供）
+  const unitCode = projectData.code || `AU-${crypto.randomUUID().substring(0, 8).toUpperCase()}`;
+  
+  let datasetId: string | null = null;
+  let createdProjectId: string | null = null;
+
+  try {
+    // 第一步：创建Dify知识库（带时间戳确保唯一性）
+    const timestamp = Date.now();
+    const knowledgeBaseName = `${projectData.name}-${unitCode}-${timestamp}`;
+    
+    // 动态导入Dify API（避免服务器端导入客户端代码）
+    const { DifyDatasetAPI } = await import('@/lib/api/dify-dataset-api');
+    
+    // 获取Dify配置（这里需要服务器端配置方式）
+    const difyConfig = {
+      baseUrl: process.env.DIFY_BASE_URL || 'https://dify.cs-magic.cn/v1',
+      apiKey: process.env.DIFY_DATASET_API_KEY || '',
+      datasetApiKey: process.env.DIFY_DATASET_API_KEY || '',
+      environment: 'custom' as const,
+    };
+    
+    if (!difyConfig.apiKey) {
+      throw new Error('Dify API配置缺失，请联系管理员配置');
+    }
+
+    const difyAPI = new DifyDatasetAPI(difyConfig);
+    
+    const dataset = await difyAPI.createDataset({
+      name: knowledgeBaseName,
+      description: `项目"${projectData.name}"(${unitCode})的专用知识库，创建时间：${new Date().toLocaleString()}`,
+      indexing_technique: 'high_quality',
+      permission: 'only_me',
+    });
+
+    datasetId = dataset.id;
+    console.log(`✅ 知识库创建成功: ${datasetId} (${knowledgeBaseName})`);
+
+    // 第二步：使用知识库ID作为项目ID创建项目记录
+    const newProject = await db.insert(auditUnits).values({
+      id: datasetId, // 关键：使用datasetId作为项目ID
+      name: projectData.name,
+      code: unitCode,
+      type: projectData.type || '',
+      address: projectData.address || '',
+      contactPerson: projectData.contact || '',
+      phone: projectData.phone || '',
+      email: projectData.email || '',
+      description: projectData.description || '',
+      datasetId: datasetId, // 同时设置datasetId字段
+      createdBy: user.id
+    }).returning();
+
+    if (!newProject[0]) {
+      throw new Error('创建项目记录失败');
+    }
+
+    createdProjectId = newProject[0].id;
+    console.log(`✅ 项目创建成功: ${createdProjectId}`);
+
+    // 格式化响应
+    const createdProject = {
+      id: newProject[0].id,
+      name: newProject[0].name,
+      code: newProject[0].code,
+      type: newProject[0].type,
+      address: newProject[0].address || '',
+      contact: newProject[0].contactPerson || '',
+      phone: newProject[0].phone || '',
+      email: newProject[0].email || '',
+      description: newProject[0].description || '',
+      datasetId: newProject[0].datasetId || undefined,
+      createdAt: newProject[0].createdAt?.toISOString().split('T')[0] || '',
+      updatedAt: newProject[0].updatedAt?.toISOString().split('T')[0] || '',
+      documentCount: 0,
+      taskCount: 0,
+      status: 'active' as const
+    };
+
+    // 重新验证相关页面
+    revalidatePath('/projects');
+    revalidatePath(`/projects/${createdProject.id}`);
+
+    return createdProject;
+
+  } catch (error) {
+    console.error('创建项目失败，开始回滚操作:', error);
+    
+    // 回滚操作：清理已创建的资源
+    const cleanupPromises = [];
+    
+    // 如果数据库记录创建了，删除它
+    if (createdProjectId) {
+      console.log(`🔄 回滚：删除项目记录 ${createdProjectId}`);
+      cleanupPromises.push(
+        db.delete(auditUnits).where(eq(auditUnits.id, createdProjectId))
+          .catch(rollbackError => console.error('回滚项目记录失败:', rollbackError))
+      );
+    }
+    
+    // 如果知识库创建了，删除它
+    if (datasetId) {
+      console.log(`🔄 回滚：删除知识库 ${datasetId}`);
+      cleanupPromises.push(
+        (async () => {
+          try {
+            const { DifyDatasetAPI } = await import('@/lib/api/dify-dataset-api');
+            const difyConfig = {
+              baseUrl: process.env.DIFY_BASE_URL || 'https://dify.cs-magic.cn/v1',
+              apiKey: process.env.DIFY_DATASET_API_KEY || '',
+              datasetApiKey: process.env.DIFY_DATASET_API_KEY || '',
+              environment: 'custom' as const,
+            };
+            const difyAPI = new DifyDatasetAPI(difyConfig);
+            await difyAPI.deleteDataset?.(datasetId);
+          } catch (rollbackError) {
+            console.error('回滚知识库失败:', rollbackError);
+          }
+        })()
+      );
+    }
+    
+    // 等待所有回滚操作完成
+    await Promise.allSettled(cleanupPromises);
+    
+    // 抛出原始错误
     throw error;
   }
 }

@@ -46,7 +46,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { DocumentSheetTrigger, DocumentSheet } from '@/components/document-sheet';
@@ -63,7 +63,7 @@ export default function ProjectAnalysis({
     const [tiobDialogOpen, setTiobDialogOpen] = useState(false);
     const [uploadingToKnowledgeBase, setUploadingToKnowledgeBase] = useState(false);
 
-    // 知识库相关hooks
+    // 知识库相关hooks - 只在项目有datasetId时启用
     const { 
         data: dataset, 
         error: datasetError, 
@@ -71,7 +71,7 @@ export default function ProjectAnalysis({
         refetch: refetchDataset
     } = useDatasetDetails(project?.datasetId, !!project?.datasetId);
 
-    // 查询知识库文档（使用无限查询）
+    // 查询知识库文档（使用无限查询）- 简化启用条件，移除对dataset的依赖
     const { 
         data: documentsResponse, 
         error: documentsError, 
@@ -79,7 +79,7 @@ export default function ProjectAnalysis({
         fetchNextPage,
         hasNextPage,
         isFetchingNextPage
-    } = useDatasetDocuments(project?.datasetId, !!project?.datasetId && !!dataset);
+    } = useDatasetDocuments(project?.datasetId, !!project?.datasetId);
     
     // 展平所有页面的数据
     const allDocuments = useMemo(() => 
@@ -87,13 +87,13 @@ export default function ProjectAnalysis({
         [documentsResponse?.pages]
     );
     
-    // 自动加载所有数据
+    // 自动加载所有数据 - 移除对fetchNextPage的依赖以避免循环
     useEffect(() => {
         // 如果有数据且还有更多页，自动加载
         if (documentsResponse && hasNextPage && !isFetchingNextPage && !isLoadingDocuments) {
             fetchNextPage();
         }
-    }, [documentsResponse, hasNextPage, isFetchingNextPage, isLoadingDocuments, fetchNextPage]);
+    }, [documentsResponse?.pages?.length, hasNextPage, isFetchingNextPage, isLoadingDocuments]); // 移除fetchNextPage依赖
 
     // 上传文档到知识库
     const createDocument = useCreateDocumentByFile();
