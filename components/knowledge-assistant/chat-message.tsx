@@ -229,18 +229,45 @@ export function ChatMessage({
 
 /**
  * 消息内容渲染组件 - 自然渲染后端发送的消息部分
- * 无需复杂的模式判断，直接渲染 parts 内容
+ * 简化的步骤加载状态检测
  */
 function MessageContent({ message }: { message: any }) {
-  // 如果有 parts，逐个渲染各部分
+  // 如果有 parts，直接渲染各部分
   if (message.parts && Array.isArray(message.parts) && message.parts.length > 0) {
+    // 追踪步骤序号并检测加载状态
+    let stepCounter = 0;
+    const partsWithLoadingState = message.parts.map((part: any, index: number) => {
+      if (part.type === 'step-start') {
+        stepCounter++; // 累加步骤序号
+        
+        // 检查下一个 part 是否是实际内容
+        const nextPart = message.parts[index + 1];
+        const hasImmediateContent = nextPart && (
+          nextPart.type === 'text' || 
+          nextPart.type === 'tool-invocation' || 
+          nextPart.type === 'tool-result' || 
+          nextPart.type === 'thinking'
+        );
+        
+        // 如果没有紧跟的内容，显示 loading
+        const shouldShowLoading = !hasImmediateContent;
+        
+        return {
+          ...part,
+          stepNumber: stepCounter,
+          isLoading: shouldShowLoading
+        };
+      }
+      return part;
+    });
+    
     return (
       <div className="space-y-2">
-        {message.parts.map((part: any, index: number) => (
+        {partsWithLoadingState.map((part: any, index: number) => (
           <MessagePart 
-            key={index} 
+            key={`${part.type}-${index}`}
             part={part} 
-            isLatest={index === message.parts.length - 1}
+            isLatest={index === partsWithLoadingState.length - 1}
             messageId={message.id}
           />
         ))}
@@ -275,6 +302,7 @@ function MessageContent({ message }: { message: any }) {
   // 默认渲染纯文本内容
   return <SimpleTextDisplay content={message.content || ''} />;
 }
+
 
 /**
  * 消息部分渲染组件 - 处理单个 message part
@@ -318,7 +346,10 @@ function MessagePart({
     case 'step-start':
       return (
         <div className={`${isLatest ? 'animate-in fade-in duration-300' : ''} my-3`}>
-          <StepStartIndicator step={part.step || 1} />
+          <StepStartIndicator 
+            stepNumber={part.stepNumber}
+            isLoading={part.isLoading || false}
+          />
         </div>
       );
 
@@ -377,18 +408,76 @@ function ToolResultDisplay({ result }: { result: any }) {
 }
 
 /**
- * 步骤开始指示器
+ * 步骤开始指示器 - 支持加载状态
  */
-function StepStartIndicator({ step }: { step: number }) {
-  return (
-    <div className="flex items-center gap-2 py-2">
-      <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-        <span className="text-white text-xs font-bold">{step}</span>
+function StepStartIndicator({ stepNumber, isLoading = false }: { stepNumber?: number; isLoading?: boolean }) {
+  if (isLoading) {
+    // 只显示加载骨架屏，不显示步骤条
+    return (
+      <div className="space-y-3">
+        <div className="text-xs text-blue-600 mb-2">🔄 AI 正在思考和处理...</div>
+        <StepLoadingSkeleton />
       </div>
-      <span className="text-sm font-medium text-blue-700">
-        步骤 {step}
-      </span>
-      <div className="flex-1 h-px bg-blue-200"></div>
+    );
+  }
+  
+  // 不是加载状态，显示简单的分隔线
+  return (
+    <div className="my-4">
+      <div className="flex items-center gap-2">
+        <div className="flex-1 h-px bg-gray-200"></div>
+        <div className="text-xs text-gray-500 px-2">
+          步骤 {stepNumber || 1}
+        </div>
+        <div className="flex-1 h-px bg-gray-200"></div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 步骤加载骨架屏组件
+ */
+function StepLoadingSkeleton() {
+  return (
+    <div className="animate-pulse space-y-3">
+      {/* 思考过程骨架 */}
+      <div className="p-4 bg-blue-50 border-l-4 border-blue-300 rounded-r-lg">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-4 h-4 bg-blue-300 rounded animate-pulse"></div>
+          <div className="h-3 bg-blue-300 rounded w-24 animate-pulse"></div>
+        </div>
+        <div className="space-y-2">
+          <div className="h-3 bg-blue-200 rounded w-3/4 animate-pulse"></div>
+          <div className="h-3 bg-blue-200 rounded w-1/2 animate-pulse"></div>
+          <div className="h-3 bg-blue-200 rounded w-2/3 animate-pulse"></div>
+        </div>
+      </div>
+
+      {/* 工具调用骨架 */}
+      <div className="border border-gray-300 bg-gray-50 rounded-lg p-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 bg-gray-300 rounded animate-pulse"></div>
+            <div className="space-y-1">
+              <div className="h-3 bg-gray-300 rounded w-28 animate-pulse"></div>
+              <div className="h-2 bg-gray-200 rounded w-20 animate-pulse"></div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-6 bg-gray-300 rounded w-16 animate-pulse"></div>
+            <div className="w-4 h-4 bg-gray-300 rounded animate-pulse"></div>
+          </div>
+        </div>
+      </div>
+      
+      {/* 额外的提示 */}
+      <div className="text-center">
+        <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 rounded-full text-xs text-blue-600">
+          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+          AI 正在分析和处理...
+        </div>
+      </div>
     </div>
   );
 }
