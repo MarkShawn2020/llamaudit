@@ -28,7 +28,7 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import {toast} from 'sonner';
 import DocumentSheet, {DocumentSheetTrigger} from "@/components/document-sheet/document-sheet";
 
-export default function ProjectAnalysis({
+export default function KnowledgeBase({
                                             projectId,
                                             project,
                                             onProjectUpdate
@@ -266,7 +266,7 @@ export default function ProjectAnalysis({
                 <CardHeader>
                     <div className="flex justify-between items-center">
                         <div>
-                            <CardTitle className="text-lg">文档</CardTitle>
+                            <CardTitle className="text-lg">知识库</CardTitle>
                             <CardDescription className="flex items-center gap-2">
                                 <FileText className="h-4 w-4"/>
                                 {dataset ? (
