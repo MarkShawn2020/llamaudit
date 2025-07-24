@@ -1,3 +1,4 @@
 - 本地已经在运行dev
 - 请不要build，使用typecheck即可
 - 禁止使用动态导入
+- 运行环境要求：Node.js >= 20.0.0（因为使用了File和Blob构造函数）
