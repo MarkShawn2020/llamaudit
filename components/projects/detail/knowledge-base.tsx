@@ -3,7 +3,7 @@
 import {TIOBComp} from "@/components/projects/detail/tiob-comp";
 import {Button} from '@/components/ui/button';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card';
-import {Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,} from "@/components/ui/dialog";
+import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,} from "@/components/ui/dialog";
 import {Project} from '@/lib/actions/project-actions';
 import {
     useCreateDocumentByFile,
@@ -12,7 +12,7 @@ import {
     useDeleteDocument
 } from '@/hooks/use-dify-dataset-server';
 import {Badge} from '@/components/ui/badge';
-import {Activity, BarChart2, BarChart3, Cpu, Database, FileText, Loader2, RefreshCw, Shield, Trash2, Upload, Zap} from 'lucide-react';
+import {Activity, BarChart2, BarChart3, Cpu, Database, FileText, Info, Loader2, RefreshCw, Shield, Trash2, Upload, Zap} from 'lucide-react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -267,6 +267,281 @@ export default function KnowledgeBase({
         }
     };
 
+    // 知识库详情对话框组件
+    const KnowledgeBaseDetailsDialog = () => {
+        const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+
+        return (
+            <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+                <DialogTrigger asChild>
+                    <Button variant="ghost" size="sm" className="gap-1">
+                        <Info className="h-4 w-4"/>
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Database className="h-5 w-5"/>
+                            知识库详情
+                        </DialogTitle>
+                        <DialogDescription>
+                            查看知识库的详细配置信息和统计数据
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-6">
+                        {/* 知识库状态 */}
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3">
+                                {isLoadingDataset ? (
+                                    <>
+                                        <Badge variant="secondary" className="text-xs">
+                                            <span className="w-2 h-2 bg-current rounded-full animate-pulse mr-1 inline-block"/>
+                                            初始化中
+                                        </Badge>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-4 h-4 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin"/>
+                                            <span className="text-sm text-muted-foreground">正在创建知识库...</span>
+                                        </div>
+                                    </>
+                                ) : dataset ? (
+                                    <>
+                                        <Badge variant="default" className="text-xs bg-green-100 text-green-800 border-green-200">
+                                            <span className="w-2 h-2 bg-green-500 rounded-full mr-1 inline-block"/>
+                                            运行正常
+                                        </Badge>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium text-sm">{dataset.name}</span>
+                                            <span className="text-xs font-mono bg-muted px-2 py-1 rounded border">
+                                                ID: {dataset.id.slice(0, 8)}...
+                                            </span>
+                                        </div>
+                                        <div className="text-xs text-muted-foreground ml-auto">
+                                            最后更新: {new Date(dataset.updated_at * 1000).toLocaleDateString("zh-CN")}
+                                        </div>
+                                    </>
+                                ) : datasetError ? (
+                                    <>
+                                        <Badge variant="destructive" className="text-xs">
+                                            <span className="w-2 h-2 bg-current rounded-full mr-1 inline-block"/>
+                                            连接失败
+                                        </Badge>
+                                        <span className="text-sm text-muted-foreground">知识库连接异常</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Badge variant="outline" className="text-xs">
+                                            <span className="w-2 h-2 bg-muted-foreground rounded-full mr-1 inline-block"/>
+                                            未配置
+                                        </Badge>
+                                        <span className="text-sm text-muted-foreground">知识库尚未初始化</span>
+                                    </>
+                                )}
+                            </div>
+
+                            {/* 骨架屏 for loading state */}
+                            {isLoadingDataset && (
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-pulse">
+                                    {[...Array(4)].map((_, i) => (
+                                        <div key={i} className="p-3 bg-muted/30 rounded-md">
+                                            <div className="h-4 bg-muted rounded mb-2"/>
+                                            <div className="h-6 bg-muted rounded mb-1"/>
+                                            <div className="h-3 bg-muted rounded"/>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 知识库统计信息 */}
+                        {dataset && (
+                            <>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div className="group cursor-pointer transition-all duration-200 hover:scale-105 p-4 bg-muted/30 rounded-lg border hover:border-blue-200 hover:shadow-sm">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <FileText className="h-5 w-5 text-blue-500"/>
+                                            <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                                                {Math.round((allDocuments.length / Math.max(dataset.document_count, 1)) * 100)}%
+                                            </span>
+                                        </div>
+                                        <div className="text-2xl font-bold text-blue-600 mb-1">
+                                            {allDocuments.length}
+                                        </div>
+                                        <div className="text-sm text-muted-foreground mb-3">文档数量</div>
+                                        <div className="w-full bg-blue-100 rounded-full h-2">
+                                            <div
+                                                className="bg-blue-500 h-2 rounded-full transition-all duration-500"
+                                                style={{width: `${Math.min((allDocuments.length / Math.max(dataset.document_count, allDocuments.length, 1)) * 100, 100)}%`}}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="group cursor-pointer transition-all duration-200 hover:scale-105 p-4 bg-muted/30 rounded-lg border hover:border-emerald-200 hover:shadow-sm">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <BarChart3 className="h-5 w-5 text-emerald-500"/>
+                                            <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                                                {allDocuments.length > 0 ? Math.round(dataset.word_count / allDocuments.length) : 0} 词/文档
+                                            </span>
+                                        </div>
+                                        <div className="text-2xl font-bold text-emerald-600 mb-1">
+                                            {dataset.word_count?.toLocaleString() || "0"}
+                                        </div>
+                                        <div className="text-sm text-muted-foreground mb-3">总词数</div>
+                                        <div className="w-full bg-emerald-100 rounded-full h-2">
+                                            <div
+                                                className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
+                                                style={{width: `${Math.min((dataset.word_count / Math.max(dataset.word_count, 100000)) * 100, 100)}%`}}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="group cursor-pointer transition-all duration-200 hover:scale-105 p-4 bg-muted/30 rounded-lg border hover:border-purple-200 hover:shadow-sm">
+                                        <div className="flex items-center justify-between mb-3">
+                                            {dataset.indexing_technique === "high_quality" ?
+                                                <Zap className="h-5 w-5 text-purple-500"/> :
+                                                <Cpu className="h-5 w-5 text-purple-500"/>
+                                            }
+                                            <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                                                {dataset.embedding_available ? "可用" : "不可用"}
+                                            </span>
+                                        </div>
+                                        <div className="text-sm font-semibold text-purple-600 mb-1">
+                                            {dataset.indexing_technique === "high_quality" ? "高质量" : "经济模式"}
+                                        </div>
+                                        <div className="text-sm text-muted-foreground mb-3">索引模式</div>
+                                        <div className="w-full bg-purple-100 rounded-full h-2">
+                                            <div
+                                                className={`h-2 rounded-full transition-all duration-500 ${
+                                                    dataset.indexing_technique === "high_quality" ? "bg-purple-500 w-full" : "bg-purple-400 w-3/4"
+                                                }`}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="group cursor-pointer transition-all duration-200 hover:scale-105 p-4 bg-muted/30 rounded-lg border hover:border-orange-200 hover:shadow-sm">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <Activity className="h-5 w-5 text-orange-500"/>
+                                            <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                                                {dataset.app_count > 0 ? "活跃" : "未使用"}
+                                            </span>
+                                        </div>
+                                        <div className="text-2xl font-bold text-orange-600 mb-1">
+                                            {dataset.app_count}
+                                        </div>
+                                        <div className="text-sm text-muted-foreground mb-3">关联应用</div>
+                                        <div className="w-full bg-orange-100 rounded-full h-2">
+                                            <div
+                                                className="bg-orange-500 h-2 rounded-full transition-all duration-500"
+                                                style={{width: `${Math.min((dataset.app_count / Math.max(dataset.app_count, 1)) * 100, 100)}%`}}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 知识库技术详情 */}
+                                <div className="space-y-4">
+                                    <h3 className="text-sm font-medium">技术配置</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
+                                            <div className="flex items-center gap-2">
+                                                <Database className="h-4 w-4 text-muted-foreground"/>
+                                                <span className="text-sm text-muted-foreground">存储提供商:</span>
+                                            </div>
+                                            <Badge variant="outline" className="text-xs capitalize">
+                                                {dataset.provider}
+                                            </Badge>
+                                        </div>
+                                        <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
+                                            <div className="flex items-center gap-2">
+                                                <Shield className="h-4 w-4 text-muted-foreground"/>
+                                                <span className="text-sm text-muted-foreground">访问权限:</span>
+                                            </div>
+                                            <Badge variant="outline" className={`text-xs ${
+                                                dataset.permission === "only_me" ? "border-blue-200 text-blue-700" :
+                                                    dataset.permission === "all_team_members" ? "border-green-200 text-green-700" :
+                                                        "border-amber-200 text-amber-700"
+                                            }`}>
+                                                {dataset.permission === "only_me" ? "仅自己" :
+                                                    dataset.permission === "all_team_members" ? "全团队" : "部分成员"}
+                                            </Badge>
+                                        </div>
+                                        {dataset.embedding_model && (
+                                            <>
+                                                <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
+                                                    <div className="flex items-center gap-2">
+                                                        <Cpu className="h-4 w-4 text-muted-foreground"/>
+                                                        <span className="text-sm text-muted-foreground">嵌入模型:</span>
+                                                    </div>
+                                                    <code className="text-xs bg-muted px-2 py-1 rounded font-mono">
+                                                        {dataset.embedding_model}
+                                                    </code>
+                                                </div>
+                                                <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
+                                                    <div className="flex items-center gap-2">
+                                                        <Zap className="h-4 w-4 text-muted-foreground"/>
+                                                        <span className="text-sm text-muted-foreground">模型提供商:</span>
+                                                    </div>
+                                                    <Badge variant="secondary" className="text-xs">
+                                                        {dataset.embedding_model_provider}
+                                                    </Badge>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {/* 知识库操作区域 */}
+                        {(datasetError || !dataset) && !isLoadingDataset && (
+                            <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg">
+                                <div className="flex items-start gap-3">
+                                    <div className="w-2 h-2 bg-amber-500 rounded-full mt-2 flex-shrink-0"/>
+                                    <div className="flex-1">
+                                        <div className="text-sm font-medium text-amber-800 mb-1">
+                                            知识库需要初始化
+                                        </div>
+                                        <div className="text-xs text-amber-700 mb-3">
+                                            初始化知识库后即可使用智能助手功能和文档管理
+                                        </div>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="text-amber-700 border-amber-300 hover:bg-amber-100"
+                                            onClick={handleReinitializeKnowledgeBase}
+                                        >
+                                            重新初始化
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 错误状态的详细信息 */}
+                        {datasetError && !isLoadingDataset && (
+                            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                                <div className="flex items-start gap-3">
+                                    <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"/>
+                                    <div className="flex-1">
+                                        <div className="text-sm font-medium text-red-800 mb-2">
+                                            知识库连接错误
+                                        </div>
+                                        <div className="text-xs text-red-700 font-mono bg-red-100 p-2 rounded break-all mb-2">
+                                            {datasetError.message || "未知错误"}
+                                        </div>
+                                        <div className="text-xs text-red-600">
+                                            请检查Dify配置或联系系统管理员
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+        );
+    };
+
     return (
         <>
             <Card>
@@ -292,6 +567,8 @@ export default function KnowledgeBase({
                             </CardDescription>
                         </div>
                         <div className="flex gap-2">
+                            <KnowledgeBaseDetailsDialog />
+                            
                             <Dialog open={tiobDialogOpen} onOpenChange={setTiobDialogOpen}>
                                 <DialogTrigger asChild>
                                     <Button variant="ghost" size="sm">
@@ -308,7 +585,6 @@ export default function KnowledgeBase({
                                 </DialogContent>
                             </Dialog>
 
-
                             <Button
                                 onClick={triggerFileUpload}
                                 disabled={uploadingToKnowledgeBase || !project?.datasetId}
@@ -324,276 +600,6 @@ export default function KnowledgeBase({
                     </div>
                 </CardHeader>
 
-                {/* 知识库详情区域 */}
-                <div className="px-6 border-b border-border/40">
-                    <div className="py-4">
-                        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-4">
-                            <Database className="h-4 w-4"/>
-                            知识库详情
-                        </div>
-
-                        <div className="bg-muted/30 rounded-lg p-4 space-y-4">
-                            {/* 知识库状态行 */}
-                            <div className="flex flex-col gap-3">
-                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                                        {isLoadingDataset ? (
-                                            <>
-                                                <Badge variant="secondary" className="text-xs w-fit">
-                                                    <span className="w-2 h-2 bg-current rounded-full animate-pulse mr-1 inline-block"/>
-                                                    初始化中
-                                                </Badge>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-4 h-4 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin"/>
-                                                    <span className="text-sm text-muted-foreground">正在创建知识库...</span>
-                                                </div>
-                                            </>
-                                        ) : dataset ? (
-                                            <>
-                                                <Badge variant="default" className="text-xs w-fit bg-green-100 text-green-800 border-green-200">
-                                                    <span className="w-2 h-2 bg-green-500 rounded-full mr-1 inline-block"/>
-                                                    运行正常
-                                                </Badge>
-                                                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                                                    <span className="font-medium text-sm break-words">{dataset.name}</span>
-                                                    <span className="text-xs font-mono bg-background px-2 py-1 rounded border w-fit">
-                                                        ID: {dataset.id.slice(0, 8)}...
-                                                    </span>
-                                                </div>
-                                            </>
-                                        ) : datasetError ? (
-                                            <>
-                                                <Badge variant="destructive" className="text-xs w-fit">
-                                                    <span className="w-2 h-2 bg-current rounded-full mr-1 inline-block"/>
-                                                    连接失败
-                                                </Badge>
-                                                <span className="text-sm text-muted-foreground">知识库连接异常</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Badge variant="outline" className="text-xs w-fit">
-                                                    <span className="w-2 h-2 bg-muted-foreground rounded-full mr-1 inline-block"/>
-                                                    未配置
-                                                </Badge>
-                                                <span className="text-sm text-muted-foreground">知识库尚未初始化</span>
-                                            </>
-                                        )}
-                                    </div>
-
-                                    {dataset && (
-                                        <div className="text-xs text-muted-foreground whitespace-nowrap">
-                                            最后更新: {new Date(dataset.updated_at * 1000).toLocaleDateString("zh-CN")}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* 骨架屏 for loading state */}
-                                {isLoadingDataset && (
-                                    <div className="space-y-3 animate-pulse">
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                            {[...Array(4)].map((_, i) => (
-                                                <div key={i} className="p-3 bg-background rounded-md border">
-                                                    <div className="h-4 bg-muted rounded mb-2"/>
-                                                    <div className="h-6 bg-muted rounded mb-1"/>
-                                                    <div className="h-3 bg-muted rounded"/>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* 知识库统计信息 */}
-                            {dataset && (
-                                <div className="border-t border-border/40 pt-4">
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                        <div className="group cursor-pointer transition-all duration-200 hover:scale-105 p-3 bg-background rounded-md border hover:border-blue-200 hover:shadow-sm">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <FileText className="h-4 w-4 text-blue-500"/>
-                                                <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    {Math.round((allDocuments.length / Math.max(dataset.document_count, 1)) * 100)}%
-                                                </span>
-                                            </div>
-                                            <div className="text-lg font-semibold text-blue-600">
-                                                {allDocuments.length}
-                                            </div>
-                                            <div className="text-xs text-muted-foreground">文档数量</div>
-                                            <div className="mt-2 w-full bg-blue-100 rounded-full h-1">
-                                                <div
-                                                    className="bg-blue-500 h-1 rounded-full transition-all duration-500"
-                                                    style={{width: `${Math.min((allDocuments.length / Math.max(dataset.document_count, allDocuments.length, 1)) * 100, 100)}%`}}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="group cursor-pointer transition-all duration-200 hover:scale-105 p-3 bg-background rounded-md border hover:border-emerald-200 hover:shadow-sm">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <BarChart3 className="h-4 w-4 text-emerald-500"/>
-                                                <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    {allDocuments.length > 0 ? Math.round(dataset.word_count / allDocuments.length) : 0} 词/文档
-                                                </span>
-                                            </div>
-                                            <div className="text-lg font-semibold text-emerald-600">
-                                                {dataset.word_count?.toLocaleString() || "0"}
-                                            </div>
-                                            <div className="text-xs text-muted-foreground">总词数</div>
-                                            <div className="mt-2 w-full bg-emerald-100 rounded-full h-1">
-                                                <div
-                                                    className="bg-emerald-500 h-1 rounded-full transition-all duration-500"
-                                                    style={{width: `${Math.min((dataset.word_count / Math.max(dataset.word_count, 100000)) * 100, 100)}%`}}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="group cursor-pointer transition-all duration-200 hover:scale-105 p-3 bg-background rounded-md border hover:border-purple-200 hover:shadow-sm">
-                                            <div className="flex items-center justify-between mb-2">
-                                                {dataset.indexing_technique === "high_quality" ?
-                                                    <Zap className="h-4 w-4 text-purple-500"/> :
-                                                    <Cpu className="h-4 w-4 text-purple-500"/>
-                                                }
-                                                <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    {dataset.embedding_available ? "可用" : "不可用"}
-                                                </span>
-                                            </div>
-                                            <div className="text-sm font-semibold text-purple-600 capitalize">
-                                                {dataset.indexing_technique === "high_quality" ? "高质量" : "经济模式"}
-                                            </div>
-                                            <div className="text-xs text-muted-foreground">索引模式</div>
-                                            <div className="mt-2 w-full bg-purple-100 rounded-full h-1">
-                                                <div
-                                                    className={`h-1 rounded-full transition-all duration-500 ${
-                                                        dataset.indexing_technique === "high_quality" ? "bg-purple-500 w-full" : "bg-purple-400 w-3/4"
-                                                    }`}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="group cursor-pointer transition-all duration-200 hover:scale-105 p-3 bg-background rounded-md border hover:border-orange-200 hover:shadow-sm">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <Activity className="h-4 w-4 text-orange-500"/>
-                                                <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    {dataset.app_count > 0 ? "活跃" : "未使用"}
-                                                </span>
-                                            </div>
-                                            <div className="text-lg font-semibold text-orange-600">
-                                                {dataset.app_count}
-                                            </div>
-                                            <div className="text-xs text-muted-foreground">关联应用</div>
-                                            <div className="mt-2 w-full bg-orange-100 rounded-full h-1">
-                                                <div
-                                                    className="bg-orange-500 h-1 rounded-full transition-all duration-500"
-                                                    style={{width: `${Math.min((dataset.app_count / Math.max(dataset.app_count, 1)) * 100, 100)}%`}}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* 知识库详细信息 */}
-                                    <div className="mt-4 pt-4 border-t border-border/40">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                            <div className="flex items-center justify-between p-2 rounded hover:bg-muted/50 transition-colors">
-                                                <div className="flex items-center gap-2">
-                                                    <Database className="h-3 w-3 text-muted-foreground"/>
-                                                    <span className="text-muted-foreground">存储提供商:</span>
-                                                </div>
-                                                <Badge variant="outline" className="text-xs capitalize">
-                                                    {dataset.provider}
-                                                </Badge>
-                                            </div>
-                                            <div className="flex items-center justify-between p-2 rounded hover:bg-muted/50 transition-colors">
-                                                <div className="flex items-center gap-2">
-                                                    <Shield className="h-3 w-3 text-muted-foreground"/>
-                                                    <span className="text-muted-foreground">访问权限:</span>
-                                                </div>
-                                                <Badge variant="outline" className={`text-xs ${
-                                                    dataset.permission === "only_me" ? "border-blue-200 text-blue-700" :
-                                                        dataset.permission === "all_team_members" ? "border-green-200 text-green-700" :
-                                                            "border-amber-200 text-amber-700"
-                                                }`}>
-                                                    {dataset.permission === "only_me" ? "仅自己" :
-                                                        dataset.permission === "all_team_members" ? "全团队" : "部分成员"}
-                                                </Badge>
-                                            </div>
-                                            {dataset.embedding_model && (
-                                                <>
-                                                    <div className="flex items-center justify-between p-2 rounded hover:bg-muted/50 transition-colors">
-                                                        <div className="flex items-center gap-2">
-                                                            <Cpu className="h-3 w-3 text-muted-foreground"/>
-                                                            <span className="text-muted-foreground">嵌入模型:</span>
-                                                        </div>
-                                                        <code className="text-xs bg-muted px-2 py-1 rounded font-mono">
-                                                            {dataset.embedding_model}
-                                                        </code>
-                                                    </div>
-                                                    <div className="flex items-center justify-between p-2 rounded hover:bg-muted/50 transition-colors">
-                                                        <div className="flex items-center gap-2">
-                                                            <Zap className="h-3 w-3 text-muted-foreground"/>
-                                                            <span className="text-muted-foreground">模型提供商:</span>
-                                                        </div>
-                                                        <Badge variant="secondary" className="text-xs">
-                                                            {dataset.embedding_model_provider}
-                                                        </Badge>
-                                                    </div>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* 知识库操作区域 */}
-                            {(datasetError || !dataset) && !isLoadingDataset && (
-                                <div className="border-t border-border/40 pt-4">
-                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg">
-                                        <div className="flex items-start gap-3">
-                                            <div className="w-2 h-2 bg-amber-500 rounded-full mt-2 flex-shrink-0"/>
-                                            <div className="min-w-0">
-                                                <div className="text-sm font-medium text-amber-800 mb-1">
-                                                    知识库需要初始化
-                                                </div>
-                                                <div className="text-xs text-amber-700 break-words">
-                                                    初始化知识库后即可使用智能助手功能和文档管理
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-2 flex-shrink-0">
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                className="text-amber-700 border-amber-300 hover:bg-amber-100 transition-colors"
-                                                onClick={handleReinitializeKnowledgeBase}
-                                            >
-                                                重新初始化
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* 错误状态的详细信息 */}
-                            {datasetError && !isLoadingDataset && (
-                                <div className="border-t border-border/40 pt-4">
-                                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                                        <div className="flex items-start gap-3">
-                                            <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"/>
-                                            <div className="min-w-0 flex-1">
-                                                <div className="text-sm font-medium text-red-800 mb-2">
-                                                    知识库连接错误
-                                                </div>
-                                                <div className="text-xs text-red-700 font-mono bg-red-100 p-2 rounded break-all">
-                                                    {datasetError.message || "未知错误"}
-                                                </div>
-                                                <div className="text-xs text-red-600 mt-2">
-                                                    请检查Dify配置或联系系统管理员
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
 
                 <CardContent className="w-full">
                     <input
