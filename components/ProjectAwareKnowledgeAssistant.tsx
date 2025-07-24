@@ -187,7 +187,7 @@ function DiagnosticKnowledgeAssistant({config}: { config: AssistantConfig }) {
         const validation = validateConfig();
         console.log('🔍 配置验证结果:', validation);
         return validation;
-    }, [processedConfig]);
+    }, [validateConfig]);
 
     // 主要助手逻辑
     const assistant = useKnowledgeAssistant(processedConfig);
@@ -214,7 +214,7 @@ function DiagnosticKnowledgeAssistant({config}: { config: AssistantConfig }) {
     }), [
         config,
         processedConfig,
-        configValidation.isValid, // 只依赖isValid标志，避免对象引用问题
+        configValidation,
         assistant.isOpen,
         assistant.messages.length,
         assistant.isLoading,

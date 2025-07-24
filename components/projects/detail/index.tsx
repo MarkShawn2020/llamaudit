@@ -28,7 +28,7 @@ import ProjectInfo from 'components/projects/detail/ProjectInfo';
 import {PencilIcon, TrashIcon, Building2, Database, FileText, MapPin, Phone, Mail, Calendar, User} from 'lucide-react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {useEffect, useState} from 'react';
+import {useEffect, useState, useCallback} from 'react';
 import {toast} from 'sonner';
 import {useAtom} from 'jotai';
 import {
@@ -74,12 +74,7 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
 
     // logger.info('ProjectDetail', {projectId, project});
 
-    useEffect(() => {
-        // 加载项目详情
-        loadProject();
-    }, [projectId]);
-
-    const loadProject = async () => {
+    const loadProject = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
@@ -101,7 +96,17 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [projectId]);
+
+    const handleProjectUpdate = useCallback((updated: Partial<Project>) => {
+        if (!project) return;
+        setProject({...project, ...updated});
+    }, [project]);
+
+    useEffect(() => {
+        // 加载项目详情
+        loadProject();
+    }, [projectId, loadProject]);
 
 
     // 确保知识库存在
@@ -122,12 +127,7 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
         };
 
         initializeDataset();
-    }, [project, datasetError, ensureDataset]);
-
-    const handleProjectUpdate = (updated: Partial<Project>) => {
-        if (!project) return;
-        setProject({...project, ...updated});
-    };
+    }, [project, datasetError, ensureDataset, handleProjectUpdate]);
 
     const handleDeleteProject = async () => {
         if (!project) return;

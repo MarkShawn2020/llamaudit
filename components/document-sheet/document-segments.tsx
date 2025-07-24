@@ -391,7 +391,7 @@ function SegmentsList({
     } else {
       selectAllSegments(segments.map(s => s.id));
     }
-  }, [selectedSegmentIds.length, segments.length, segments, clearSelectedSegments, selectAllSegments]);
+  }, [selectedSegmentIds.length, segments, clearSelectedSegments, selectAllSegments]);
 
   // 滚动到底部时加载更多
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {

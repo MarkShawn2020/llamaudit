@@ -28,6 +28,9 @@ interface CheckResult {
 export function QuickDebugTool() {
   const [results, setResults] = useState<CheckResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
+  
+  // Move hook to component level - hooks must be called unconditionally
+  const documentSheetContext = useDocumentSheet();
 
   // 运行快速检查
   const runQuickCheck = () => {
@@ -36,20 +39,19 @@ export function QuickDebugTool() {
 
     try {
       // 检查1: Provider是否可用
-      try {
-        const context = useDocumentSheet();
+      if (documentSheetContext) {
         checkResults.push({
           name: 'DocumentSheetProvider',
           status: 'pass',
           message: 'Provider 正常工作',
-          details: `Context状态: isOpen=${context.isOpen}, datasetId=${context.datasetId}`,
+          details: `Context状态: isOpen=${documentSheetContext.isOpen}, datasetId=${documentSheetContext.datasetId}`,
         });
-      } catch (error) {
+      } else {
         checkResults.push({
           name: 'DocumentSheetProvider',
           status: 'fail',
           message: 'Provider 未配置或不可用',
-          details: (error as Error).message,
+          details: 'useDocumentSheet hook 无法调用',
         });
       }
 
@@ -179,9 +181,11 @@ function TestTriggerButton() {
  * 手动测试按钮
  */
 function ManualTestButton() {
+  // Move hook to component level
+  const { openDocumentSheet } = useDocumentSheet();
+  
   const handleManualTest = () => {
     try {
-      const { openDocumentSheet } = useDocumentSheet();
       openDocumentSheet('manual-test-dataset', 'manual-test-doc', '手动测试文档');
     } catch (error) {
       alert('手动测试失败: ' + (error as Error).message);

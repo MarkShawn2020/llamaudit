@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,7 +38,7 @@ export function DifyConfigComponent() {
   const { toast } = useToast();
 
   // 加载项目的Dify配置
-  const loadProjectDifyConfig = async () => {
+  const loadProjectDifyConfig = useCallback(async () => {
     if (!projectId) return;
     
     try {
@@ -61,12 +61,12 @@ export function DifyConfigComponent() {
     } catch (error) {
       console.error('加载项目Dify配置失败:', error);
     }
-  };
+  }, [projectId, config]);
 
   // 组件挂载时加载项目配置
   useEffect(() => {
     loadProjectDifyConfig();
-  }, [projectId]);
+  }, [projectId, loadProjectDifyConfig]);
 
   const handlePresetChange = (environment: 'local' | 'cloud') => {
     const newConfig = DEFAULT_DIFY_CONFIGS[environment];

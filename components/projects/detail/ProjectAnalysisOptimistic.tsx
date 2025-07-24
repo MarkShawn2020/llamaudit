@@ -43,7 +43,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
 import OptimisticFileUpload from '@/components/optimistic-file-upload';
 import { Separator } from '@/components/ui/separator';
@@ -78,7 +78,10 @@ export default function ProjectAnalysisOptimistic({
     } = useDatasetDocuments(project?.datasetId, !!project?.datasetId && !!dataset);
     
     // 展平所有页面的数据
-    const allDocuments = documentsResponse?.pages?.flatMap(page => page.data) || [];
+    const allDocuments = useMemo(() => 
+        documentsResponse?.pages?.flatMap(page => page.data) || [], 
+        [documentsResponse?.pages]
+    );
     
     // 自动加载所有数据
     useEffect(() => {
