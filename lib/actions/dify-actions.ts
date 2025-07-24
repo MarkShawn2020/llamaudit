@@ -11,6 +11,23 @@ import type {
 } from '@/lib/api/dify-dataset-api';
 
 /**
+ * 清理文件名中的特殊字符，确保与Dify API兼容
+ */
+function sanitizeFileName(fileName: string): string {
+  return fileName
+    // 替换中文引号
+    .replace(/[""]/g, '"')
+    .replace(/['']/g, "'")
+    // 替换其他可能有问题的字符
+    .replace(/[<>:"/\\|?*]/g, '_')
+    // 替换连续的空格和下划线
+    .replace(/\s+/g, ' ')
+    .replace(/_+/g, '_')
+    // 去除首尾空格
+    .trim();
+}
+
+/**
  * 获取Dify配置的统一方法（服务器端）
  * 优先级: 环境变量 > 默认配置
  */
@@ -88,8 +105,11 @@ export async function createDocumentByFile(
     const config = await getDifyConfig();
     const api = new DifyDatasetAPI(config);
     
+    // 清理文件名以确保与Dify API兼容
+    const sanitizedFileName = sanitizeFileName(fileName);
+    
     // 在服务器端创建File对象
-    const file = new File([fileBuffer], fileName, {
+    const file = new File([fileBuffer], sanitizedFileName, {
       type: getContentType(fileName)
     });
     
