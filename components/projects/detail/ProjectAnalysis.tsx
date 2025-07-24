@@ -73,10 +73,10 @@ export default function ProjectAnalysis({
     }, [documentsResponse?.pages?.length, hasNextPage, isFetchingNextPage, isLoadingDocuments]); // 移除fetchNextPage依赖
 
     // 上传文档到知识库
-    const createDocument = useCreateDocumentByFile();
+    const createDocument = useCreateDocumentByFile(project?.datasetId || '');
 
     // 删除知识库文档
-    const deleteDocument = useDeleteDocument();
+    const deleteDocument = useDeleteDocument(project?.datasetId || '');
 
     // 用于跟踪文档状态变化的ref
     const previousDocsRef = useRef<any[]>([]);
@@ -135,7 +135,6 @@ export default function ProjectAnalysis({
             for (const file of Array.from(files)) {
                 try {
                     const result = await createDocument.mutateAsync({
-                        datasetId: project.datasetId!,
                         file,
                         options: {
                             indexing_technique: 'high_quality',
@@ -204,10 +203,7 @@ export default function ProjectAnalysis({
         if (!project?.datasetId) return;
 
         try {
-            await deleteDocument.mutateAsync({
-                datasetId: project.datasetId,
-                documentId
-            });
+            await deleteDocument.mutateAsync(documentId);
         } catch (error) {
             console.error('删除文档失败:', error);
         }

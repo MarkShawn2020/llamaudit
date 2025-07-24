@@ -79,8 +79,12 @@ export function ProjectAwareKnowledgeAssistant() {
             console.log('✅ 知识库创建成功:', datasetId);
 
             // 更新项目关联
-            await updateProjectDatasetId(projectId, datasetId);
-            console.log('✅ 项目知识库关联更新成功');
+            if (datasetId) {
+                await updateProjectDatasetId(projectId, datasetId);
+                console.log('✅ 项目知识库关联更新成功');
+            } else {
+                throw new Error('知识库创建失败');
+            }
 
             // 重新加载配置
             await loadProjectConfig(projectId);

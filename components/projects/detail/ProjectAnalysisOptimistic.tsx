@@ -72,7 +72,7 @@ export default function ProjectAnalysisOptimistic({
     }, [documentsResponse, hasNextPage, isFetchingNextPage, isLoadingDocuments, fetchNextPage]);
 
     // 删除知识库文档
-    const deleteDocument = useDeleteDocument();
+    const deleteDocument = useDeleteDocument(project?.datasetId || '');
 
     // 用于跟踪文档状态变化的ref
     const previousDocsRef = useRef<any[]>([]);
@@ -116,10 +116,7 @@ export default function ProjectAnalysisOptimistic({
         if (!project?.datasetId) return;
 
         try {
-            await deleteDocument.mutateAsync({
-                datasetId: project.datasetId,
-                documentId
-            });
+            await deleteDocument.mutateAsync(documentId);
         } catch (error) {
             console.error('删除文档失败:', error);
         }
