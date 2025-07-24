@@ -96,8 +96,9 @@ class DifyDatasetAPI {
     useDatasetKey = true
   ): Promise<Response> {
     const apiKey = useDatasetKey ? this.config.datasetApiKey : this.config.apiKey;
+    const fullUrl = `${this.config.baseUrl}${endpoint}`;
     
-    const response = await fetch(`${this.config.baseUrl}${endpoint}`, {
+    const response = await fetch(fullUrl, {
       ...options,
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -107,7 +108,30 @@ class DifyDatasetAPI {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      
+      // 详细的错误调试信息
+      const debugInfo = {
+        endpoint: fullUrl,
+        method: options.method || 'GET',
+        status: response.status,
+        statusText: response.statusText,
+        apiKeyType: useDatasetKey ? 'dataset' : 'app',
+        apiKeyPreview: apiKey ? `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 4)}` : 'undefined',
+        baseUrl: this.config.baseUrl,
+        hasBody: !!options.body,
+        bodyType: options.body ? (options.body instanceof FormData ? 'FormData' : typeof options.body) : 'none',
+        timestamp: new Date().toISOString()
+      };
+      
+      console.error('🚨 Dify API请求失败 - 调试信息:', debugInfo);
+      console.error('📋 错误详情:', errorData);
+      
+      const enhancedMessage = `${errorData.message || `HTTP ${response.status}: ${response.statusText}`}\n` +
+        `端点: ${fullUrl}\n` +
+        `API密钥类型: ${debugInfo.apiKeyType} (${debugInfo.apiKeyPreview})\n` +
+        `请求方法: ${debugInfo.method}`;
+      
+      throw new Error(enhancedMessage);
     }
 
     return response;

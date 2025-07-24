@@ -147,6 +147,13 @@ export default function KnowledgeBase({
                     successCount++;
                 } catch (error) {
                     console.error(`文件 ${file.name} 上传失败:`, error);
+                    
+                    // 显示详细的错误信息给用户
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    toast.error(`文件 ${file.name} 上传失败: ${errorMessage}`, {
+                        duration: 8000, // 延长显示时间以便用户阅读详细信息
+                    });
+                    
                     errorCount++;
                 }
             }

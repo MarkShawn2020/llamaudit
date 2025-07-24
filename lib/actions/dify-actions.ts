@@ -102,12 +102,12 @@ export async function createDocumentByFile(
     process_mode?: 'automatic' | 'custom';
   } = {}
 ): Promise<CreateDocumentResponse> {
+  // 清理文件名以确保与Dify API兼容
+  const sanitizedFileName = sanitizeFileName(fileName);
+  
   try {
     const config = await getDifyConfig();
     const api = new DifyDatasetAPI(config);
-    
-    // 清理文件名以确保与Dify API兼容
-    const sanitizedFileName = sanitizeFileName(fileName);
     
     // 创建File对象（Node.js 20+支持）
     const file = new File([fileBuffer], sanitizedFileName, {
@@ -116,7 +116,19 @@ export async function createDocumentByFile(
     
     return await api.createDocumentByFile(datasetId, file, options);
   } catch (error) {
-    console.error('通过文件创建文档失败:', error);
+    // 增强错误日志，提供文件上传的上下文信息
+    const fileInfo = {
+      originalFileName: fileName,
+      sanitizedFileName: sanitizedFileName,
+      fileSize: fileBuffer.byteLength,
+      mimeType: getContentType(fileName),
+      datasetId: datasetId,
+      uploadOptions: options
+    };
+    
+    console.error('📤 文件上传失败 - 文件信息:', fileInfo);
+    console.error('❌ 原始错误:', error);
+    
     throw error;
   }
 }
