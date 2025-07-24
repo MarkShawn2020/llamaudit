@@ -51,7 +51,6 @@
     "@radix-ui/react-tooltip": "^1.2.7",
     "@streamparser/json": "^0.0.22",
     "@tailwindcss/postcss": "4.0.12",
-    "@tailwindcss/typography": "^0.5.16",
     "@tanstack/react-query": "^5.83.0",
     "@tanstack/react-query-devtools": "^5.83.0",
     "@types/bcryptjs": "^2.4.6",
@@ -108,6 +107,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@tailwindcss/typography": "^0.5.16",
     "@types/ali-oss": "^6.16.11",
     "@types/file-saver": "^2.0.7",
     "@types/react-syntax-highlighter": "^15.5.13",

@@ -383,31 +383,23 @@ function MarkdownDisplay({ content, className }: { content: string; className?: 
   if (!content) return null;
   
   return (
-    <div className={cn(
-      'prose prose-sm dark:prose-invert max-w-none',
-      // 文本颜色
-      'prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground',
-      'prose-ul:text-foreground prose-ol:text-foreground prose-li:text-foreground',
-      'prose-a:text-primary prose-a:underline-offset-4',
-      // 代码样式
-      'prose-code:text-foreground prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs',
-      'prose-pre:bg-muted prose-pre:border',
-      // 引用样式
-      'prose-blockquote:border-l-border prose-blockquote:text-muted-foreground',
-      // 列表样式
-      'prose-ul:list-disc prose-ol:list-decimal prose-li:marker:text-foreground',
-      // 极紧凑间距 - 完全消除间距
-      'prose-headings:mb-0 prose-headings:mt-0 prose-headings:first:mt-0',
-      'prose-p:mb-0 prose-p:mt-0 prose-p:leading-tight',
-      'prose-ul:mb-0 prose-ul:mt-0 prose-ol:mb-0 prose-ol:mt-0 prose-ul:pl-4 prose-ol:pl-4',
-      'prose-li:mb-0 prose-li:mt-0 prose-li:leading-tight prose-li:py-0',
-      'prose-blockquote:mb-0 prose-blockquote:mt-0',
-      'prose-pre:mb-0 prose-pre:mt-0',
-      // 额外的紧凑化
-      '[&>*]:mb-0 [&>*]:mt-0 [&>*+*]:mt-0',
-      '[&_p+p]:mt-0 [&_li+li]:mt-0 [&_h1+*]:mt-0 [&_h2+*]:mt-0 [&_h3+*]:mt-0',
-      className
-    )}>
+    <div 
+      className={cn(
+        'prose prose-sm dark:prose-invert max-w-none',
+        // 文本颜色
+        'prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground',
+        'prose-ul:text-foreground prose-ol:text-foreground prose-li:text-foreground',
+        'prose-a:text-primary prose-a:underline-offset-4',
+        // 代码样式
+        'prose-code:text-foreground prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs',
+        'prose-pre:bg-muted prose-pre:border',
+        // 引用样式
+        'prose-blockquote:border-l-border prose-blockquote:text-muted-foreground',
+        // 列表样式
+        'prose-ul:list-disc prose-ol:list-decimal prose-li:marker:text-foreground',
+        className
+      )}
+    >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -429,30 +421,6 @@ function MarkdownDisplay({ content, className }: { content: string; className?: 
               </code>
             );
           },
-          // 修正标题层级大小并极度紧凑
-          h1: ({ children, ...props }) => (
-            <h1 className="text-lg font-bold mb-0 mt-1 first:mt-0 leading-tight" {...props}>{children}</h1>
-          ),
-          h2: ({ children, ...props }) => (
-            <h2 className="text-base font-bold mb-0 mt-1 first:mt-0 leading-tight" {...props}>{children}</h2>
-          ),
-          h3: ({ children, ...props }) => (
-            <h3 className="text-sm font-semibold mb-0 mt-0.5 first:mt-0 leading-tight" {...props}>{children}</h3>
-          ),
-          // 极紧凑段落 - 几乎无间距
-          p: ({ children, ...props }) => (
-            <p className="mb-0 last:mb-0 leading-tight" {...props}>{children}</p>
-          ),
-          // 极紧凑列表 - 最小间距
-          ul: ({ children, ...props }) => (
-            <ul className="mb-0 pl-4 space-y-0 list-disc leading-none" {...props}>{children}</ul>
-          ),
-          ol: ({ children, ...props }) => (
-            <ol className="mb-0 pl-4 space-y-0 list-decimal leading-none" {...props}>{children}</ol>
-          ),
-          li: ({ children, ...props }) => (
-            <li className="leading-tight mb-0 py-0" {...props}>{children}</li>
-          ),
         }}
       >
         {content}

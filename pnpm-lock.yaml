@@ -116,9 +116,6 @@ importers:
       '@tailwindcss/postcss':
         specifier: 4.0.12
         version: 4.0.12
-      '@tailwindcss/typography':
-        specifier: ^0.5.16
-        version: 0.5.16(tailwindcss@4.0.12)
       '@tanstack/react-query':
         specifier: ^5.83.0
         version: 5.83.0(react@19.0.0)
@@ -282,6 +279,9 @@ importers:
         specifier: ^3.24.2
         version: 3.24.2
     devDependencies:
+      '@tailwindcss/typography':
+        specifier: ^0.5.16
+        version: 0.5.16(tailwindcss@4.0.12)
       '@types/ali-oss':
         specifier: ^6.16.11
         version: 6.16.11
