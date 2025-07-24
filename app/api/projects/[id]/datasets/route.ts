@@ -106,6 +106,61 @@ export async function POST(
 }
 
 /**
+ * 删除项目数据集
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const projectId = params.id;
+  
+  try {
+    // 获取项目信息
+    const project = await getProject(projectId);
+    
+    // 如果项目不存在，也算成功（幂等操作）
+    if (!project?.datasetId) {
+      return NextResponse.json({ success: true, message: '数据集不存在或已删除' });
+    }
+
+    // 获取项目的Dify配置
+    const difyConfig = await getProjectDifyConfig(projectId);
+    
+    // 创建DifyDatasetAPI实例
+    const api = new DifyDatasetAPI(difyConfig);
+    
+    // 删除数据集
+    await api.deleteDataset(project.datasetId);
+
+    console.log(`✅ 项目 ${projectId} 的数据集 ${project.datasetId} 删除成功`);
+
+    return NextResponse.json({
+      success: true,
+      message: '数据集删除成功',
+      datasetId: project.datasetId
+    });
+
+  } catch (error) {
+    console.error(`❌ 项目 ${projectId} 数据集删除失败:`, error);
+    
+    const errorMessage = error instanceof Error ? error.message : '数据集删除失败';
+    
+    // 如果是404错误（数据集不存在），当作成功处理
+    if (errorMessage.includes('404') || errorMessage.includes('not found')) {
+      return NextResponse.json({
+        success: true,
+        message: '数据集不存在或已删除'
+      });
+    }
+    
+    return NextResponse.json(
+      { error: errorMessage },
+      { status: 500 }
+    );
+  }
+}
+
+/**
  * 获取项目的Dify配置
  * 优先级: 项目自定义配置 > 默认云端配置
  */

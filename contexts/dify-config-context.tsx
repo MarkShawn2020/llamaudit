@@ -1,7 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { DifyConfig, DEFAULT_DIFY_CONFIGS, DIFY_CONFIG_STORAGE_KEY } from '@/types/dify-config';
+import React, { createContext, useContext, ReactNode } from 'react';
+import { DifyConfig } from '@/types/dify-config';
+import { useGlobalSettings } from '@/contexts/global-settings-context';
 
 interface DifyConfigContextType {
   config: DifyConfig;
@@ -11,43 +12,29 @@ interface DifyConfigContextType {
 
 const DifyConfigContext = createContext<DifyConfigContextType | undefined>(undefined);
 
+// DifyConfigProvider现在作为GlobalSettings的适配器层
 export function DifyConfigProvider({ children }: { children: ReactNode }) {
-  const [config, setConfigState] = useState<DifyConfig>(DEFAULT_DIFY_CONFIGS.cloud);
-
-  // 从本地存储加载配置
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(DIFY_CONFIG_STORAGE_KEY);
-      if (saved) {
-        try {
-          const parsedConfig = JSON.parse(saved) as DifyConfig;
-          setConfigState(parsedConfig);
-        } catch (error) {
-          console.error('Failed to parse saved Dify config:', error);
-        }
-      }
-    }
-  }, []);
-
-  const setConfig = (newConfig: DifyConfig) => {
-    setConfigState(newConfig);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(DIFY_CONFIG_STORAGE_KEY, JSON.stringify(newConfig));
-    }
-  };
+  const { settings, updateDifyConfig } = useGlobalSettings();
 
   const updateConfig = (updates: Partial<DifyConfig>) => {
-    const newConfig = { ...config, ...updates };
-    setConfig(newConfig);
+    const newConfig = { ...settings.dify, ...updates };
+    updateDifyConfig(newConfig);
+  };
+
+  const contextValue: DifyConfigContextType = {
+    config: settings.dify,
+    setConfig: updateDifyConfig,
+    updateConfig,
   };
 
   return (
-    <DifyConfigContext.Provider value={{ config, setConfig, updateConfig }}>
+    <DifyConfigContext.Provider value={contextValue}>
       {children}
     </DifyConfigContext.Provider>
   );
 }
 
+// 保持向后兼容的useDifyConfig hook
 export function useDifyConfig() {
   const context = useContext(DifyConfigContext);
   if (context === undefined) {

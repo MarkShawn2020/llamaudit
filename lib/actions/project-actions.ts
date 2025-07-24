@@ -6,6 +6,8 @@ import { auditUnits, files, users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import crypto from 'crypto';
+import { DifyDatasetAPI } from '@/lib/api/dify-dataset-api';
+import { DEFAULT_DIFY_CONFIGS } from '@/types/dify-config';
 
 export interface Project {
   id: string;
@@ -286,8 +288,8 @@ export async function createProject(projectData: Omit<Project, 'id' | 'createdAt
 }
 
 /**
- * 创建项目并同时创建知识库（新版本，推荐使用）
- * 采用知识库优先创建的策略，避免项目和知识库不同步的问题
+ * 创建项目并同时创建知识库（直接Server Action版本）
+ * 采用知识库优先创建的策略，直接使用DifyDatasetAPI，避免不必要的API路由调用
  * @param projectData 项目数据
  */
 export async function createProjectWithDataset(projectData: Omit<Project, 'id' | 'createdAt' | 'documentCount' | 'taskCount' | 'status' | 'updatedAt' | 'datasetId'>): Promise<Project> {
@@ -320,27 +322,22 @@ export async function createProjectWithDataset(projectData: Omit<Project, 'id' |
   let createdProjectId: string | null = null;
 
   try {
-    // 第一步：创建Dify知识库（带时间戳确保唯一性）
+    // 第一步：直接创建Dify知识库
+    const projectId = crypto.randomUUID(); // 预生成项目ID
     const timestamp = Date.now();
-    const knowledgeBaseName = `${projectData.name}-${unitCode}-${timestamp}`;
+    const knowledgeBaseName = `proj-${projectId.slice(0, 8)}-${projectData.name}-kb`;
     
-    // 动态导入Dify API（避免服务器端导入客户端代码）
-    const { DifyDatasetAPI } = await import('@/lib/api/dify-dataset-api');
+    // 获取Dify配置
+    const difyConfig = await getDifyConfig();
     
-    // 获取Dify配置（这里需要服务器端配置方式）
-    const difyConfig = {
-      baseUrl: process.env.DIFY_BASE_URL || 'https://dify.cs-magic.cn/v1',
-      apiKey: process.env.DIFY_DATASET_API_KEY || '',
-      datasetApiKey: process.env.DIFY_DATASET_API_KEY || '',
-      environment: 'custom' as const,
-    };
-    
-    if (!difyConfig.apiKey) {
-      throw new Error('Dify API配置缺失，请联系管理员配置');
+    if (!difyConfig.datasetApiKey) {
+      throw new Error('Dify数据集API密钥未配置，请检查环境变量或系统配置');
     }
 
+    // 直接导入DifyDatasetAPI（现在是服务器端兼容的）
     const difyAPI = new DifyDatasetAPI(difyConfig);
     
+    // 创建知识库
     const dataset = await difyAPI.createDataset({
       name: knowledgeBaseName,
       description: `项目"${projectData.name}"(${unitCode})的专用知识库，创建时间：${new Date().toLocaleString()}`,
@@ -353,7 +350,7 @@ export async function createProjectWithDataset(projectData: Omit<Project, 'id' |
 
     // 第二步：使用知识库ID作为项目ID创建项目记录
     const newProject = await db.insert(auditUnits).values({
-      id: datasetId, // 关键：使用datasetId作为项目ID
+      id: datasetId, // 关键：使用datasetId作为项目ID，确保一致性
       name: projectData.name,
       code: unitCode,
       type: projectData.type || '',
@@ -419,15 +416,9 @@ export async function createProjectWithDataset(projectData: Omit<Project, 'id' |
       cleanupPromises.push(
         (async () => {
           try {
-            const { DifyDatasetAPI } = await import('@/lib/api/dify-dataset-api');
-            const difyConfig = {
-              baseUrl: process.env.DIFY_BASE_URL || 'https://dify.cs-magic.cn/v1',
-              apiKey: process.env.DIFY_DATASET_API_KEY || '',
-              datasetApiKey: process.env.DIFY_DATASET_API_KEY || '',
-              environment: 'custom' as const,
-            };
+            const difyConfig = await getDifyConfig();
             const difyAPI = new DifyDatasetAPI(difyConfig);
-            await difyAPI.deleteDataset?.(datasetId);
+            await difyAPI.deleteDataset(datasetId);
           } catch (rollbackError) {
             console.error('回滚知识库失败:', rollbackError);
           }
@@ -441,6 +432,22 @@ export async function createProjectWithDataset(projectData: Omit<Project, 'id' |
     // 抛出原始错误
     throw error;
   }
+}
+
+/**
+ * 获取Dify配置的统一方法
+ * 优先级: 环境变量 > 默认配置
+ */
+async function getDifyConfig() {
+  const environment = (process.env.DIFY_ENVIRONMENT as 'local' | 'cloud') || 'cloud';
+  const defaultConfig = DEFAULT_DIFY_CONFIGS[environment];
+  
+  return {
+    ...defaultConfig,
+    datasetApiKey: process.env.DIFY_DATASET_API_KEY || 
+                   process.env.NEXT_PUBLIC_DIFY_DATASET_API_KEY || 
+                   defaultConfig.datasetApiKey,
+  };
 }
 
 /**

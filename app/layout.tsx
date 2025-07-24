@@ -5,6 +5,7 @@ import {cn} from '@/lib/utils';
 import {ThemeProvider} from '@/components/theme-provider';
 import {UserProvider} from '@/components/user-provider';
 import {DifyConfigProvider} from '@/contexts/dify-config-context';
+import {GlobalSettingsProvider} from '@/contexts/global-settings-context';
 import {QueryProvider} from '@/components/query-provider';
 import {GlobalNavbar} from '@/components/GlobalNavbar';
 import {getUser} from '@/lib/db/queries';
@@ -49,8 +50,9 @@ export default async function RootLayout({
             disableTransitionOnChange
         >
             <UserProvider initialUser={initialUser}>
-                <DifyConfigProvider>
-                    <QueryProvider>
+                <GlobalSettingsProvider>
+                    <DifyConfigProvider>
+                        <QueryProvider>
                         <DocumentSheetProvider>
                             <div className="flex min-h-screen flex-col">
                                 <GlobalNavbar/>
@@ -59,8 +61,9 @@ export default async function RootLayout({
                             {/*<DevFloat />*/}
                             <SimpleProjectAwareAssistant/>
                         </DocumentSheetProvider>
-                    </QueryProvider>
-                </DifyConfigProvider>
+                        </QueryProvider>
+                    </DifyConfigProvider>
+                </GlobalSettingsProvider>
             </UserProvider>
         </ThemeProvider>
         </body>

@@ -1,5 +1,3 @@
-'use client';
-
 import { DifyConfig } from '@/types/dify-config';
 
 interface DifyDataset {

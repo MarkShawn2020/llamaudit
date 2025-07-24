@@ -2,6 +2,7 @@
 
 import {navItems} from "@/components/nav-items";
 import {UserMenu} from "@/components/user-menu";
+import {GlobalSettingsMenu} from "@/components/global-settings-menu";
 import {useUser} from '@/components/user-provider';
 import {cn} from '@/lib/utils';
 import {ShieldAlertIcon, RefreshCw} from 'lucide-react';
@@ -123,7 +124,7 @@ export function GlobalNavbar() {
           </nav>
         </div>
         
-        {/* 用户菜单 */}
+        {/* 用户菜单和设置 */}
         <div className="flex items-center gap-3">
           {/* 检查更新按钮 - 只对管理员显示 */}
           {isAdmin && (
@@ -138,6 +139,7 @@ export function GlobalNavbar() {
               {isUpdating ? '更新中...' : '检查更新'}
             </Button>
           )}
+          <GlobalSettingsMenu />
           <UserMenu />
         </div>
       </div>

@@ -5,33 +5,14 @@
 
 'use client';
 
-import { TIOBComp } from "@/components/projects/detail/tiob-comp";
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { DifyConfigComponent } from '@/components/dify-config';
-import { Project } from '@/lib/actions/project-actions';
-import { 
-    useDatasetDetails, 
-    useDatasetDocuments, 
-    useCreateDocumentByFile, 
-    useDeleteDocument 
-} from '@/hooks/use-dify-dataset';
-import { Badge } from '@/components/ui/badge';
-import { 
-    BarChart2,
-    FileText,
-    Settings,
-    Trash2,
-    RefreshCw,
-} from 'lucide-react';
+import {TIOBComp} from "@/components/projects/detail/tiob-comp";
+import {Button} from '@/components/ui/button';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card';
+import {Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,} from "@/components/ui/dialog";
+import {Project} from '@/lib/actions/project-actions';
+import {useDatasetDetails, useDatasetDocuments, useDeleteDocument} from '@/hooks/use-dify-dataset';
+import {Badge} from '@/components/ui/badge';
+import {BarChart2, FileText, RefreshCw, Trash2,} from 'lucide-react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -43,16 +24,16 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { toast } from 'sonner';
+import {useEffect, useMemo, useRef, useState} from 'react';
+import {toast} from 'sonner';
 import OptimisticFileUpload from '@/components/optimistic-file-upload';
-import { Separator } from '@/components/ui/separator';
+import {Separator} from '@/components/ui/separator';
 
 export default function ProjectAnalysisOptimistic({
-    projectId, 
-    project, 
-    onProjectUpdate
-}: {
+                                                      projectId,
+                                                      project,
+                                                      onProjectUpdate
+                                                  }: {
     projectId: string,
     project?: Project,
     onProjectUpdate?: (updates: Partial<Project>) => void
@@ -60,29 +41,29 @@ export default function ProjectAnalysisOptimistic({
     const [tiobDialogOpen, setTiobDialogOpen] = useState(false);
 
     // 知识库相关hooks
-    const { 
-        data: dataset, 
-        error: datasetError, 
+    const {
+        data: dataset,
+        error: datasetError,
         isLoading: isLoadingDataset,
         refetch: refetchDataset
     } = useDatasetDetails(project?.datasetId, !!project?.datasetId);
 
     // 查询知识库文档（用于显示现有文档）
-    const { 
-        data: documentsResponse, 
-        error: documentsError, 
+    const {
+        data: documentsResponse,
+        error: documentsError,
         isLoading: isLoadingDocuments,
         fetchNextPage,
         hasNextPage,
         isFetchingNextPage
     } = useDatasetDocuments(project?.datasetId, !!project?.datasetId && !!dataset);
-    
+
     // 展平所有页面的数据
-    const allDocuments = useMemo(() => 
-        documentsResponse?.pages?.flatMap(page => page.data) || [], 
+    const allDocuments = useMemo(() =>
+            documentsResponse?.pages?.flatMap(page => page.data) || [],
         [documentsResponse?.pages]
     );
-    
+
     // 自动加载所有数据
     useEffect(() => {
         if (documentsResponse && hasNextPage && !isFetchingNextPage && !isLoadingDocuments) {
@@ -133,7 +114,7 @@ export default function ProjectAnalysisOptimistic({
     // 删除文档
     const handleDeleteDocument = async (documentId: string) => {
         if (!project?.datasetId) return;
-        
+
         try {
             await deleteDocument.mutateAsync({
                 datasetId: project.datasetId,
@@ -150,7 +131,7 @@ export default function ProjectAnalysisOptimistic({
             case 'completed':
                 return (
                     <Badge variant="default" className="text-xs bg-green-100 text-green-800 border-green-200 h-5">
-                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1 inline-block" />
+                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1 inline-block"/>
                         已完成
                     </Badge>
                 );
@@ -158,14 +139,14 @@ export default function ProjectAnalysisOptimistic({
             case 'queuing':
                 return (
                     <Badge variant="secondary" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200 h-5">
-                        <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full mr-1 animate-pulse inline-block" />
+                        <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full mr-1 animate-pulse inline-block"/>
                         等待处理
                     </Badge>
                 );
             case 'splitting':
                 return (
                     <Badge variant="secondary" className="text-xs bg-purple-50 text-purple-700 border-purple-200 h-5">
-                        <span className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-1 animate-pulse inline-block" />
+                        <span className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-1 animate-pulse inline-block"/>
                         分段中
                     </Badge>
                 );
@@ -173,7 +154,7 @@ export default function ProjectAnalysisOptimistic({
             case 'processing':
                 return (
                     <Badge variant="secondary" className="text-xs bg-blue-50 text-blue-700 border-blue-200 h-5">
-                        <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1 animate-pulse inline-block" />
+                        <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1 animate-pulse inline-block"/>
                         索引中
                     </Badge>
                 );
@@ -181,14 +162,14 @@ export default function ProjectAnalysisOptimistic({
             case 'failed':
                 return (
                     <Badge variant="destructive" className="text-xs h-5">
-                        <span className="w-1.5 h-1.5 bg-current rounded-full mr-1 inline-block" />
+                        <span className="w-1.5 h-1.5 bg-current rounded-full mr-1 inline-block"/>
                         失败
                     </Badge>
                 );
             default:
                 return (
                     <Badge variant="outline" className="text-xs h-5">
-                        <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full mr-1 inline-block" />
+                        <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full mr-1 inline-block"/>
                         {status}
                     </Badge>
                 );
@@ -202,18 +183,18 @@ export default function ProjectAnalysisOptimistic({
                     <div>
                         <CardTitle className="text-lg">文档管理</CardTitle>
                         <CardDescription className="flex items-center gap-2">
-                            <FileText className="h-4 w-4" />
+                            <FileText className="h-4 w-4"/>
                             {dataset ? (
                                 <span className="flex items-center gap-2">
                                     <span>{allDocuments.length} 个文档</span>
                                     {allDocuments.length > 0 && (
-                                        <span className="w-2 h-2 bg-green-500 rounded-full inline-block" />
+                                        <span className="w-2 h-2 bg-green-500 rounded-full inline-block"/>
                                     )}
                                 </span>
                             ) : (
                                 <span className="flex items-center gap-2">
                                     知识库初始化中...
-                                    <span className="w-2 h-2 bg-current rounded-full animate-pulse inline-block" />
+                                    <span className="w-2 h-2 bg-current rounded-full animate-pulse inline-block"/>
                                 </span>
                             )}
                         </CardDescription>
@@ -222,7 +203,7 @@ export default function ProjectAnalysisOptimistic({
                         <Dialog open={tiobDialogOpen} onOpenChange={setTiobDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button variant="ghost" size="sm">
-                                    <BarChart2 className="h-4 w-4" />
+                                    <BarChart2 className="h-4 w-4"/>
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="!max-w-[90vw] overflow-hidden">
@@ -235,19 +216,6 @@ export default function ProjectAnalysisOptimistic({
                             </DialogContent>
                         </Dialog>
 
-                        <Dialog>
-                            <DialogTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                    <Settings className="h-4 w-4" />
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>配置</DialogTitle>
-                                </DialogHeader>
-                                <DifyConfigComponent />
-                            </DialogContent>
-                        </Dialog>
                     </div>
                 </div>
             </CardHeader>
@@ -267,13 +235,13 @@ export default function ProjectAnalysisOptimistic({
                                     支持拖拽上传，实时进度反馈
                                 </div>
                             </div>
-                            <OptimisticFileUpload 
-                                datasetId={project?.datasetId || ''} 
+                            <OptimisticFileUpload
+                                datasetId={project?.datasetId || ''}
                                 className="border rounded-lg p-4"
                             />
                         </div>
 
-                        <Separator />
+                        <Separator/>
 
                         {/* 现有文档列表 */}
                         <div className="space-y-4">
@@ -286,7 +254,7 @@ export default function ProjectAnalysisOptimistic({
 
                             {isLoadingDocuments ? (
                                 <div className="flex justify-center py-12">
-                                    <RefreshCw className="h-6 w-6 animate-spin" />
+                                    <RefreshCw className="h-6 w-6 animate-spin"/>
                                 </div>
                             ) : documentsError ? (
                                 <div className="text-center py-12 text-destructive">
@@ -295,19 +263,23 @@ export default function ProjectAnalysisOptimistic({
                             ) : !allDocuments.length ? (
                                 <div className="text-center py-12 text-muted-foreground">
                                     <div className="space-y-2">
-                                        <FileText className="h-12 w-12 mx-auto text-muted-foreground/50" />
+                                        <FileText className="h-12 w-12 mx-auto text-muted-foreground/50"/>
                                         <div className="text-sm">暂无文档</div>
                                         <div className="text-xs">上传文档后将在此处显示</div>
                                     </div>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 w-full">
+                                <div
+                                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 w-full">
                                     {allDocuments.map((doc) => (
-                                        <div key={doc.id} className="relative group border rounded-lg p-3 hover:bg-muted/20 transition-colors min-w-0">
+                                        <div key={doc.id}
+                                             className="relative group border rounded-lg p-3 hover:bg-muted/20 transition-colors min-w-0">
                                             <div className="flex items-start gap-3">
-                                                <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                                                <FileText
+                                                    className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5"/>
                                                 <div className="flex-1 min-w-0 space-y-2">
-                                                    <div className="font-medium text-sm leading-tight pr-6 truncate">{doc.name}</div>
+                                                    <div
+                                                        className="font-medium text-sm leading-tight pr-6 truncate">{doc.name}</div>
                                                     <div className="space-y-1.5">
                                                         {getStatusBadge(doc.indexing_status)}
                                                         <div className="text-xs text-muted-foreground font-mono">
@@ -318,12 +290,13 @@ export default function ProjectAnalysisOptimistic({
                                             </div>
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="sm" 
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
                                                         className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 transition-opacity"
                                                     >
-                                                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+                                                        <Trash2
+                                                            className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive"/>
                                                     </Button>
                                                 </AlertDialogTrigger>
                                                 <AlertDialogContent>
