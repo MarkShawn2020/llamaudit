@@ -523,7 +523,7 @@ export function useKnowledgeAssistant(config: AssistantConfig): UseKnowledgeAssi
     return messages
       .filter(msg => !msg.isLoading)
       .map(msg => {
-        const time = msg.timestamp.toLocaleString();
+        const time = (msg.timestamp || msg.createdAt || new Date()).toLocaleString();
         const role = msg.type === 'user' ? '用户' : '助手';
         const content = msg.error || msg.content;
         return `[${time}] ${role}: ${content}`;

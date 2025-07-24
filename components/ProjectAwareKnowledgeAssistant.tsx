@@ -281,17 +281,7 @@ function DiagnosticKnowledgeAssistant({config}: { config: AssistantConfig }) {
                     console.log('❌ 侧边栏关闭按钮被点击');
                     assistant.closeAssistant();
                 }}
-                messages={assistant.messages}
-                onSendMessage={async (message) => {
-                    console.log('📤 发送消息:', message);
-                    await assistant.sendMessage(message);
-                }}
-                onClearMessages={() => {
-                    console.log('🗑️ 清空对话被调用');
-                    assistant.clearMessages();
-                }}
-                isLoading={assistant.isLoading}
-                error={assistant.error}
+                projectId={config.projectId}
             />
 
             {/* 开发模式的额外调试面板 */}

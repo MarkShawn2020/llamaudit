@@ -97,12 +97,21 @@ export interface OpenRouterResponse {
   };
 }
 
-// 聊天消息类型
+// 聊天消息类型 - 兼容 AI SDK 格式
 export interface ChatMessage {
   id: string;
-  type: 'user' | 'assistant';
+  type?: 'user' | 'assistant'; // 传统格式
+  role?: 'user' | 'assistant' | 'system'; // AI SDK 格式
   content: string;
-  timestamp: Date;
+  timestamp?: Date; // 传统格式
+  createdAt?: Date | string; // AI SDK 格式
+  parts?: Array<{ // AI SDK 格式的 parts
+    type: 'text' | 'tool-call' | 'tool-result';
+    text?: string;
+    toolName?: string;
+    args?: any;
+    result?: any;
+  }>;
   context?: DifyRetrievalRecord[];
   error?: string;
   isLoading?: boolean;

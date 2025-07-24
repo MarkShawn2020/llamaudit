@@ -59,11 +59,7 @@ export function KnowledgeAssistant({
       <AssistantSidebar
         isOpen={assistant.isOpen}
         onClose={assistant.closeAssistant}
-        messages={assistant.messages}
-        onSendMessage={assistant.sendMessage}
-        onClearMessages={assistant.clearMessages}
-        isLoading={assistant.isLoading}
-        error={assistant.error}
+        projectId={config.projectId}
       />
     </div>
   );

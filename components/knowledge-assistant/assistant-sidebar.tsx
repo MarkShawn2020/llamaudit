@@ -1,5 +1,5 @@
 /**
- * 智能助手侧边栏组件
+ * 智能助手侧边栏组件 - 使用 Vercel AI SDK
  */
 
 'use client';
@@ -9,20 +9,47 @@ import { X, Minimize2, Maximize2, Settings, Trash2, Download } from 'lucide-reac
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { AssistantSidebarProps } from './types';
+import { useChat } from '@ai-sdk/react';
 import { MessageList } from './chat-message';
 import { MessageInput, QuickQuestions } from './message-input';
 import { AssistantStatus } from './floating-button';
 
+interface AssistantSidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+  projectId: string;
+}
+
 export function AssistantSidebar({
   isOpen,
   onClose,
-  messages,
-  onSendMessage,
-  onClearMessages,
-  isLoading,
-  error,
+  projectId,
 }: AssistantSidebarProps) {
+  // 使用 AI SDK 的 useChat hook
+  const { 
+    messages, 
+    input, 
+    handleInputChange, 
+    handleSubmit, 
+    append,
+    isLoading, 
+    error,
+    stop,
+    reload,
+    setMessages
+  } = useChat({
+    api: '/api/assistant/chat',
+    body: {
+      projectId
+    },
+    onError: (error) => {
+      console.error('🤖 聊天错误:', error);
+    },
+    onFinish: (message) => {
+      console.log('🤖 聊天完成:', message);
+    }
+  });
+
   const [isMinimized, setIsMinimized] = useState(false);
   const [showQuickQuestions, setShowQuickQuestions] = useState(messages.length === 0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -47,10 +74,19 @@ export function AssistantSidebar({
     }
   }, [messages, isOpen]);
 
+  // 监听消息数量变化，控制快速问题显示
+  useEffect(() => {
+    setShowQuickQuestions(messages.length === 0);
+  }, [messages.length]);
+
   // 处理消息发送
   const handleSendMessage = async (message: string) => {
     setShowQuickQuestions(false);
-    await onSendMessage(message);
+    // 使用 AI SDK 的 append 方法发送消息
+    await append({
+      role: 'user',
+      content: message
+    });
   };
 
   // 快速问题列表
@@ -64,14 +100,14 @@ export function AssistantSidebar({
 
   // 清空对话
   const handleClearChat = () => {
-    onClearMessages();
+    setMessages([]);
     setShowQuickQuestions(true);
   };
 
   // 导出对话
   const handleExportChat = () => {
     const chatText = messages
-      .map(msg => `${msg.type === 'user' ? '用户' : '助手'}: ${msg.content}`)
+      .map(msg => `${msg.role === 'user' ? '用户' : '助手'}: ${msg.content}`)
       .join('\n\n');
     
     const blob = new Blob([chatText], { type: 'text/plain' });
@@ -201,45 +237,52 @@ export function AssistantSidebar({
               {error && (
                 <div className="px-4 py-2 bg-red-50 border-b border-red-200">
                   <div className="text-sm text-red-700">
-                    ❌ {error}
+                    ❌ {error.message || error.toString()}
                   </div>
                 </div>
               )}
 
-              {/* 消息区域 */}
-              <div className="flex-1 flex flex-col min-h-0">
-                <ScrollArea className="flex-1">
-                  <MessageList
-                    messages={messages}
-                    isLoading={isLoading}
-                    showContext={true}
-                  />
-                  <div ref={messagesEndRef} />
-                </ScrollArea>
+              {/* 消息区域 - 修复高度溢出问题 */}
+              <div className="flex-1 flex flex-col overflow-hidden">
+                {/* 滚动消息区域 - 明确高度约束 */}
+                <div className="flex-1 overflow-hidden">
+                  <ScrollArea className="h-full">
+                    <div className="space-y-4 p-4">
+                      <MessageList
+                        messages={messages}
+                        isLoading={isLoading}
+                        showContext={true}
+                      />
+                      <div ref={messagesEndRef} />
+                    </div>
+                  </ScrollArea>
+                </div>
 
-                {/* 快速问题 */}
+                {/* 快速问题区域 - 固定空间 */}
                 {showQuickQuestions && (
-                  <>
-                    <Separator />
+                  <div className="flex-shrink-0 border-t">
                     <QuickQuestions
                       questions={quickQuestions}
                       onQuestionSelect={handleSendMessage}
                       disabled={isLoading}
                     />
-                  </>
+                  </div>
                 )}
 
-                {/* 输入区域 */}
-                <MessageInput
-                  onSendMessage={handleSendMessage}
-                  disabled={isLoading}
-                  placeholder={
-                    messages.length === 0 
-                      ? "问个问题开始对话..." 
-                      : "继续提问..."
-                  }
-                />
+                {/* 输入区域 - 固定空间 */}
+                <div className="flex-shrink-0 border-t">
+                  <MessageInput
+                    onSendMessage={handleSendMessage}
+                    disabled={isLoading}
+                    placeholder={
+                      messages.length === 0 
+                        ? "问个问题开始对话..." 
+                        : "继续提问..."
+                    }
+                  />
+                </div>
               </div>
+
             </>
           )}
         </div>
