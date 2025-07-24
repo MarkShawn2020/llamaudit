@@ -169,6 +169,7 @@ export async function getProject(id: string): Promise<Project | null> {
 
     const files = project.files as any[];
 
+
     // 格式化响应，统一命名规范
     const formattedProject = {
       id: project.id,

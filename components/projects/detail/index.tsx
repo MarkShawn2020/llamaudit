@@ -42,6 +42,7 @@ export default function ProjectDetail({project: initialProject}: { project: Proj
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [showProjectInfo, setShowProjectInfo] = useState(false);
+    const [isInitializingDataset, setIsInitializingDataset] = useState(false);
     // 使用项目特定的原子化状态
     const [tiobItems] = useAtom(projectTiobItemsAtomFamily(project.id));
     // 防止重复初始化知识库的标志
@@ -75,6 +76,7 @@ export default function ProjectDetail({project: initialProject}: { project: Proj
 
                 try {
                     initializingDatasetRef.current = true;
+                    setIsInitializingDataset(true);
 
                     // 显示友好的提示
                     toast.info('正在为项目初始化知识库...', {
@@ -102,12 +104,24 @@ export default function ProjectDetail({project: initialProject}: { project: Proj
                 } catch (error) {
                     console.error('❌ 项目详情页知识库初始化失败:', error);
 
-                    // 检查是否是命名冲突错误
+                    // 处理初始化失败
                     const errorMessage = error instanceof Error ? error.message : '未知错误';
+                    console.error('知识库初始化详细错误:', error);
+                    
                     if (errorMessage.includes('already exists')) {
                         toast.warning('知识库创建遇到命名冲突', {
-                            description: '正在重试使用备用名称...',
-                            duration: 5000
+                            description: '请稍后重试或手动检查Dify配置',
+                            duration: 6000
+                        });
+                    } else if (errorMessage.includes('401') || errorMessage.includes('403')) {
+                        toast.error('知识库初始化失败', {
+                            description: 'Dify API认证失败，请检查配置',
+                            duration: 8000
+                        });
+                    } else if (errorMessage.includes('网络') || errorMessage.includes('timeout')) {
+                        toast.error('知识库初始化失败', {
+                            description: '网络连接异常，请检查网络后重试',
+                            duration: 8000
                         });
                     } else {
                         toast.error('知识库初始化失败', {
@@ -117,12 +131,13 @@ export default function ProjectDetail({project: initialProject}: { project: Proj
                     }
                 } finally {
                     initializingDatasetRef.current = false;
+                    setIsInitializingDataset(false);
                 }
             }
         };
 
         initializeDataset();
-    }, [project.id, project.datasetId, ensureDataset, handleProjectUpdate]);
+    }, [project.id, project.datasetId, project.name, ensureDataset, handleProjectUpdate]);
 
     const handleDeleteProject = async () => {
         if (!project) return;
@@ -270,6 +285,7 @@ export default function ProjectDetail({project: initialProject}: { project: Proj
             projectId={project.id}
             project={project}
             onProjectUpdate={handleProjectUpdate}
+            isInitializingDataset={isInitializingDataset}
         />
 
         {/* 删除项目 */}
