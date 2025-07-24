@@ -46,7 +46,7 @@ import {useCallback, useEffect, useRef, useState} from 'react';
 import {toast} from 'sonner';
 import {useAtom} from 'jotai';
 import {projectTiobItemsAtomFamily} from '@/components/projects/detail/project-atoms';
-import {useDatasetDetails, useDatasetDocuments, useProjectDataset} from '@/hooks/use-dify-dataset';
+import {useDatasetDetails, useDatasetDocuments, useProjectDataset} from '@/hooks/use-dify-dataset-server';
 import {Badge} from '@/components/ui/badge';
 
 interface Project extends BaseProject {

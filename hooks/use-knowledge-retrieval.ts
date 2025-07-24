@@ -228,5 +228,3 @@ export function useKnowledgeRetrievalStats() {
     getCacheHitRate,
   };
 }
-
-export default useKnowledgeRetrieval;

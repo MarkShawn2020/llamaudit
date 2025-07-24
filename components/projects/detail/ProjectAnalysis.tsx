@@ -10,7 +10,7 @@ import {
     useDatasetDetails,
     useDatasetDocuments,
     useDeleteDocument
-} from '@/hooks/use-dify-dataset';
+} from '@/hooks/use-dify-dataset-server';
 import {Badge} from '@/components/ui/badge';
 import {BarChart2, FileText, Loader2, RefreshCw, Trash2, Upload} from 'lucide-react';
 import {
@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {toast} from 'sonner';
-import {DocumentSheet, DocumentSheetTrigger} from '@/components/document-sheet';
+import DocumentSheet, {DocumentSheetTrigger} from "@/components/document-sheet/document-sheet";
 
 export default function ProjectAnalysis({
                                             projectId,

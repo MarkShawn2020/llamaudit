@@ -9,8 +9,8 @@ import {GlobalSettingsProvider} from '@/contexts/global-settings-context';
 import {QueryProvider} from '@/components/query-provider';
 import {GlobalNavbar} from '@/components/GlobalNavbar';
 import {getUser} from '@/lib/db/queries';
-import {DocumentSheetProvider} from '@/components/document-sheet';
 import {SimpleProjectAwareAssistant} from '@/components/ProjectAwareKnowledgeAssistant';
+import {DocumentSheetProvider} from "@/contexts/document-sheet-context";
 
 const fontSans = FontSans({
     subsets: ['latin'],
@@ -53,14 +53,14 @@ export default async function RootLayout({
                 <GlobalSettingsProvider>
                     <DifyConfigProvider>
                         <QueryProvider>
-                        <DocumentSheetProvider>
-                            <div className="flex min-h-screen flex-col">
-                                <GlobalNavbar/>
-                                <main className="flex-1">{children}</main>
-                            </div>
-                            {/*<DevFloat />*/}
-                            <SimpleProjectAwareAssistant/>
-                        </DocumentSheetProvider>
+                            <DocumentSheetProvider>
+                                <div className="flex min-h-screen flex-col">
+                                    <GlobalNavbar/>
+                                    <main className="flex-1">{children}</main>
+                                </div>
+                                {/*<DevFloat />*/}
+                                <SimpleProjectAwareAssistant/>
+                            </DocumentSheetProvider>
                         </QueryProvider>
                     </DifyConfigProvider>
                 </GlobalSettingsProvider>

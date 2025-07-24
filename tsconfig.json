@@ -36,6 +36,8 @@
     ".next/types/**/*.ts"
   ],
   "exclude": [
+    ".next",
+    "components/ui",
     "node_modules"
   ]
 }

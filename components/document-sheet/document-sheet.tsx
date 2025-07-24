@@ -24,7 +24,7 @@ import {
     useDocumentUploadFile,
     useSearchDocumentSegments,
     useUpdateSegmentsStatus
-} from '@/hooks/use-document-details';
+} from '@/hooks/use-document-details-server';
 import {useDifyConfig} from '@/contexts/dify-config-context';
 
 import DocumentMeta from './document-meta';

@@ -11,8 +11,8 @@ import {AssistantConfig} from '@/components/knowledge-assistant/types';
 import {useAssistantConfig, useKnowledgeAssistant} from '@/hooks/use-knowledge-assistant';
 import {FloatingAssistantButton} from '@/components/knowledge-assistant/floating-button';
 import {AssistantSidebar} from '@/components/knowledge-assistant/assistant-sidebar';
-import {useProjectDataset} from '@/hooks/use-dify-dataset';
 import {updateProjectDatasetId} from '@/lib/api/project-api';
+import {useProjectDataset} from "@/hooks/use-dify-dataset-server";
 
 interface ProjectConfigResponse {
     config: AssistantConfig;

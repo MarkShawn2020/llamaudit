@@ -706,5 +706,3 @@ export function useAssistantPerformance() {
     resetMetrics,
   };
 }
-
-export default useKnowledgeAssistant;

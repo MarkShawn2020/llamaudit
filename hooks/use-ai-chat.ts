@@ -329,5 +329,3 @@ function getSuggestionForIssue(issue: string): string {
 
   return suggestions[issue] || '继续优化回复质量';
 }
-
-export default useAIChat;
