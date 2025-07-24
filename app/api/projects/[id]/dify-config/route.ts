@@ -27,7 +27,7 @@ interface DifyConfigResponse {
  */
 export async function GET(
     request: NextRequest,
-    { params }: { params: Promise<{ projectId: string }> }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const user = await getUser();
@@ -35,7 +35,7 @@ export async function GET(
             return NextResponse.json({error: '未授权访问'}, {status: 401});
         }
 
-        const {projectId} = await params;
+        const {id: projectId} = await params;
         if (!projectId) {
             return NextResponse.json({error: '项目ID不能为空'}, {status: 400});
         }
@@ -96,7 +96,7 @@ export async function GET(
  */
 export async function PUT(
     request: NextRequest,
-    { params }: { params: Promise<{ projectId: string }> }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const user = await getUser();
@@ -104,7 +104,7 @@ export async function PUT(
             return NextResponse.json({error: '未授权访问'}, {status: 401});
         }
 
-        const {projectId} = await params;
+        const {id: projectId} = await params;
         if (!projectId) {
             return NextResponse.json({error: '项目ID不能为空'}, {status: 400});
         }
@@ -199,7 +199,7 @@ export async function PUT(
  */
 export async function POST(
     request: NextRequest,
-    { params }: { params: Promise<{ projectId: string }> }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const user = await getUser();
@@ -207,7 +207,7 @@ export async function POST(
             return NextResponse.json({error: '未授权访问'}, {status: 401});
         }
 
-        const {projectId} = await params;
+        const {id: projectId} = await params;
         if (!projectId) {
             return NextResponse.json({error: '项目ID不能为空'}, {status: 400});
         }
@@ -299,7 +299,7 @@ export async function POST(
  */
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: Promise<{ projectId: string }> }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const user = await getUser();
@@ -307,7 +307,7 @@ export async function DELETE(
             return NextResponse.json({error: '未授权访问'}, {status: 401});
         }
 
-        const {projectId} = await params;
+        const {id: projectId} = await params;
         if (!projectId) {
             return NextResponse.json({error: '项目ID不能为空'}, {status: 400});
         }
