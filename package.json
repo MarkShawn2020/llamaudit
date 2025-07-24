@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "0.9.18",
+  "version": "0.9.19",
   "packageManager": "pnpm@9.15.1",
   "scripts": {
     "dev": "next dev",
