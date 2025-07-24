@@ -20,7 +20,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import {deleteProject, getProject, Project as BaseProject, updateProjectDatasetId} from '@/lib/api/project-api';
+import {deleteProject, Project as BaseProject, updateProjectDatasetId} from '@/lib/api/project-api';
 import KnowledgeBase from '@/components/projects/detail/knowledge-base';
 import ProjectInfo from 'components/projects/detail/ProjectInfo';
 import {Building2, Calendar, FileText, Mail, MapPin, PencilIcon, Phone, TrashIcon, User} from 'lucide-react';
@@ -36,57 +36,28 @@ interface Project extends BaseProject {
     fileCount?: number; // 兼容新命名
 }
 
-export default function ProjectDetail({projectId}: { projectId: string }) {
-    const [project, setProject] = useState<Project | null>(null);
-    const [loading, setLoading] = useState(true);
+export default function ProjectDetail({project: initialProject}: { project: Project }) {
+    const [project, setProject] = useState<Project>(initialProject);
     const [error, setError] = useState<string | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [showProjectInfo, setShowProjectInfo] = useState(false);
     // 使用项目特定的原子化状态
-    const [tiobItems] = useAtom(projectTiobItemsAtomFamily(projectId));
+    const [tiobItems] = useAtom(projectTiobItemsAtomFamily(project.id));
     // 防止重复初始化知识库的标志
     const initializingDatasetRef = useRef(false);
     const router = useRouter();
 
     // 知识库管理
-    const {ensureDataset, isCreating} = useProjectDataset(projectId, project?.name || '');
+    const {ensureDataset, isCreating} = useProjectDataset(project.id, project.name);
 
 
     // logger.info('ProjectDetail', {projectId, project});
 
-    const loadProject = useCallback(async () => {
-        try {
-            setLoading(true);
-            setError(null);
-            const data = await getProject(projectId);
-
-            if (!data) {
-                setError('项目不存在');
-                toast.error('无法找到该项目');
-                return;
-            }
-
-            setProject(data);
-            // 文件计数现在基于Jotai原子状态，不需要在此设置
-
-        } catch (error) {
-            console.error('加载项目详情失败:', error);
-            setError('加载项目详情失败');
-            toast.error('加载项目详情失败');
-        } finally {
-            setLoading(false);
-        }
-    }, [projectId]);
 
     const handleProjectUpdate = useCallback((updated: Partial<Project>) => {
-        setProject(prev => prev ? {...prev, ...updated} : null);
-    }, []); // 依赖数组为空，因为函数不依赖任何外部变量
-
-    useEffect(() => {
-        // 加载项目详情
-        loadProject();
-    }, [projectId, loadProject]);
+        setProject(prev => ({...prev, ...updated}));
+    }, []);
 
 
     // 确保知识库存在
@@ -95,8 +66,8 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
             // 防止重复初始化
             if (initializingDatasetRef.current) return;
 
-            // 只有项目存在且没有知识库ID时才初始化
-            if (project && !project.datasetId) {
+            // 只有项目没有知识库ID时才初始化
+            if (!project.datasetId) {
                 console.log('🔧 项目详情页开始初始化知识库:', {
                     projectId: project.id,
                     projectName: project.name
@@ -151,7 +122,7 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
         };
 
         initializeDataset();
-    }, [project?.id, project?.datasetId, ensureDataset, handleProjectUpdate]); // 添加依赖以确保正确性
+    }, [project.id, project.datasetId, ensureDataset, handleProjectUpdate]);
 
     const handleDeleteProject = async () => {
         if (!project) return;
@@ -177,91 +148,10 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
 
     // logger.info("project detail: ", {project, files, tiobItems});
 
-    if (loading) {
-        return (
-            <div className="container mx-auto py-6 space-y-6">
-                {/* 项目概览骨架屏 */}
-                <Card className="mb-6">
-                    <CardHeader className="pb-2">
-                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                            <div className="min-w-0 flex-1 space-y-2">
-                                <div className="h-6 bg-muted rounded animate-pulse"/>
-                                <div className="h-4 bg-muted/70 rounded animate-pulse w-1/2"/>
-                            </div>
-                            <div className="flex gap-2">
-                                <div className="h-8 w-24 bg-muted rounded animate-pulse"/>
-                                <div className="h-8 w-20 bg-muted rounded animate-pulse"/>
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        {/* 核心指标骨架屏 */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {[...Array(3)].map((_, i) => (
-                                <div key={i} className="space-y-3">
-                                    <div className="h-4 bg-muted/70 rounded animate-pulse w-2/3"/>
-                                    <div className="h-8 bg-muted rounded animate-pulse w-1/2"/>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* 知识库信息骨架屏 */}
-                        <div className="pt-4 border-t border-border/40">
-                            <div className="h-4 bg-muted/70 rounded animate-pulse w-1/4 mb-4"/>
-                            <div className="bg-muted/30 rounded-lg p-4 space-y-4">
-                                <div className="flex justify-between items-center">
-                                    <div className="h-6 bg-muted rounded animate-pulse w-1/3"/>
-                                    <div className="h-4 bg-muted/70 rounded animate-pulse w-1/4"/>
-                                </div>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    {[...Array(4)].map((_, i) => (
-                                        <div key={i} className="p-3 bg-background rounded-md">
-                                            <div className="h-4 bg-muted/70 rounded mb-2 animate-pulse"/>
-                                            <div className="h-8 bg-muted rounded mb-2 animate-pulse"/>
-                                            <div className="h-3 bg-muted/70 rounded mb-2 animate-pulse"/>
-                                            <div className="h-1 bg-muted/70 rounded animate-pulse"/>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 联系信息骨架屏 */}
-                        <div className="pt-4 border-t border-border/40">
-                            <div className="h-4 bg-muted/70 rounded animate-pulse w-1/6 mb-3"/>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {[...Array(4)].map((_, i) => (
-                                    <div key={i} className="flex items-center gap-2">
-                                        <div className="h-4 w-4 bg-muted/70 rounded animate-pulse"/>
-                                        <div className="h-4 bg-muted/70 rounded animate-pulse flex-1"/>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* 项目分析骨架屏 */}
-                <Card>
-                    <CardHeader>
-                        <div className="h-6 bg-muted rounded animate-pulse w-1/4"/>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {[...Array(3)].map((_, i) => (
-                                <div key={i} className="h-16 bg-muted/50 rounded animate-pulse"/>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        );
-    }
-
-    if (error || !project) {
+    if (error) {
         return (<div className="container mx-auto py-6">
             <div className="text-center py-12 border rounded-lg bg-gray-50">
-                <h3 className="text-lg font-medium text-red-600">{error || '项目不存在'}</h3>
+                <h3 className="text-lg font-medium text-red-600">{error}</h3>
                 <p className="text-sm text-gray-500 mt-1">请返回项目列表查看其他项目</p>
                 <Button asChild variant="outline" className="mt-4">
                     <Link href="/projects">返回项目列表</Link>
@@ -377,7 +267,7 @@ export default function ProjectDetail({projectId}: { projectId: string }) {
         </Card>
 
         <KnowledgeBase
-            projectId={projectId}
+            projectId={project.id}
             project={project}
             onProjectUpdate={handleProjectUpdate}
         />

@@ -1,5 +1,6 @@
 import { getUser } from '@/lib/db/queries';
 import { redirect } from 'next/navigation';
+import { getProject } from '@/lib/actions/project-actions';
 import ProjectDetail from '@/components/projects/detail';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -19,8 +20,14 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
   const {id: projectId} = await params;
 
+  // 在服务端获取项目数据
+  const project = await getProject(projectId);
 
-  return <ProjectDetail projectId={projectId} />;
+  if (!project) {
+    redirect('/projects');
+  }
+
+  return <ProjectDetail project={project} />;
 } 
 
  
