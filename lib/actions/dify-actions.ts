@@ -201,6 +201,191 @@ export async function batchGetDatasetDocuments(
 }
 
 /**
+ * 获取文档详情
+ */
+export async function getDocumentDetails(datasetId: string, documentId: string): Promise<any> {
+  try {
+    const config = await getDifyConfig();
+    const api = new DifyDatasetAPI(config);
+    
+    const response = await fetch(`${config.baseUrl}/datasets/${datasetId}/documents/${documentId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${config.datasetApiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch document details: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('获取文档详情失败:', error);
+    throw error;
+  }
+}
+
+/**
+ * 获取文档分段信息
+ */
+export async function getDocumentSegments(
+  datasetId: string, 
+  documentId: string, 
+  page: number = 1, 
+  limit: number = 20
+): Promise<any> {
+  try {
+    const config = await getDifyConfig();
+    
+    const response = await fetch(`${config.baseUrl}/datasets/${datasetId}/documents/${documentId}/segments?page=${page}&limit=${limit}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${config.datasetApiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch document segments: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('获取文档分段失败:', error);
+    throw error;
+  }
+}
+
+/**
+ * 搜索文档分段
+ */
+export async function searchDocumentSegments(
+  datasetId: string,
+  documentId: string,
+  keyword: string,
+  page: number = 1,
+  limit: number = 20
+): Promise<any> {
+  try {
+    const config = await getDifyConfig();
+    
+    const response = await fetch(`${config.baseUrl}/datasets/${datasetId}/documents/${documentId}/segments/search`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${config.datasetApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        keyword,
+        page,
+        limit,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to search document segments: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('搜索文档分段失败:', error);
+    throw error;
+  }
+}
+
+/**
+ * 获取分段详情
+ */
+export async function getSegmentDetails(
+  datasetId: string,
+  documentId: string,
+  segmentId: string
+): Promise<any> {
+  try {
+    const config = await getDifyConfig();
+    
+    const response = await fetch(`${config.baseUrl}/datasets/${datasetId}/documents/${documentId}/segments/${segmentId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${config.datasetApiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch segment details: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('获取分段详情失败:', error);
+    throw error;
+  }
+}
+
+/**
+ * 批量更新分段状态
+ */
+export async function updateSegmentsStatus(
+  datasetId: string,
+  documentId: string,
+  segmentIds: string[],
+  enabled: boolean
+): Promise<{ success: boolean; updated_count: number }> {
+  try {
+    const config = await getDifyConfig();
+    
+    const response = await fetch(`${config.baseUrl}/datasets/${datasetId}/documents/${documentId}/segments/batch`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${config.datasetApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        segment_ids: segmentIds,
+        enabled,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to update segments status: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('批量更新分段状态失败:', error);
+    throw error;
+  }
+}
+
+/**
+ * 获取文档上传文件信息
+ */
+export async function getDocumentUploadFile(
+  datasetId: string,
+  documentId: string
+): Promise<any> {
+  try {
+    const config = await getDifyConfig();
+    
+    const response = await fetch(`${config.baseUrl}/datasets/${datasetId}/documents/${documentId}/upload-file`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${config.datasetApiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch document upload file: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('获取文档上传文件失败:', error);
+    throw error;
+  }
+}
+
+/**
  * 健康检查：测试Dify连接
  */
 export async function testDifyConnection(): Promise<{ success: boolean; message: string }> {
