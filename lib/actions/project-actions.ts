@@ -8,6 +8,7 @@ import { revalidatePath } from 'next/cache';
 import crypto from 'crypto';
 import { DifyDatasetAPI } from '@/lib/api/dify-dataset-api';
 import { DEFAULT_DIFY_CONFIGS } from '@/types/dify-config';
+import { getProjectDifyConfig } from '@/lib/project-dify-config';
 
 export interface Project {
   id: string;
@@ -745,5 +746,96 @@ export async function getProjectFiles(projectId: string): Promise<ProjectFile[]>
   } catch (error) {
     console.error('获取文件列表失败:', error);
     throw error;
+  }
+}
+
+interface UserDifyPreferences {
+  difyBaseUrl?: string;
+  difyDatasetApiKey?: string;
+  difyAppApiKey?: string;
+}
+
+/**
+ * 确保项目有有效的数据集ID
+ * 服务端预处理函数，在页面加载前确保dataset就绪
+ * @param project 项目对象
+ * @param userPreferences 用户浏览器的dify偏好设置
+ */
+export async function ensureProjectDataset(project: Project, userPreferences?: UserDifyPreferences): Promise<Project> {
+  try {
+    console.log(`🔧 确保项目[${project.id}]有有效的dataset...`);
+    if (userPreferences) {
+      console.log('📱 使用用户浏览器偏好配置');
+    }
+
+    // 获取项目的Dify配置作为基础
+    const projectConfig = await getProjectDifyConfig(project.id);
+    
+    // 🚀 配置优先级：用户偏好 > 项目配置 > 环境变量
+    const effectiveConfig = {
+      baseUrl: userPreferences?.difyBaseUrl || projectConfig.difyBaseUrl,
+      datasetApiKey: userPreferences?.difyDatasetApiKey || projectConfig.difyDatasetApiKey,
+      configSource: userPreferences ? 'user-preferences' : projectConfig.configSource
+    };
+
+    // 验证最终配置
+    if (!effectiveConfig.baseUrl || !effectiveConfig.datasetApiKey) {
+      throw new Error('Dify配置不完整：缺少baseUrl或datasetApiKey。请检查用户偏好设置、项目配置或环境变量');
+    }
+
+    // 构建DifyConfig对象
+    const difyConfig = {
+      baseUrl: effectiveConfig.baseUrl,
+      apiKey: userPreferences?.difyAppApiKey || '', // dataset API通常不需要app API密钥
+      datasetApiKey: effectiveConfig.datasetApiKey,
+      environment: 'custom' as const
+    };
+
+    console.log(`🔧 使用配置源: ${effectiveConfig.configSource}`);
+
+    // 如果项目已有datasetId，验证其是否在Dify服务器上存在
+    if (project.datasetId) {
+      try {
+        console.log(`🔍 验证现有dataset[${project.datasetId}]是否存在...`);
+        
+        const api = new DifyDatasetAPI(difyConfig);
+        await api.getDatasetDetails(project.datasetId);
+        
+        console.log(`✅ Dataset[${project.datasetId}]验证成功`);
+        return project; // dataset存在且有效，直接返回
+      } catch (error) {
+        console.warn(`⚠️ Dataset[${project.datasetId}]不存在或不可访问，将重新创建:`, error);
+        // 继续创建新的dataset
+      }
+    }
+
+    // 创建新的dataset
+    const api = new DifyDatasetAPI(difyConfig);
+    const timestamp = Date.now();
+    const datasetName = `proj-${project.id.slice(0, 8)}-${project.name}-kb-${timestamp}`;
+    
+    console.log(`🔄 创建新dataset: ${datasetName}`);
+    const dataset = await api.createDataset({
+      name: datasetName,
+      description: `项目"${project.name}"(${project.code})的专用知识库，创建时间：${new Date().toLocaleString()}`,
+      indexing_technique: 'high_quality',
+      permission: 'only_me',
+    });
+
+    console.log(`✅ Dataset创建成功: ${dataset.id}`);
+
+    // 更新项目的datasetId
+    await updateProjectDatasetId(project.id, dataset.id);
+
+    // 返回更新后的项目
+    return {
+      ...project,
+      datasetId: dataset.id,
+      updatedAt: new Date().toISOString().split('T')[0]
+    };
+
+  } catch (error) {
+    console.error(`❌ 确保项目[${project.id}]dataset失败:`, error);
+    throw new Error(`确保项目dataset失败: ${error instanceof Error ? error.message : '未知错误'}`);
   }
 } 

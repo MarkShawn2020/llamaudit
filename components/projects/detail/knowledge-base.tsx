@@ -31,18 +31,16 @@ import DocumentSheet, {DocumentSheetTrigger} from "@/components/document-sheet/d
 export default function KnowledgeBase({
                                             projectId,
                                             project,
-                                            onProjectUpdate,
-                                            isInitializingDataset = false
+                                            onProjectUpdate
                                         }: {
     projectId: string,
     project?: Project,
-    onProjectUpdate?: (updates: Partial<Project>) => void,
-    isInitializingDataset?: boolean
+    onProjectUpdate?: (updates: Partial<Project>) => void
 }) {
     const [tiobDialogOpen, setTiobDialogOpen] = useState(false);
     const [uploadingToKnowledgeBase, setUploadingToKnowledgeBase] = useState(false);
 
-    // 知识库相关hooks - 只在项目有datasetId时启用
+    // 知识库数据获取 - 只在有datasetId时启用
     const {
         data: dataset,
         error: datasetError,
@@ -302,16 +300,16 @@ export default function KnowledgeBase({
                         {/* 知识库状态 */}
                         <div className="space-y-4">
                             <div className="flex items-center gap-3">
-                                {(isLoadingDataset || isInitializingDataset) ? (
+                                {isLoadingDataset ? (
                                     <>
                                         <Badge variant="secondary" className="text-xs">
                                             <span className="w-2 h-2 bg-current rounded-full animate-pulse mr-1 inline-block"/>
-                                            {isInitializingDataset ? '正在创建' : '初始化中'}
+                                            初始化中
                                         </Badge>
                                         <div className="flex items-center gap-2">
                                             <div className="w-4 h-4 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin"/>
                                             <span className="text-sm text-muted-foreground">
-                                                {isInitializingDataset ? '正在为项目创建知识库...' : '正在加载知识库...'}
+                                                正在加载知识库...
                                             </span>
                                         </div>
                                     </>
@@ -351,7 +349,7 @@ export default function KnowledgeBase({
                             </div>
 
                             {/* 骨架屏 for loading state */}
-                            {(isLoadingDataset || isInitializingDataset) && (
+                            {isLoadingDataset && (
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-pulse">
                                     {[...Array(4)].map((_, i) => (
                                         <div key={i} className="p-3 bg-muted/30 rounded-md">
@@ -571,7 +569,7 @@ export default function KnowledgeBase({
                                 </span>
                                 ) : (
                                     <span className="flex items-center gap-2">
-                                    {isInitializingDataset ? '正在创建知识库...' : '知识库初始化中...'}
+                                    知识库初始化中...
                                     <span className="w-2 h-2 bg-current rounded-full animate-pulse inline-block"/>
                                 </span>
                                 )}
@@ -626,13 +624,8 @@ export default function KnowledgeBase({
                         <div className="text-center py-12 text-muted-foreground">
                             <div className="flex items-center justify-center gap-2">
                                 <div className="w-4 h-4 border-2 border-muted-foreground/30 border-t-current rounded-full animate-spin"/>
-                                {isInitializingDataset ? '正在创建知识库，请稍候...' : '知识库初始化中...'}
+                                知识库加载中...
                             </div>
-                            {isInitializingDataset && (
-                                <div className="mt-2 text-sm text-muted-foreground/80">
-                                    首次访问需要创建知识库，完成后可上传文档
-                                </div>
-                            )}
                         </div>
                     ) : isLoadingDocuments ? (
                         <div className="flex justify-center py-12">

@@ -20,17 +20,16 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import {deleteProject, Project as BaseProject, updateProjectDatasetId} from '@/lib/api/project-api';
+import {deleteProject, Project as BaseProject} from '@/lib/api/project-api';
 import KnowledgeBase from '@/components/projects/detail/knowledge-base';
 import ProjectInfo from 'components/projects/detail/ProjectInfo';
 import {Building2, Calendar, FileText, Mail, MapPin, PencilIcon, Phone, TrashIcon, User} from 'lucide-react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useState} from 'react';
 import {toast} from 'sonner';
 import {useAtom} from 'jotai';
 import {projectTiobItemsAtomFamily} from '@/components/projects/detail/project-atoms';
-import {useProjectDataset} from '@/hooks/use-dify-dataset-server';
 
 interface Project extends BaseProject {
     fileCount?: number; // 兼容新命名
@@ -42,15 +41,9 @@ export default function ProjectDetail({project: initialProject}: { project: Proj
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [showProjectInfo, setShowProjectInfo] = useState(false);
-    const [isInitializingDataset, setIsInitializingDataset] = useState(false);
     // 使用项目特定的原子化状态
     const [tiobItems] = useAtom(projectTiobItemsAtomFamily(project.id));
-    // 防止重复初始化知识库的标志
-    const initializingDatasetRef = useRef(false);
     const router = useRouter();
-
-    // 知识库管理
-    const {ensureDataset, isCreating} = useProjectDataset(project.id, project.name);
 
 
     // logger.info('ProjectDetail', {projectId, project});
@@ -61,83 +54,8 @@ export default function ProjectDetail({project: initialProject}: { project: Proj
     }, []);
 
 
-    // 确保知识库存在
-    useEffect(() => {
-        const initializeDataset = async () => {
-            // 防止重复初始化
-            if (initializingDatasetRef.current) return;
-
-            // 只有项目没有知识库ID时才初始化
-            if (!project.datasetId) {
-                console.log('🔧 项目详情页开始初始化知识库:', {
-                    projectId: project.id,
-                    projectName: project.name
-                });
-
-                try {
-                    initializingDatasetRef.current = true;
-                    setIsInitializingDataset(true);
-
-                    // 显示友好的提示
-                    toast.info('正在为项目初始化知识库...', {
-                        description: '首次访问项目需要创建知识库，请稍候',
-                        duration: 3000
-                    });
-
-                    // 传入undefined，让ensureDataset知道需要创建新的知识库
-                    const datasetId = await ensureDataset(undefined);
-                    if (datasetId) {
-                        // 更新项目的知识库ID
-                        await updateProjectDatasetId(project.id, datasetId);
-                        handleProjectUpdate({datasetId});
-
-                        console.log('✅ 项目详情页知识库初始化成功:', {
-                            projectId: project.id,
-                            datasetId
-                        });
-
-                        toast.success('知识库初始化完成！', {
-                            description: '现在可以上传文档并使用智能助手功能',
-                            duration: 4000
-                        });
-                    }
-                } catch (error) {
-                    console.error('❌ 项目详情页知识库初始化失败:', error);
-
-                    // 处理初始化失败
-                    const errorMessage = error instanceof Error ? error.message : '未知错误';
-                    console.error('知识库初始化详细错误:', error);
-                    
-                    if (errorMessage.includes('already exists')) {
-                        toast.warning('知识库创建遇到命名冲突', {
-                            description: '请稍后重试或手动检查Dify配置',
-                            duration: 6000
-                        });
-                    } else if (errorMessage.includes('401') || errorMessage.includes('403')) {
-                        toast.error('知识库初始化失败', {
-                            description: 'Dify API认证失败，请检查配置',
-                            duration: 8000
-                        });
-                    } else if (errorMessage.includes('网络') || errorMessage.includes('timeout')) {
-                        toast.error('知识库初始化失败', {
-                            description: '网络连接异常，请检查网络后重试',
-                            duration: 8000
-                        });
-                    } else {
-                        toast.error('知识库初始化失败', {
-                            description: `错误: ${errorMessage}`,
-                            duration: 8000
-                        });
-                    }
-                } finally {
-                    initializingDatasetRef.current = false;
-                    setIsInitializingDataset(false);
-                }
-            }
-        };
-
-        initializeDataset();
-    }, [project.id, project.datasetId, project.name, ensureDataset, handleProjectUpdate]);
+    // 移除冗余的知识库初始化逻辑
+    // 知识库初始化现在由KnowledgeBase组件统一处理
 
     const handleDeleteProject = async () => {
         if (!project) return;
@@ -285,7 +203,6 @@ export default function ProjectDetail({project: initialProject}: { project: Proj
             projectId={project.id}
             project={project}
             onProjectUpdate={handleProjectUpdate}
-            isInitializingDataset={isInitializingDataset}
         />
 
         {/* 删除项目 */}
